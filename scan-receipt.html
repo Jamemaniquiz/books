@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scan Receipt - BookNest</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    .upload-zone {
+      border: 3px dashed rgba(15,118,110,0.35); border-radius: 20px;
+      padding: 3rem 2rem; text-align: center; background: rgba(255,255,255,0.6);
+      cursor: pointer; transition: all 0.25s ease; position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--primary); background: rgba(15,118,110,0.06); transform: translateY(-2px);
+    }
+    .upload-zone input[type="file"] { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+    .upload-icon { font-size:3rem;margin-bottom:0.8rem; }
+    .upload-zone h3 { margin:0 0 0.4rem;font-size:1.2rem;color:var(--text); }
+    .upload-zone p  { margin:0;color:var(--muted);font-size:0.9rem; }
+
+    #imagePreviewWrap { display:none; }
+    #imagePreview { max-width:100%;max-height:360px;object-fit:contain;border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,0.12);border:2px solid rgba(15,118,110,0.2); }
+    #scanBtn { display:none;width:100%;padding:1rem;font-size:1.05rem;border-radius:14px; }
+
+    #aiStatus { display:none;align-items:center;gap:0.8rem;padding:1rem 1.4rem;border-radius:14px;background:rgba(15,118,110,0.08);border:1px solid rgba(15,118,110,0.2);color:var(--primary);font-weight:600; }
+    .spinner { width:20px;height:20px;border:3px solid rgba(15,118,110,0.2);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    #extractedPanel { display:none; }
+    .extracted-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem; }
+    .extracted-item { background:rgba(248,250,252,0.9);border:1px solid var(--border);border-radius:12px;padding:0.9rem 1rem; }
+    .extracted-item label { font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.3rem; }
+    .extracted-item input, .extracted-item select { width:100%;padding:0.5rem 0.7rem;border-radius:8px;border:1px solid var(--border);font-size:0.95rem;background:#fff; }
+
+    #booksTableWrap { overflow-x:auto;border-radius:14px;border:1px solid var(--border);background:#fff; }
+    #booksTable { width:100%;border-collapse:collapse; }
+    #booksTable th { background:rgba(226,232,240,0.8);color:var(--muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;padding:0.7rem 0.8rem; }
+    #booksTable td { padding:0.6rem 0.8rem;border-bottom:1px solid var(--border); }
+    #booksTable input, #booksTable select { border:1px solid var(--border);border-radius:7px;padding:0.4rem 0.6rem;font-size:0.9rem;width:100%;background:#fff; }
+    #booksTable input:focus, #booksTable select:focus { outline:none;border-color:var(--primary); }
+    .del-row-btn { background:rgba(239,68,68,0.1);color:#b91c1c;border:1px solid rgba(239,68,68,0.3);border-radius:7px;padding:0.3rem 0.7rem;cursor:pointer;font-size:0.82rem;font-weight:600; }
+
+    .totals-bar { display:flex;justify-content:flex-end;gap:1.5rem;align-items:center;padding:0.8rem 1rem;background:rgba(15,118,110,0.06);border-radius:0 0 14px 14px;border:1px solid var(--border);border-top:none;flex-wrap:wrap; }
+    .total-chip { display:flex;flex-direction:column;align-items:flex-end; }
+    .total-chip span:first-child { font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em; }
+    .total-chip span:last-child  { font-size:1.2rem;font-weight:700;color:var(--text); }
+    .save-actions { display:flex;gap:0.8rem;flex-wrap:wrap; }
+
+    .hint-box { background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.2);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:0.88rem;color:#0b3f3b; }
+    .hint-box strong { display:block;margin-bottom:0.4rem;font-size:0.95rem; }
+
+    #savedBanner { display:none;align-items:center;gap:0.8rem;padding:1rem 1.4rem;border-radius:14px;background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.3);color:#15803d;font-weight:700;font-size:1rem;margin-top:1rem; }
+    #errorBanner  { display:none;align-items:center;gap:0.8rem;padding:1rem 1.4rem;border-radius:14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#b91c1c;font-weight:600;font-size:0.95rem;margin-top:1rem; }
+
+    /* ── Receipt Photo Attachments ── */
+    .photo-upload-zone {
+      border: 2px dashed rgba(37,99,235,0.35); border-radius: 14px;
+      padding: 1.2rem; text-align: center; background: rgba(239,246,255,0.6);
+      cursor: pointer; transition: all 0.2s ease; position: relative;
+    }
+    .photo-upload-zone:hover { border-color:#0f766e; background:rgba(219,234,254,0.5); }
+    .photo-upload-zone input[type="file"] { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .photo-thumb-wrap {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #cfe3df;
+      background: #f0f4f8;
+    }
+    .photo-thumb-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-thumb-remove {
+      position: absolute; top: 4px; right: 4px;
+      background: rgba(239,68,68,0.85); color: #fff;
+      border: none; border-radius: 50%; width: 22px; height: 22px;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    /* Receipt photo section inside the receipt itself */
+    .bn-photos-section {
+      margin: 0 32px 24px;
+    }
+    .bn-photos-header {
+      background: linear-gradient(135deg,#0f766e,#0b3f3b); color:#f8fafc;
+      padding: 10px; text-align: center; font-size: 15px; font-weight: 700;
+      border-radius: 12px 12px 0 0;
+    }
+    .bn-photos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px;
+      background: #fffefc;
+      border: 2px solid #cfe3df;
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+    }
+    .bn-photo-cell {
+      aspect-ratio: 1 / 1;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1.5px solid #cfe3df;
+      background: #e8f0fe;
+    }
+    .bn-photo-cell img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* receipt modal */
+    .bn-modal { border:none;border-radius:20px;padding:0;width:min(1140px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(15,23,42,0.2); }
+    .bn-modal::backdrop { background:rgba(15,23,42,0.5); }
+    .bn-modal-inner { display:flex;flex-direction:column;max-height:92vh;overflow-y:auto; }
+    .bn-modal-bar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;padding:1rem 1.4rem;background:#0b3f3b;color:#fff;border-radius:20px 20px 0 0; }
+    .bn-btn-blue  { background:#0f766e;color:#fff;border:none;padding:8px 16px;border-radius:10px;font-weight:600;cursor:pointer; }
+    .bn-btn-slate { background:#0b3f3b;color:#fff;border:none;padding:8px 16px;border-radius:10px;font-weight:600;cursor:pointer; }
+    .bn-receipt { font-family:'Inter','Segoe UI',Arial,sans-serif;background:white;color:#1f2937; }
+    .bn-header { background:linear-gradient(135deg,#0b3f3b 0%,#0f766e 100%);color:white;padding:28px 36px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem; }
+    .bn-header-left { display:flex;align-items:center;gap:16px; }
+    .bn-logo-circle { width:72px;height:72px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid #c9a227;box-shadow:0 4px 14px rgba(169,120,47,0.28);overflow:hidden; }
+    .bn-logo-img { width:100%;height:100%;object-fit:contain;padding:6px;background:#fff; }
+    .bn-title { font-size:34px;font-weight:800;color:#c9a227;letter-spacing:2px;margin:0; }
+    .bn-invoice-info { text-align:right; }
+    .bn-invoice-label { color:#c9a227;font-size:20px;margin:0 0 4px; }
+    .bn-invoice-date  { color:#e0e0e0;font-size:13px; }
+    .bn-warning-box   { margin:24px 32px;border:2px solid #cfe3df;padding:16px;background:#f6f1e4;border-radius:12px; }
+    .bn-warning-title { color:#a8433a;font-weight:700;margin-bottom:6px; }
+    .bn-warning-title::before { content:"⚠️ ";font-size:16px; }
+    .bn-warning-text  { color:#555;font-size:12px;line-height:1.5; }
+    .bn-customer-readonly { margin:0 32px 16px;padding:14px 18px;background:#fffefc;border:1px solid #cfe3df;border-radius:10px;font-size:13px;color:#1f2937;display:grid;gap:4px; }
+    .bn-order-section { margin:0 32px 24px; }
+    .bn-order-header { background:linear-gradient(135deg,#0f766e,#0b3f3b);color:#f8fafc;padding:12px;text-align:center;font-size:17px;font-weight:700;border-radius:12px 12px 0 0; }
+    .bn-table { width:100%;border-collapse:collapse;border:2px solid #cfe3df;border-top:none; }
+    .bn-table thead { background:#0f766e; }
+    .bn-table thead th { color:#fffefc !important; }
+    .bn-table th,.bn-table td { padding:11px 13px;text-align:left;border-bottom:1px solid #e2e8f0; }
+    .bn-table th { font-size:12px;text-transform:uppercase;letter-spacing:0.04em; }
+    .bn-total-section { background:linear-gradient(135deg,#f0ede0,#cfe3df);margin:0 32px 24px;padding:28px;border:2px solid #bcdad4;text-align:center;border-radius:14px; }
+    .bn-total-header  { font-size:22px;font-weight:700;color:#0b3f3b;margin-bottom:14px; }
+    .bn-books-total   { font-size:16px;color:#0b3f3b;font-weight:600;margin-bottom:6px; }
+    .bn-shipping-note { font-size:13px;color:#a8433a;font-weight:700;margin-bottom:14px; }
+    .bn-grand-total   { background:#0b3f3b;color:#f8fafc;padding:16px;font-size:30px;font-weight:700;border-radius:12px;box-shadow:0 8px 20px rgba(30,58,138,0.22);margin-bottom:10px; }
+    .bn-pay-notice    { color:#a8433a;font-weight:700;font-size:14px; }
+    .bn-info-grid { display:flex;gap:16px;margin:0 32px 24px;flex-wrap:wrap; }
+    .bn-card { flex:1;min-width:300px;padding:22px;border-radius:12px;box-shadow:0 6px 16px rgba(15,23,42,0.09); }
+    .bn-payment-card { background:linear-gradient(135deg,#f6f1e4,#f0ede0);border:2px solid #0f766e;text-align:center; }
+    .bn-shipment-card { background:linear-gradient(135deg,#f6f1e4,#f0ede0);border:2px solid #0f766e; }
+    .bn-card-title    { font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px; }
+    .bn-readonly-info { font-size:13px;color:#1f2937;display:grid;gap:6px; }
+    .bn-note-wrap { margin:0 32px 0; }
+    .bn-note-card { background:linear-gradient(180deg,#fff,#fffefc);border:2px solid #cfe3df;border-left:7px solid #0f766e;border-radius:14px;padding:24px 28px;margin-bottom:16px; }
+    .bn-note-title    { font-size:22px;font-weight:700;color:#0b3f3b;margin-bottom:10px; }
+    .bn-note-list     { font-size:13px;line-height:1.6;margin:0;padding:0;list-style:none;color:#0b3f3b; }
+    .bn-note-list li  { margin-bottom:8px;background:#fff;border:1px solid #f0ede0;border-radius:8px;padding:8px 10px; }
+    .bn-thanks-card   { background:linear-gradient(135deg,#f6f1e4,#f0ede0);border-radius:12px;padding:16px;text-align:center;font-size:22px;font-weight:700;color:#0b3f3b;margin-bottom:24px;border:2px solid #bcdad4; }
+
+    @media print {
+      body > *:not(#previewModal) { display:none !important; }
+      #previewModal { display:block !important;position:static !important;box-shadow:none !important;width:100% !important;max-height:none !important;border:none !important;padding:0 !important; }
+      .bn-modal-bar { display:none !important; }
+      * { -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="logo">
+      <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+      <span>BookNest</span>
+    </div>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="inventory.html">Inventory &amp; Sales</a>
+      <a href="receipt-history.html">Receipts</a>
+      <a href="invoice-builder.html">🧾 Invoice Builder</a>
+      <a class="active" href="scan-receipt.html">📸 Scan</a>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📸 Import Old Receipt</h2>
+      </div>
+
+      <div class="hint-box">
+        <strong>📌 Supports all BookNest receipt formats</strong>
+        Works with old yellow/black receipts, blue receipts, TikTok/Facebook screenshots,
+        and any printed or handwritten BookNest invoice. Just upload — AI reads it, you review, then Save.
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" />
+        <div class="upload-icon">📷</div>
+        <h3>Upload a photo or screenshot of your old receipt</h3>
+        <p>Click to browse — JPG, PNG, WEBP, screenshots all work</p>
+      </div>
+
+      <div id="imagePreviewWrap" style="margin-top:1.2rem;text-align:center;">
+        <img id="imagePreview" src="" alt="Receipt preview" />
+        <div style="margin-top:0.8rem;">
+          <button class="btn ghost" id="changeImageBtn" style="font-size:0.85rem;">🔄 Use Different Image</button>
+        </div>
+      </div>
+
+      <div style="margin-top:1.2rem;">
+        <button class="btn primary" id="scanBtn">🤖 Read Receipt with AI</button>
+      </div>
+
+      <div id="aiStatus" style="margin-top:1rem;">
+        <div class="spinner"></div>
+        <span id="aiStatusText">Reading your receipt…</span>
+      </div>
+    </section>
+
+    <section class="panel" id="extractedPanel">
+      <div class="panel-header">
+        <h2>✏️ Review &amp; Edit — Fix Anything Wrong</h2>
+        <span class="muted" style="font-size:0.85rem;">All fields are editable.</span>
+      </div>
+      <p class="muted" style="margin-bottom:1.2rem;font-size:0.9rem;">
+        Old receipts may not have customer info — that's fine.
+        Make sure the <strong>book titles and prices</strong> are correct, then click <strong>Save</strong>.
+      </p>
+
+      <div class="extracted-grid" style="margin-bottom:1.4rem;">
+        <div class="extracted-item">
+          <label>Customer Name</label>
+          <input type="text" id="f-customer" placeholder="Optional" />
+        </div>
+        <div class="extracted-item">
+          <label>Phone Number</label>
+          <input type="text" id="f-phone" placeholder="Optional" />
+        </div>
+        <div class="extracted-item">
+          <label>Shipping Address</label>
+          <input type="text" id="f-address" placeholder="Optional" />
+        </div>
+        <div class="extracted-item">
+          <label>Payment Method</label>
+          <select id="f-payment">
+            <option value="GCash">📱 GCash</option>
+            <option value="GotYme Bank">🏦 GoTyme Bank</option>
+          </select>
+        </div>
+        <div class="extracted-item">
+          <label>Shipping Fee (₱)</label>
+          <input type="number" id="f-shipping" value="0" min="0" step="0.01" oninput="recalcTotals()" />
+        </div>
+        <div class="extracted-item">
+          <label>Receipt Date</label>
+          <input type="date" id="f-date" />
+        </div>
+      </div>
+
+      <div class="panel-header" style="margin-bottom:0.8rem;">
+        <h3 style="margin:0;">📚 Books Ordered</h3>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn ghost" id="addBookRowBtn" style="font-size:0.85rem;">+ Add Row</button>
+          <button class="btn ghost" id="bulkPasteBtn" style="font-size:0.85rem;">📋 Bulk Paste</button>
+        </div>
+      </div>
+      <div id="booksTableWrap">
+        <datalist id="scanBoxSuggestions"></datalist>
+        <table id="booksTable">
+          <thead>
+            <tr><th>Title</th><th>Author</th><th>Format/Genre</th><th>Condition</th><th>Box</th><th>Qty</th><th>Unit Price (₱)</th><th>Row Total</th><th></th></tr>
+          </thead>
+          <tbody id="booksTableBody"></tbody>
+        </table>
+        <div class="totals-bar">
+          <div class="total-chip"><span>Books Total</span><span id="dispBooksTotal">₱0.00</span></div>
+          <div class="total-chip"><span>Shipping</span><span id="dispShipping">₱0.00</span></div>
+          <div class="total-chip" style="border-left:2px solid var(--primary);padding-left:1.2rem;">
+            <span>Grand Total</span><span id="dispGrandTotal" style="color:var(--primary);font-size:1.4rem;">₱0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Photo Attachments ── -->
+      <div style="margin-top:1.6rem;">
+        <div class="panel-header" style="margin-bottom:0.8rem;">
+          <h3 style="margin:0;">📷 Book / Shipping Photos <span style="font-size:0.8rem;font-weight:400;color:var(--muted);">(max 4 photos)</span></h3>
+        </div>
+        <div class="photo-upload-zone" id="photoUploadZone">
+          <input type="file" id="photoFileInput" accept="image/*" multiple />
+          <div style="font-size:1.5rem;margin-bottom:0.4rem;">📸</div>
+          <p style="margin:0;color:var(--muted);font-size:0.88rem;">Click to add photos of the book(s) or shipping — up to 4 images</p>
+        </div>
+        <div class="photo-grid" id="photoGrid"></div>
+      </div>
+
+      <div id="savedBanner">✅ Receipt saved! Redirecting to Receipt History…</div>
+      <div id="errorBanner"></div>
+
+      <div class="save-actions" style="margin-top:1.4rem;">
+        <button class="btn primary" id="saveReceiptBtn">💾 Save to Receipt History</button>
+        <button class="btn ghost"   id="previewReceiptBtn">👁 Preview Receipt</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Receipt Preview Modal -->
+  <dialog id="previewModal" class="bn-modal">
+    <div class="bn-modal-inner">
+      <div class="bn-modal-bar">
+        <span style="font-weight:700;font-size:1rem;">📄 Receipt Preview</span>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+          <button id="dlPreviewBtn"    class="bn-btn-blue"  type="button">📸 Download Image</button>
+          <button id="printPreviewBtn" class="bn-btn-slate" type="button">🖨 Print</button>
+          <button id="closePreviewBtn" class="bn-btn-slate" type="button">✕ Close</button>
+        </div>
+      </div>
+      <div id="previewPrintArea" class="bn-receipt">
+        <div class="bn-header">
+          <div class="bn-header-left">
+            <div class="bn-logo-circle"><img class="bn-logo-img" src="Assets/Booknest.png" alt="BookNest logo" /></div>
+            <h1 class="bn-title">BOOKNEST</h1>
+          </div>
+          <div class="bn-invoice-info">
+            <h2 class="bn-invoice-label">ORDER INVOICE</h2>
+            <div class="bn-invoice-date">DATE: <span id="prev-date">—</span></div>
+            <div class="bn-invoice-date">Receipt #: <span id="prev-id" style="font-family:monospace;font-size:0.78rem">—</span></div>
+            <div class="bn-invoice-date">Payment: <span id="prev-payment">—</span></div>
+          </div>
+        </div>
+        <div class="bn-warning-box">
+          <div class="bn-warning-title">Please be reminded that cancellations or changes to orders are not allowed once the invoice has been issued.</div>
+          <div class="bn-warning-text">Kindly note that we sell pre-loved books unless stated otherwise.</div>
+        </div>
+        <div class="bn-customer-readonly" id="prev-customer-block"></div>
+        <div class="bn-order-section">
+          <div class="bn-order-header">📚 ORDER DETAILS</div>
+          <table class="bn-table">
+            <thead><tr><th>TITLE</th><th>AUTHOR</th><th>TYPE</th><th>GENRE</th><th>CONDITION</th><th>QTY</th><th>PRICE</th><th>TOTAL</th><th></th></tr></thead>
+            <tbody id="prev-items"></tbody>
+          </table>
+        </div>
+        <div class="bn-total-section">
+          <div class="bn-total-header">💰 TOTAL AMOUNT TO PAY 💰</div>
+          <div class="bn-books-total">Books Total: ₱<span id="prev-books-total">0.00</span></div>
+          <div class="bn-shipping-note" id="prev-shipping-note">Shipping Fee is <u>NOT INCLUDED</u> in this invoice.</div>
+          <div class="bn-grand-total" id="prev-grand-total">₱ 0.00</div>
+          <div class="bn-pay-notice">! PAY THIS EXACT AMOUNT !</div>
+        </div>
+        <div class="bn-info-grid">
+          <div class="bn-card bn-payment-card" id="prev-payment-card"></div>
+          <div class="bn-card bn-shipment-card">
+            <div class="bn-card-title" style="color:#0f766e;">📦 SHIPMENT DETAILS</div>
+            <div id="prev-shipment-card" class="bn-readonly-info"></div>
+          </div>
+        </div>
+        <div class="bn-note-wrap">
+          <div id="prev-photos-section" class="bn-photos-section" style="display:none;">
+            <div class="bn-photos-header">📷 ITEM / SHIPPING PHOTOS</div>
+            <div class="bn-photos-grid" id="prev-photos-grid"></div>
+          </div>
+          <div class="bn-note-card">
+            <div class="bn-note-title">📌 IMPORTANT INFORMATION</div>
+            <ul class="bn-note-list">
+              <li>📚 <b>Pre-loved items:</b> We sell pre-loved books unless stated otherwise.</li>
+              <li>🚫 <b>No cancellation/changes</b> once invoice is issued.</li>
+              <li>📅 <b>Payment deadline:</b> Within 24 hours from invoice receipt.</li>
+              <li>🚚 <b>Shipping fee:</b> Not yet included in this invoice.</li>
+              <li>🧾 <b>Send proof of payment</b> right after transfer.</li>
+              <li>🎥 <b>For claims:</b> Record an unboxing video.</li>
+            </ul>
+          </div>
+          <div class="bn-thanks-card">Thank you for your purchase! ★</div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">BookNest © 2026</footer>
+
+  <script src="app.js"></script>
+
+  <script>
+    // ── Initialize storage on page load ──
+    if (typeof migrateStorage === 'function') {
+      migrateStorage();
+      ensureSeedData();
+    }
+
+    // ── Populate box suggestions from existing inventory ──
+    // scanKnownBoxes backs the "Box" dropdown on each book row (below).
+    let scanKnownBoxes = [];
+    try {
+      if (typeof getBooks === 'function') {
+        scanKnownBoxes = [...new Set([
+          ...getBooks().map(b => (b.box || "").trim()),
+          ...(typeof getPurchases === 'function' ? getPurchases().map(p => (p.box || "").trim()) : []),
+        ].filter(Boolean))].sort();
+        const boxDatalist = document.getElementById("scanBoxSuggestions");
+        if (boxDatalist) boxDatalist.innerHTML = scanKnownBoxes.map(b => `<option value="${esc(b)}"></option>`).join("");
+      }
+    } catch(e) { console.warn("Could not populate box suggestions:", e); }
+    
+    // ── Self-contained storage (works even if app.js globals fail) ──
+    const RECEIPTS_KEY = ".receipts";
+
+    function bnGetReceipts() {
+      try {
+        const raw = localStorage.getItem(RECEIPTS_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+
+    function bnSaveReceipts(receipts) {
+      try {
+        localStorage.setItem(RECEIPTS_KEY, JSON.stringify(receipts));
+        return true;
+      } catch(e) {
+        console.error("localStorage save failed:", e);
+        return false;
+      }
+    }
+
+    // ── Helpers ──
+    const fmt = (v) => new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP"}).format(v);
+
+    function makeid() {
+      const d = new Date().toISOString().slice(0,10).replace(/-/g,"");
+      const r = Math.random().toString(16).slice(2,6).toUpperCase();
+      return "BN-" + d + "-" + r;
+    }
+
+    function fmtDateLong(iso) {
+      return new Date(iso).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+    }
+
+    // ── State ──
+    let imageBase64   = null;
+    let imageMediaType = "image/jpeg";
+    let currentReceiptId = null;
+
+    // ── Upload ──
+    const fileInput  = document.getElementById("fileInput");
+    const uploadZone = document.getElementById("uploadZone");
+    const previewWrap = document.getElementById("imagePreviewWrap");
+    const previewImg  = document.getElementById("imagePreview");
+    const scanBtn     = document.getElementById("scanBtn");
+
+    uploadZone.addEventListener("dragover",  e => { e.preventDefault(); uploadZone.classList.add("drag-over"); });
+    uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag-over"));
+    uploadZone.addEventListener("drop", e => {
+      e.preventDefault(); uploadZone.classList.remove("drag-over");
+      if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
+    document.getElementById("changeImageBtn").addEventListener("click", () => { fileInput.value=""; fileInput.click(); });
+
+    function loadImage(file) {
+      if (!file.type.startsWith("image/")) { alert("Please upload an image file."); return; }
+      imageMediaType = file.type || "image/jpeg";
+      const reader = new FileReader();
+      reader.onload = e => {
+        imageBase64 = e.target.result.split(",")[1];
+        previewImg.src = e.target.result;
+        previewWrap.style.display = "block";
+        uploadZone.style.display = "none";
+        scanBtn.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ── Scan ──
+    scanBtn.addEventListener("click", scanReceipt);
+
+    async function scanReceipt() {
+      if (!imageBase64) return;
+      const status     = document.getElementById("aiStatus");
+      const statusText = document.getElementById("aiStatusText");
+      scanBtn.disabled = true;
+      status.style.display = "flex";
+      statusText.textContent = "Reading your receipt with AI…";
+
+      const today = new Date().toISOString().slice(0,10);
+
+      const prompt = `You are reading a BookNest bookstore receipt image. BookNest is a Philippine online pre-loved bookstore.
+
+RECEIPT FORMATS RECOGNIZED:
+1. OLD FORMAT: Dark/black background, yellow text. Columns: TITLE | FORMAT | QTY | PRICE
+2. NEW FORMAT: Blue header with BookNest logo. Columns: TITLE | AUTHOR | GENRE | QTY | PRICE | TOTAL
+3. SCREENSHOTS: TikTok/Facebook screenshots of BookNest invoices
+4. HANDWRITTEN: Handwritten invoices or mixed format receipts
+
+EXTRACTION RULES - READ CAREFULLY:
+1. Extract EVERY book row visible. Include title, author, format/genre, condition, quantity, and UNIT PRICE
+2. TITLE: The book's full name/title
+3. AUTHOR: Person who wrote it (if visible - may be blank on old receipts)
+4. GENRE/FORMAT: PB (paperback), HB (hardcover), E-book, or genre type (Fiction, Mystery, etc.)
+5. CONDITION: Look for "New", "Pre-loved", "Used", "Good", "Like New" → standardize to "New", "Pre Loved", or "Remaindered"
+6. QTY: Quantity of that book
+7. UNIT PRICE: Price PER BOOK (not total) - if only row total shown and qty=1, then unitPrice = that number
+8. Customer info (name, phone, address) may be missing — leave as empty strings if not visible
+9. Date: Look for "DATE:" or similar. Use YYYY-MM-DD format. If not found, use ${today}
+10. Payment: Look for "GCash", "GoTyme", "Bank Transfer", etc. Default: "GCash"
+
+CRITICAL: Return ONLY raw JSON object — no markdown backticks, no explanation, no extra text:
+{"customer":"Name or empty","phone":"","address":"","paymentMethod":"GCash","shippingFee":0,"date":"${today}","books":[{"title":"Full Title","author":"Author Name","genre":"HB/PB/Genre","condition":"Pre Loved","qty":1,"unitPrice":0.00}]}
+
+Requirements:
+- books array MUST have at least 1 entry
+- unitPrice MUST be a number (0.00 format), never a string
+- qty MUST be a number
+- condition must be "New", "Pre Loved", or "Remaindered"
+- All currency values are in PHP (₱)
+- If image is unclear, extract what you can see and leave unclear items empty or 0`;
+
+      try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 2000,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: { type: "base64", media_type: imageMediaType, data: imageBase64 } },
+                { type: "text", text: prompt }
+              ]
+            }]
+          })
+        });
+
+        const data = await response.json();
+        const raw  = data.content?.find(b => b.type === "text")?.text || "{}";
+        console.log("AI raw response:", raw);
+
+        let parsed = {};
+        try {
+          const m = raw.match(/\{[\s\S]*\}/);
+          if (m) parsed = JSON.parse(m[0]);
+        } catch(e) { console.warn("JSON parse failed", e); }
+
+        // Sanitize
+        parsed.customer      = String(parsed.customer || "").trim();
+        parsed.phone         = String(parsed.phone    || "").trim();
+        parsed.address       = String(parsed.address  || "").trim();
+        parsed.paymentMethod = String(parsed.paymentMethod || "GCash");
+        parsed.shippingFee   = Math.max(0, parseFloat(parsed.shippingFee) || 0);
+        parsed.date          = parsed.date || today;
+        if (!Array.isArray(parsed.books)) parsed.books = [];
+
+        parsed.books = parsed.books.map(b => {
+          const qty = Math.max(1, parseInt(b.qty) || 1);
+          let   up  = parseFloat(b.unitPrice) || 0;
+          if (up === 0 && parseFloat(b.totalPrice) > 0) up = parseFloat(b.totalPrice) / qty;
+          const typeValues = ["PB","HB","MMPB","Sprayed","Leatherbound","Special Edition","Other","Paperback","Hardbound","Hardcover"];
+          const rawGenre = String(b.genre || b.format || "").trim();
+          const isType   = typeValues.some(t => rawGenre.toUpperCase() === t.toUpperCase());
+          return {
+            title:     String(b.title  || "").trim(),
+            author:    String(b.author || "").trim(),
+            type:      isType ? rawGenre.toUpperCase().replace("PAPERBACK","PB").replace("HARDBOUND","HB").replace("HARDCOVER","HB") : (b.type || "PB"),
+            genre:     isType ? "" : rawGenre,
+            condition: ["New","Pre Loved","Remaindered"].includes(b.condition) ? b.condition : "Pre Loved",
+            qty, unitPrice: Math.max(0, up)
+          };
+        }).filter(b => b.title.length > 0 || b.unitPrice > 0);
+
+        if (parsed.books.length === 0) {
+          parsed.books = [{ title:"", author:"", genre:"", condition:"Pre Loved", qty:1, unitPrice:0 }];
+        }
+
+        const found = parsed.books.filter(b => b.title.length > 0).length;
+        statusText.textContent = found > 0
+          ? `✓ Found ${found} book(s)! Check the details below, then click Save.`
+          : "⚠ Couldn't auto-read books — please fill in the rows below manually.";
+
+        populateFields(parsed);
+
+      } catch(err) {
+        console.error("Scan error:", err);
+        statusText.textContent = "⚠ AI unavailable — please fill in the form manually below.";
+        setTimeout(() => { status.style.display = "none"; }, 3000);
+        populateFields({ customer:"", phone:"", address:"", paymentMethod:"GCash",
+          shippingFee:0, date:today,
+          books:[{ title:"", author:"", genre:"", condition:"Pre Loved", qty:1, unitPrice:0 }] });
+      }
+      scanBtn.disabled = false;
+    }
+
+    // ── Populate form ──
+    function populateFields(data) {
+      document.getElementById("f-customer").value = data.customer || "";
+      document.getElementById("f-phone").value    = data.phone    || "";
+      document.getElementById("f-address").value  = data.address  || "";
+      document.getElementById("f-shipping").value = data.shippingFee || 0;
+
+      const pm = (data.paymentMethod || "GCash").toLowerCase();
+      document.getElementById("f-payment").value = pm.includes("got") ? "GotYme Bank" : "GCash";
+      document.getElementById("f-date").value    = data.date || new Date().toISOString().slice(0,10);
+
+      const tbody = document.getElementById("booksTableBody");
+      tbody.innerHTML = "";
+      const books = (Array.isArray(data.books) && data.books.length > 0)
+        ? data.books
+        : [{ title:"", author:"", genre:"", condition:"Pre Loved", qty:1, unitPrice:0 }];
+      books.forEach(b => addBookRow(b));
+      recalcTotals();
+
+      currentReceiptId = makeid();
+      const panel = document.getElementById("extractedPanel");
+      panel.style.display = "block";
+      panel.scrollIntoView({ behavior:"smooth", block:"start" });
+
+      // Reset banners
+      document.getElementById("savedBanner").style.display = "none";
+      document.getElementById("errorBanner").style.display = "none";
+      const btn = document.getElementById("saveReceiptBtn");
+      btn.textContent = "💾 Save to Receipt History";
+      btn.disabled    = false;
+      btn.style.background = "";
+    }
+
+    // ── Box dropdown ──
+    // Builds the <select> for the "Box" column: "No box", every known box,
+    // and an "Add new box" option that prompts for a name.
+    function boxSelectHtml(selectedBox) {
+      const box = (selectedBox || "").trim();
+      const options = box && !scanKnownBoxes.includes(box)
+        ? [...scanKnownBoxes, box].sort()
+        : scanKnownBoxes;
+      const optionsHtml = [
+        `<option value=""${box ? "" : " selected"}>— No box —</option>`,
+        ...options.map(b => `<option value="${esc(b)}"${b === box ? " selected" : ""}>📦 ${esc(b)}</option>`),
+        `<option value="__new__">➕ Add new box…</option>`,
+      ].join("");
+      return `<select class="b-box" title="Which box this book came from" style="border:1px solid var(--border);border-radius:7px;padding:0.4rem 0.5rem;font-size:0.88rem;width:100%;background:#fff;">${optionsHtml}</select>`;
+    }
+
+    // When "Add new box…" is picked, prompt for a name, add it to the known
+    // list so it shows up on other rows too, and select it. Cancelling
+    // falls back to "No box".
+    document.addEventListener("change", (e) => {
+      const select = e.target.closest(".b-box");
+      if (!select || select.value !== "__new__") return;
+      const name = (prompt("Name this new box (e.g. \"Box 3\"):", "") || "").trim();
+      if (!name) { select.value = ""; return; }
+      if (!scanKnownBoxes.includes(name)) {
+        scanKnownBoxes.push(name);
+        scanKnownBoxes.sort();
+        document.querySelectorAll("select.b-box").forEach(sel => {
+          if (sel === select) return;
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = `📦 ${name}`;
+          sel.insertBefore(opt, sel.lastElementChild);
+        });
+        const newOpt = document.createElement("option");
+        newOpt.value = name;
+        newOpt.textContent = `📦 ${name}`;
+        select.insertBefore(newOpt, select.lastElementChild);
+      }
+      select.value = name;
+    });
+
+    // ── Book rows ──
+    function addBookRow(book = {}) {
+      const tbody = document.getElementById("booksTableBody");
+      const tr    = document.createElement("tr");
+      const conds = ["New","Pre Loved","Remaindered"];
+      const types = ["PB","HB","MMPB","Sprayed","Leatherbound","Special Edition","Other"];
+      tr.innerHTML = `
+        <td><input type="text"   class="b-title"  value="${esc(book.title||'')}"  placeholder="Book title" oninput="recalcTotals()"/></td>
+        <td><input type="text"   class="b-author" value="${esc(book.author||'')}" placeholder="Author"/></td>
+        <td><select class="b-type" style="border:1px solid var(--border);border-radius:7px;padding:0.4rem 0.5rem;font-size:0.88rem;width:100%;background:#fff;">
+          ${types.map(t=>`<option value="${t}"${(book.type||book.genre||'PB')===t?' selected':''}>${t}</option>`).join('')}
+        </select></td>
+        <td><input type="text"   class="b-genre"  value="${esc(book.genre&&!['PB','HB','MMPB','Sprayed','Leatherbound','Special Edition','Other'].includes(book.genre)?book.genre:'')}"  placeholder="Fiction / Thriller..."/></td>
+        <td><select class="b-condition" style="border:1px solid var(--border);border-radius:7px;padding:0.4rem 0.5rem;font-size:0.88rem;width:100%;background:#fff;">
+          ${conds.map(c=>`<option value="${c}"${(book.condition||'Pre Loved')===c?' selected':''}>${c}</option>`).join('')}
+        </select></td>
+        <td>${boxSelectHtml(book.box || '')}</td>
+        <td><input type="number" class="b-qty"   value="${book.qty||1}"        min="1"     style="width:60px"  oninput="recalcTotals()"/></td>
+        <td><input type="number" class="b-price" value="${book.unitPrice||0}"  min="0" step="0.01" style="width:90px" oninput="recalcTotals()"/></td>
+        <td class="b-rowtotal" style="font-weight:700;color:var(--primary);">₱0.00</td>
+        <td><button class="del-row-btn" onclick="this.closest('tr').remove();recalcTotals()">✕</button></td>`;
+      tbody.appendChild(tr);
+      recalcTotals();
+    }
+
+    // ── Bulk Paste ──
+    function openBulkPasteDialog() {
+      const dialog = document.createElement("dialog");
+      dialog.style.cssText = "border:none;border-radius:16px;padding:0;width:min(600px,95vw);max-height:90vh;box-shadow:0 24px 64px rgba(15,23,42,0.25);";
+      dialog.innerHTML = `
+        <div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+          <h3 style="margin:0;color:#1f2937;font-size:1.1rem;">📋 Bulk Paste Books</h3>
+          <p style="margin:0;color:#666;font-size:0.9rem;">Paste book data. Format: One per line, separated by | or Tab<br><strong>Title | Author | Genre | Condition | Qty | Price | Box</strong> (Box is optional)<br>Example: The Midnight Library | Matt Haig | HB | Pre Loved | 2 | 18.99 | Box 1</p>
+          <textarea id="bulkPasteText" style="width:100%;min-height:200px;padding:12px;border:2px solid #cbd5e1;border-radius:10px;font-family:monospace;font-size:0.9rem;resize:vertical;" placeholder="The Midnight Library | Matt Haig | HB | Pre Loved | 1 | 18.99 | Box 1&#10;Atomic Habits | James Clear | PB | New | 1 | 21.50 | Box 2"></textarea>
+          <div style="display:flex;gap:12px;justify-content:flex-end;">
+            <button type="button" onclick="this.closest('dialog').close()" style="background:#64748b;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+            <button type="button" id="confirmBulkPasteBtn" style="background:#0f766e;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;">✓ Add All</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(dialog);
+
+      dialog.querySelector("#confirmBulkPasteBtn").addEventListener("click", () => {
+        const text = dialog.querySelector("#bulkPasteText").value;
+        processBulkPaste(text);
+        dialog.close();
+        dialog.remove();
+      });
+
+      dialog.showModal();
+      dialog.querySelector("#bulkPasteText").focus();
+    }
+
+    function processBulkPaste(text) {
+      const lines = text.split(/\n/).filter(l => l.trim());
+      const tbody = document.getElementById("booksTableBody");
+      
+      if (!tbody) {
+        alert("⚠ Error: Book table not found. Please reload the page.");
+        console.error("booksTableBody not found");
+        return;
+      }
+      
+      let added = 0;
+
+      lines.forEach((line, idx) => {
+        try {
+          const parts = line.split(/\||\t/).map(p => p.trim()).filter(p => p);
+          if (parts.length >= 1) {
+            const book = {
+              title: parts[0] || "",
+              author: parts[1] || "",
+              genre: parts[2] || "",
+              condition: ["New","Pre Loved","Remaindered"].includes(parts[3]) ? parts[3] : "Pre Loved",
+              qty: Math.max(1, parseInt(parts[4]) || 1),
+              unitPrice: Math.max(0, parseFloat(parts[5]) || 0),
+              box: parts[6] || ""
+            };
+            if (book.title || book.unitPrice > 0) {
+              addBookRow(book);
+              added++;
+            }
+          }
+        } catch(e) {
+          console.error(`Error parsing line ${idx + 1}:`, line, e);
+        }
+      });
+
+      if (added > 0) {
+        recalcTotals();
+        alert(`✓ Added ${added} book(s) successfully!`);
+      } else {
+        alert("⚠ No valid books found. Please check the format:\nTitle | Author | Genre | Condition | Qty | Price");
+      }
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function recalcTotals() {
+      let total = 0;
+      document.querySelectorAll("#booksTableBody tr").forEach(tr => {
+        const qty   = parseFloat(tr.querySelector(".b-qty")?.value)   || 0;
+        const price = parseFloat(tr.querySelector(".b-price")?.value) || 0;
+        const row   = qty * price;
+        const cell  = tr.querySelector(".b-rowtotal");
+        if (cell) cell.textContent = fmt(row);
+        total += row;
+      });
+      const sf = parseFloat(document.getElementById("f-shipping").value) || 0;
+      document.getElementById("dispBooksTotal").textContent = fmt(total);
+      document.getElementById("dispShipping").textContent   = fmt(sf);
+      document.getElementById("dispGrandTotal").textContent = fmt(total + sf);
+    }
+
+    // ── Collect ──
+    function collectData() {
+      const books = [];
+      document.querySelectorAll("#booksTableBody tr").forEach(tr => {
+        books.push({
+          title:     tr.querySelector(".b-title")?.value.trim()     || "",
+          author:    tr.querySelector(".b-author")?.value.trim()    || "",
+          type:      tr.querySelector(".b-type")?.value             || "PB",
+          genre:     tr.querySelector(".b-genre")?.value.trim()     || "",
+          condition: tr.querySelector(".b-condition")?.value        || "Pre Loved",
+          box:       tr.querySelector(".b-box")?.value.trim()       || "",
+          qty:       parseInt(tr.querySelector(".b-qty")?.value)    || 1,
+          unitPrice: parseFloat(tr.querySelector(".b-price")?.value)|| 0,
+        });
+      });
+      const sf         = parseFloat(document.getElementById("f-shipping").value) || 0;
+      const booksTotal = books.reduce((s,b) => s + b.qty * b.unitPrice, 0);
+      const dateVal    = document.getElementById("f-date").value || new Date().toISOString().slice(0,10);
+      return {
+        id:            currentReceiptId || makeid(),
+        date:          new Date(dateVal + "T12:00:00").toISOString(),
+        customer:      document.getElementById("f-customer").value.trim(),
+        phone:         document.getElementById("f-phone").value.trim(),
+        address:       document.getElementById("f-address").value.trim(),
+        paymentMethod: document.getElementById("f-payment").value,
+        shippingCost:  sf,
+        items:         books,
+        total:         booksTotal + sf,
+        photos:        receiptPhotos.slice(0, MAX_PHOTOS),
+      };
+    }
+
+    // ── SAVE — moved to initialization function ──
+
+    // ── Preview — moved to initialization function ──
+    function openPreview() {
+      const d = collectData();
+      document.getElementById("prev-date").textContent    = fmtDateLong(d.date);
+      document.getElementById("prev-id").textContent      = d.id;
+      document.getElementById("prev-payment").textContent = d.paymentMethod;
+      document.getElementById("prev-customer-block").innerHTML = `
+        <strong>👤 ${d.customer||"—"}</strong>
+        <span>📍 ${d.address||"—"}</span>
+        <span>📞 ${d.phone||"—"}</span>`;
+      document.getElementById("prev-items").innerHTML = d.items.map(i=>`
+        <tr><td>${i.title||"—"}</td><td>${i.author||"—"}</td><td>${i.genre||"—"}</td>
+        <td>${fmt(i.unitPrice)}</td><td>${i.condition}</td>
+        <td style="text-align:center">${i.qty}</td><td>${fmt(i.qty*i.unitPrice)}</td></tr>`).join("");
+      const bt = d.items.reduce((s,i)=>s+i.qty*i.unitPrice,0);
+      document.getElementById("prev-books-total").textContent = bt.toFixed(2);
+      const sn = document.getElementById("prev-shipping-note");
+      if (d.shippingCost > 0) {
+        sn.innerHTML = `Shipping Fee <strong style="color:#16a34a;">INCLUDED</strong> (+₱${d.shippingCost.toFixed(2)})`;
+        sn.style.color = "#16a34a";
+      } else {
+        sn.innerHTML = `Shipping Fee is <u>NOT INCLUDED</u> in this invoice.`;
+        sn.style.color = "";
+      }
+      document.getElementById("prev-grand-total").textContent = `₱ ${d.total.toFixed(2)}`;
+      const isG = d.paymentMethod.toLowerCase().includes("got");
+      document.getElementById("prev-payment-card").innerHTML = `
+        <div class="bn-card-title" style="color:#0f766e;justify-content:center;">💳 PAYMENT METHOD</div>
+        <div style="margin:10px 0 6px;">
+          <div style="width:64px;height:64px;background:${isG?"linear-gradient(135deg,#7c3aed,#6d28d9)":"linear-gradient(135deg,#007bff,#0056d6)"};border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:${isG?22:32}px;color:white;margin:0 auto;">${isG?"GT":"G"}</div>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:#0b3f3b;text-align:center;margin-bottom:10px;">${d.paymentMethod}</div>
+        <div style="background:#fffefc;border:2px solid #0f766e;border-radius:10px;padding:10px;text-align:center;font-weight:800;font-size:1rem;color:#0b3f3b;">${isG?"GoTyme Account":"09764097987"}</div>`;
+      document.getElementById("prev-shipment-card").innerHTML = `
+        <div style="display:grid;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border:1px solid #cfe3df;border-radius:10px;">
+            <span>👤</span><div><div style="font-size:10px;font-weight:700;color:#0f766e;text-transform:uppercase;">Customer</div><div style="font-weight:700;">${d.customer||"—"}</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border:1px solid #cfe3df;border-radius:10px;">
+            <span>📍</span><div><div style="font-size:10px;font-weight:700;color:#0f766e;text-transform:uppercase;">Address</div><div style="font-weight:600;font-size:13px;">${d.address||"—"}</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#fff;border:1px solid #cfe3df;border-radius:10px;">
+            <span>📞</span><div><div style="font-size:10px;font-weight:700;color:#0f766e;text-transform:uppercase;">Phone</div><div style="font-weight:700;">${d.phone||"—"}</div></div>
+          </div>
+        </div>`;
+      document.getElementById("previewModal").showModal();
+
+      // Photos
+      const photosSection = document.getElementById("prev-photos-section");
+      const photosGrid    = document.getElementById("prev-photos-grid");
+      if (photosSection && photosGrid) {
+        if (d.photos && d.photos.length > 0) {
+          photosGrid.innerHTML = d.photos.map(src =>
+            `<div class="bn-photo-cell"><img src="${src}" alt="Receipt photo" /></div>`
+          ).join('');
+          photosSection.style.display = '';
+        } else {
+          photosSection.style.display = 'none';
+        }
+      }
+    }
+
+    async function downloadPreview() {
+      if (typeof html2canvas === "undefined") { alert("html2canvas not loaded."); return; }
+      const bar = document.querySelector("#previewModal .bn-modal-bar");
+      bar.style.display = "none";
+      try {
+        const canvas = await html2canvas(document.getElementById("previewPrintArea"),{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+        const a = document.createElement("a");
+        a.download = `booknest-${(currentReceiptId||"scan").toLowerCase()}.png`;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      } catch(e) { console.error(e); }
+      bar.style.display = "";
+    }
+
+    // ── Photo Attachments ──
+    const MAX_PHOTOS = 4;
+    let receiptPhotos = []; // array of base64 data URLs
+
+    function initPhotoUpload() {
+      const photoInput = document.getElementById('photoFileInput');
+      const photoZone  = document.getElementById('photoUploadZone');
+      if (!photoInput || !photoZone) return;
+
+      photoInput.addEventListener('change', e => {
+        const files = Array.from(e.target.files);
+        const remaining = MAX_PHOTOS - receiptPhotos.length;
+        if (remaining <= 0) { alert('Maximum 4 photos allowed. Remove one first.'); return; }
+        const toAdd = files.slice(0, remaining);
+        if (files.length > remaining) alert(`Only ${remaining} more photo(s) can be added. Taking the first ${remaining}.`);
+        toAdd.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = ev => {
+            receiptPhotos.push(ev.target.result);
+            renderPhotoGrid();
+          };
+          reader.readAsDataURL(file);
+        });
+        photoInput.value = '';
+      });
+
+      // Drag & drop
+      photoZone.addEventListener('dragover', e => { e.preventDefault(); photoZone.style.borderColor = '#0f766e'; });
+      photoZone.addEventListener('dragleave', () => { photoZone.style.borderColor = ''; });
+      photoZone.addEventListener('drop', e => {
+        e.preventDefault(); photoZone.style.borderColor = '';
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        const remaining = MAX_PHOTOS - receiptPhotos.length;
+        files.slice(0, remaining).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = ev => { receiptPhotos.push(ev.target.result); renderPhotoGrid(); };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    function renderPhotoGrid() {
+      const grid = document.getElementById('photoGrid');
+      const zone = document.getElementById('photoUploadZone');
+      if (!grid) return;
+      grid.innerHTML = '';
+      receiptPhotos.forEach((src, i) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'photo-thumb-wrap';
+        wrap.innerHTML = `<img src="${src}" alt="Photo ${i+1}" /><button class="photo-thumb-remove" title="Remove photo">✕</button>`;
+        wrap.querySelector('button').addEventListener('click', () => {
+          receiptPhotos.splice(i, 1);
+          renderPhotoGrid();
+        });
+        grid.appendChild(wrap);
+      });
+      // Hide upload zone when at max
+      if (zone) zone.style.display = receiptPhotos.length >= MAX_PHOTOS ? 'none' : '';
+    }
+
+    // ── FINAL INITIALIZATION ──
+    function initializeScanPage() {
+      // Add Row button
+      const addBtn = document.getElementById("addBookRowBtn");
+      if (addBtn && !addBtn._initialized) {
+        addBtn.addEventListener("click", () => {
+          console.log("Add Row clicked");
+          addBookRow();
+        });
+        addBtn._initialized = true;
+      }
+
+      // Bulk Paste button
+      const bulkBtn = document.getElementById("bulkPasteBtn");
+      if (bulkBtn && !bulkBtn._initialized) {
+        bulkBtn.addEventListener("click", () => {
+          console.log("Bulk Paste clicked");
+          openBulkPasteDialog();
+        });
+        bulkBtn._initialized = true;
+      }
+
+      // Save Receipt button
+      const saveBtn = document.getElementById("saveReceiptBtn");
+      if (saveBtn && !saveBtn._initialized) {
+        saveBtn.addEventListener("click", () => {
+          console.log("Save Receipt clicked");
+          const receipt = collectData();
+          if (!receipt.items.length) {
+            receipt.items = [{ title:"", author:"", genre:"", condition:"Pre Loved", qty:1, unitPrice:0 }];
+          }
+
+          const errBanner = document.getElementById("errorBanner");
+          errBanner.style.display = "none";
+
+          const receipts = bnGetReceipts();
+          const idx      = receipts.findIndex(r => r.id === receipt.id);
+          if (idx >= 0) receipts[idx] = receipt;
+          else          receipts.push(receipt);
+
+          const ok = bnSaveReceipts(receipts);
+
+          if (ok) {
+            const check = bnGetReceipts();
+            const saved = check.find(r => r.id === receipt.id);
+            if (saved) {
+              document.getElementById("savedBanner").style.display = "flex";
+              const btn = document.getElementById("saveReceiptBtn");
+              btn.textContent  = "✓ Saved!";
+              btn.disabled     = true;
+              btn.style.background = "linear-gradient(135deg,#16a34a,#15803d)";
+              setTimeout(() => { window.location.href = "receipt-history.html"; }, 1500);
+            } else {
+              errBanner.textContent = "⚠ Save appeared to succeed but receipt not found — please try again.";
+              errBanner.style.display = "flex";
+            }
+          } else {
+            errBanner.textContent = "⚠ Could not save — localStorage may be full or blocked. Try clearing some space.";
+            errBanner.style.display = "flex";
+          }
+        });
+        saveBtn._initialized = true;
+      }
+
+      // Preview Receipt button
+      const prevBtn = document.getElementById("previewReceiptBtn");
+      if (prevBtn && !prevBtn._initialized) {
+        prevBtn.addEventListener("click", openPreview);
+        prevBtn._initialized = true;
+      }
+
+      // Close Preview button
+      const closeBtn = document.getElementById("closePreviewBtn");
+      if (closeBtn && !closeBtn._initialized) {
+        closeBtn.addEventListener("click", () => document.getElementById("previewModal").close());
+        closeBtn._initialized = true;
+      }
+
+      // Print Preview button
+      const printBtn = document.getElementById("printPreviewBtn");
+      if (printBtn && !printBtn._initialized) {
+        printBtn.addEventListener("click", () => window.print());
+        printBtn._initialized = true;
+      }
+
+      // Download Preview button
+      const dlBtn = document.getElementById("dlPreviewBtn");
+      if (dlBtn && !dlBtn._initialized) {
+        dlBtn.addEventListener("click", downloadPreview);
+        dlBtn._initialized = true;
+      }
+
+      console.log("Scan page initialized successfully");
+    }
+
+    // Initialize on DOMContentLoaded
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => { initializeScanPage(); initPhotoUpload(); });
+    } else {
+      initializeScanPage(); initPhotoUpload();
+    }
+  </script>
+</body>
+</html>

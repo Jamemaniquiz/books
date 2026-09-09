@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inventory - BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  </head>
+  <body class="inventory-page">
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a class="active" href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+      </nav>
+    </header>
+
+    <main class="container">
+
+      <!-- ── BookNest Receipt Modal ──────────────────────────────── -->
+      <dialog id="receiptModal" class="bn-modal">
+        <div class="bn-modal-inner">
+
+          <!-- modal action bar (hidden in screenshot) -->
+          <div class="bn-modal-bar modal-no-print">
+            <span style="font-weight:700;font-size:1rem;">📄 New Receipt</span>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+              <button id="bn-download-receipt" class="bn-btn-blue modal-no-print" type="button">📸 Save as Image</button>
+              <button id="bn-print-receipt"    class="bn-btn-slate modal-no-print" type="button">🖨 Print</button>
+              <button id="bn-save-receipt"     class="bn-btn-green modal-no-print" type="button">💾 Save Receipt</button>
+              <button id="bn-close-modal"      class="bn-btn-slate modal-no-print" type="button">✕ Close</button>
+            </div>
+          </div>
+
+          <!-- ── Printable area ── -->
+          <div id="receiptPrintArea" class="bn-receipt">
+
+            <!-- Header -->
+            <div class="bn-header">
+              <div class="bn-header-left">
+                <div class="bn-logo-circle">
+                    <img class="bn-logo-img" src="Assets/Booknest.png" alt="BookNest logo" />
+                </div>
+                <h1 class="bn-title">BOOKNEST</h1>
+              </div>
+              <div class="bn-invoice-info">
+                <h2 class="bn-invoice-label">ORDER INVOICE</h2>
+                <div class="bn-invoice-date">DATE: <span id="bn-receipt-date">—</span></div>
+                <div class="bn-invoice-date">Receipt #: <span id="bn-receipt-id" style="font-family:monospace;font-size:0.78rem">—</span></div>
+              </div>
+            </div>
+
+            <!-- Warning -->
+            <div class="bn-warning-box">
+              <div class="bn-warning-title">Please be reminded that cancellations or changes to orders are not allowed once the invoice has been issued.</div>
+              <div class="bn-warning-text">Kindly note that we sell pre-loved books unless stated otherwise. These may show signs of wear such as foxing, tanning, or minor water damage.</div>
+            </div>
+
+            <!-- Order table -->
+            <div class="bn-order-section">
+              <div class="bn-order-header">📚 ORDER DETAILS</div>
+              <table class="bn-table">
+                <thead>
+                  <tr>
+                    <th>TITLE</th>
+                    <th>AUTHOR</th>
+                    <th>GENRE</th>
+                    <th>TYPE</th>
+                    <th>PRICE</th>
+                    <th>CONDITION</th>
+                    <th>QTY</th>
+                    <th>TOTAL PRICE</th>
+                  </tr>
+                </thead>
+                <tbody id="bn-order-items"></tbody>
+              </table>
+            </div>
+
+            <!-- Total -->
+            <div class="bn-total-section">
+              <div class="bn-total-header">💰 TOTAL AMOUNT TO PAY 💰</div>
+              <div class="bn-books-total">Books Total: ₱<span id="bn-books-total">0.00</span></div>
+              <div class="bn-shipping-note">Shipping Fee is <u>NOT INCLUDED</u> in this invoice.</div>
+              <div class="bn-grand-total" id="bn-grand-total-display">₱ 0.00</div>
+              <div class="bn-pay-notice">! PAY THIS EXACT AMOUNT !</div>
+            </div>
+
+            <!-- Payment + Shipment -->
+            <div class="bn-info-grid">
+              <!-- Payment -->
+              <div class="bn-card bn-payment-card">
+                <div class="bn-card-title" style="color:#1d4ed8;justify-content:center;">💳 PAYMENT METHOD</div>
+                <div style="display:flex;justify-content:center;margin:12px 0">
+                  <div class="bn-gcash-badge">G</div>
+                </div>
+                <div class="bn-brand-name">BookNest</div>
+                <div style="background:#f8fbff;border:2px solid #2563eb;border-radius:8px;padding:8px;text-align:center;font-weight:700;font-size:1.1rem;color:#1e3a8a;margin-top:12px;">09764097987</div>
+              </div>
+
+              <!-- Shipment / Customer Info -->
+              <div class="bn-card bn-shipment-card">
+                <div class="bn-card-title" style="color:#1d4ed8;">📦 NEEDED FOR SHIPMENT</div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">NAME:</label>
+                  <input type="text" id="bn-customer-name" class="bn-editable modal-no-print" placeholder="Enter customer name" />
+                  <div class="bn-readonly-val" id="bn-display-name" style="display:none"></div>
+                </div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">ADDRESS:</label>
+                  <textarea id="bn-customer-address" class="bn-editable modal-no-print" placeholder="Enter shipping address" rows="2"></textarea>
+                  <div class="bn-readonly-val" id="bn-display-address" style="display:none"></div>
+                </div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">PHONE:</label>
+                  <input type="text" id="bn-customer-phone" class="bn-editable modal-no-print" placeholder="Enter phone number" />
+                  <div class="bn-readonly-val" id="bn-display-phone" style="display:none"></div>
+                </div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">PAYMENT:</label>
+                  <select id="bn-payment-method" class="bn-editable modal-no-print">
+                    <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Maya">Maya</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <div class="bn-readonly-val" id="bn-display-payment" style="display:none"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Important Notes -->
+            <div class="bn-note-wrap">
+              <div class="bn-thanks-card">Thank you for your purchase! ★</div>
+            </div>
+
+          </div><!-- end #receiptPrintArea -->
+        </div>
+      </dialog>
+
+      <!-- ── Inventory ──────────────────────────────────────────── -->
+      <section class="panel inv-panel">
+        <div class="panel-header">
+          <div>
+            <h2>📚 Inventory</h2>
+            <span class="muted">Click any cell to edit. Use <strong>Sold</strong> to record a sale.</span>
+          </div>
+          <div class="panel-header-actions">
+            <button class="btn danger" id="deleteAllBooksBtn" type="button">🗑 Delete All</button>
+          </div>
+        </div>
+
+        <div class="inv-banner-row">
+          <div class="inv-banner">
+            <div>
+              <div class="inv-banner-title">📚 Multiple Orders</div>
+              <div class="inv-banner-sub">Use this to invoice 2 or more books in one receipt. It opens the New Sale page.</div>
+            </div>
+            <a href="new-sale.html" class="btn primary inv-banner-btn">Open Multiple Orders →</a>
+          </div>
+          <div class="inv-banner">
+            <div>
+              <div class="inv-banner-title">🎁 Bundle Order</div>
+              <div class="inv-banner-sub">Set one fixed price for a set of books — individual book prices stay hidden. Opens the Bundle Order page.</div>
+            </div>
+            <a href="bundle-sale.html" class="btn primary inv-banner-btn">Open Bundle Order →</a>
+          </div>
+        </div>
+
+        <div class="inv-add-card">
+          <div class="inv-add-card-title">
+            <span>➕ Add a Book</span>
+            <button class="btn ghost pc-trigger" id="priceCalcBtn" type="button">🧮 TikTok Price Calculator</button>
+          </div>
+          <div class="sheet-add">
+            <div class="sheet-row">
+              <input id="addTitle"     type="text"   placeholder="Title" />
+              <input id="addAuthor"    type="text"   placeholder="Author" />
+              <select id="addGenre">
+                <option value="">-- Genre --</option>
+                <option value="Fiction">Fiction</option>
+                <option value="Non-Fiction">Non-Fiction</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Romance">Romance</option>
+                <option value="Self-Help">Self-Help</option>
+                <option value="Biography">Biography</option>
+                <option value="Science">Science</option>
+                <option value="Technology">Technology</option>
+                <option value="Children's">Children's</option>
+                <option value="General">General</option>
+                <option value="Other">Other</option>
+              </select>
+              <div id="genreAiHint" class="muted" style="grid-column:1 / -1;justify-self:start;font-size:12px;line-height:1.3;padding-left:2px;">
+                Auto genre: General
+              </div>
+              <input id="addPrice"     type="number" step="0.01" min="0" placeholder="Price" />
+              <input id="addStock"     type="number" step="1"    min="0" placeholder="Stock" />
+              <select id="addType">
+                <option value="Paperback">Paperback</option>
+                <option value="Hardbound">Hardbound</option>
+                <option value="MMPB">MMPB</option>
+                <option value="Sprayed">Sprayed</option>
+                <option value="Leatherbound">Leatherbound</option>
+                <option value="Slipcase">Slipcase</option>
+                <option value="Special Edition">Special Edition</option>
+                <option value="Box Set">Box Set</option>
+                <option value="Signed">Signed</option>
+                <option value="Other">Other</option>
+              </select>
+              <select id="addCondition">
+                <option value="New">New</option>
+                <option value="Pre Loved">Pre Loved</option>
+                <option value="Remaindered">Remaindered</option>
+              </select>
+              <input id="addBox" type="text" placeholder="Box (e.g. Box 1)" title="Which box/batch this book came from" list="boxSuggestions" />
+              <datalist id="boxSuggestions"></datalist>
+              <button class="btn primary" id="addBookBtn" type="button">+ Add Book</button>
+            </div>
+            <details class="bulk-box">
+              <summary>📋 Bulk paste (Title, Author, Genre, Price, Stock, Type, Condition, Box)</summary>
+              <textarea id="bulkInput" rows="6" placeholder="Paste from Excel/Sheets or type — flexible formats accepted:&#10;&#10;Minimum (2 columns):  Title, Author&#10;e.g.  The Alchemist, Paulo Coelho&#10;&#10;With price:  Title, Author, Genre, Price&#10;e.g.  The Alchemist, Paulo Coelho, Fiction, 150&#10;&#10;Full (7 columns):  Title, Author, Genre, Price, Stock, Type, Condition&#10;e.g.  The Alchemist, Paulo Coelho, Fiction, 150, 3, Paperback, Pre Loved&#10;&#10;With a box (add a field starting with Box:):&#10;e.g.  The Alchemist, Paulo Coelho, Fiction, 150, 3, Paperback, Pre Loved, Box: Box 1&#10;&#10;Type: Paperback | Hardbound | MMPB | Sprayed | Leatherbound | Box Set | Signed&#10;Condition: New | Pre Loved | Remaindered&#10;&#10;Tab-separated (copied from Excel/Google Sheets) also works!"></textarea>
+              <div class="bulk-actions">
+                <button class="btn" id="bulkAddBtn" type="button">Add Rows</button>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="filters inv-filters">
+          <input id="searchInput" type="search" placeholder="🔍 Search by title or author" />
+          <select id="genreFilter"><option value="">All genres</option></select>
+          <select id="boxFilter"><option value="">All boxes</option></select>
+          <select id="stockFilter">
+            <option value="">All stock</option>
+            <option value="low">Low stock (&lt; 5)</option>
+            <option value="out">Out of stock</option>
+            <option value="reserved">🗓️ Layaway</option>
+          </select>
+          <select id="conditionFilter">
+            <option value="">All conditions</option>
+            <option value="New">New</option>
+            <option value="Pre Loved">Pre Loved</option>
+            <option value="Remaindered">Remaindered</option>
+          </select>
+        </div>
+
+        <div class="table-wrap inventory-wrap">
+          <table class="inventory-table">
+            <colgroup>
+              <col style="width:17%">
+              <col style="width:12%">
+              <col style="width:10%">
+              <col style="width:7%">
+              <col style="width:6%">
+              <col style="width:9%">
+              <col style="width:10%">
+              <col style="width:9%">
+              <col style="width:20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Title</th><th>Author</th><th>Genre</th>
+                <th>Price</th><th>Stock</th><th>Box</th><th>Type</th><th>Condition</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+
+    <style>
+      /* ── BookNest Modal Wrapper ── */
+      .bn-modal {
+        border: none; border-radius: 20px; padding: 0;
+        width: min(1140px, 96vw); max-height: 92vh; overflow: hidden;
+        box-shadow: 0 24px 64px rgba(15,23,42,0.2);
+      }
+      .bn-modal::backdrop { background: rgba(15,23,42,0.5); }
+      .bn-modal-inner {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-height: 92vh;
+        overflow-y: auto;
+        background: #fff;
+      }
+
+      .bn-modal-bar {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+        gap: 0.6rem; padding: 1rem 1.4rem;
+        background: #0f172a; color: #fff;
+        border-radius: 20px 20px 0 0;
+      }
+      .bn-btn-blue  { background:#2563eb;color:#fff;border:none;padding:9px 18px;border-radius:999px;font-weight:700;cursor:pointer;font-size:0.85rem;transition:all 0.15s ease; }
+      .bn-btn-green { background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;padding:9px 18px;border-radius:999px;font-weight:700;cursor:pointer;font-size:0.85rem;transition:all 0.15s ease; }
+      .bn-btn-slate { background:#334155;color:#fff;border:none;padding:9px 18px;border-radius:999px;font-weight:700;cursor:pointer;font-size:0.85rem;transition:all 0.15s ease; }
+      .bn-btn-blue:hover,.bn-btn-green:hover,.bn-btn-slate:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(15,23,42,0.25); }
+
+      /* ── BookNest Receipt Body ── */
+      .bn-receipt {
+        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+        background: white;
+        color: #1f2937;
+      }
+
+      .bn-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+        color: white;
+        padding: 28px 36px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .bn-header-left { display:flex;align-items:center;gap:16px; }
+      .bn-logo-circle {
+        width:72px;height:72px;background:white;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:2rem;border:3px solid #ffd93d;
+        box-shadow:0 4px 14px rgba(255,217,61,0.3);
+        overflow:hidden;
+      }
+      .bn-logo-img { width: 100%; height: 100%; object-fit: contain; padding: 6px; background: #fff; }
+      .bn-title { font-size:34px;font-weight:800;color:#ffd93d;letter-spacing:2px;margin:0; }
+      .bn-invoice-info { text-align:right; }
+      .bn-invoice-label { color:#ffd93d;font-size:20px;margin:0 0 4px; }
+      .bn-invoice-date  { color:#e0e0e0;font-size:13px; }
+
+      .bn-warning-box {
+        margin:24px 32px;border:2px solid #bfdbfe;padding:16px;
+        background:#eff6ff;border-radius:12px;
+      }
+      .bn-warning-title { color:#e74c3c;font-weight:700;margin-bottom:6px; }
+      .bn-warning-title::before { content:"⚠️ ";font-size:16px; }
+      .bn-warning-text  { color:#555;font-size:12px;line-height:1.5; }
+
+      .bn-order-section { margin:0 32px 24px; }
+      .bn-order-header {
+        background:linear-gradient(135deg,#1d4ed8,#1e3a8a);color:#f8fafc;
+        padding:12px;text-align:center;font-size:17px;font-weight:700;
+        border-radius:12px 12px 0 0;
+      }
+      .bn-table { width:100%;border-collapse:collapse;border:2px solid #bfdbfe;border-top:none;border-radius:0 0 12px 12px;overflow:hidden; }
+      .bn-table thead { background:#2563eb; }
+      .bn-table thead th { color:#000000 !important;background:#dbeafe; }
+      .bn-table th,
+      .bn-table td { padding:11px 13px;text-align:left;border-bottom:1px solid #e2e8f0; }
+      .bn-table th { font-size:12px;text-transform:uppercase;letter-spacing:0.04em; }
+      .bn-table tbody tr:hover { background:#eff6ff; }
+
+      .bn-total-section {
+        background:linear-gradient(135deg,#dbeafe,#bfdbfe);
+        margin:0 32px 24px;padding:28px;border:2px solid #93c5fd;
+        text-align:center;border-radius:14px;
+      }
+      .bn-total-header  { font-size:22px;font-weight:700;color:#0f172a;margin-bottom:14px; }
+      .bn-books-total   { font-size:16px;color:#1e3a8a;font-weight:600;margin-bottom:6px; }
+      .bn-shipping-note { font-size:13px;color:#e74c3c;font-weight:700;margin-bottom:14px; }
+      .bn-grand-total   { background:#1e3a8a;color:#f8fafc;padding:16px;font-size:30px;font-weight:700;border-radius:12px;box-shadow:0 8px 20px rgba(30,58,138,0.22);margin-bottom:10px; }
+      .bn-pay-notice    { color:#e74c3c;font-weight:700;font-size:14px; }
+
+      .bn-info-grid {
+        display:flex;gap:16px;margin:0 32px 24px;flex-wrap:wrap;
+      }
+      .bn-card { flex:1;min-width:260px;padding:22px;border-radius:12px;box-shadow:0 6px 16px rgba(15,23,42,0.09); }
+      .bn-payment-card { background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #60a5fa;text-align:center; }
+      .bn-shipment-card { background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #60a5fa; }
+      .bn-card-title    { font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px; }
+      .bn-gcash-badge   { background:#007bff;color:white;width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.2); }
+      .bn-brand-name    { font-size:16px;font-weight:700;color:#1e3a8a;margin-top:8px; }
+      .bn-field-group   { margin-bottom:12px; }
+      .bn-field-label   { font-weight:700;color:#1d4ed8;display:block;margin-bottom:4px;font-size:13px; }
+      .bn-editable {
+        width:100%;padding:8px 10px;border:1px solid #93c5fd;border-radius:8px;
+        font-size:13px;background:#fff;box-sizing:border-box;
+        font-family:inherit;resize:vertical;
+      }
+      .bn-editable:focus { outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.15); }
+      .bn-readonly-val  { font-size:13px;color:#1f2937;padding:2px 0; }
+
+      .bn-note-wrap { margin:0 32px 0; }
+      .bn-note-card {
+        background:linear-gradient(180deg,#fff,#f8fbff);
+        border:2px solid #bfdbfe;border-left:7px solid #2563eb;
+        border-radius:14px;padding:24px 28px;margin-bottom:16px;
+      }
+      .bn-note-title    { font-size:22px;font-weight:700;color:#1e3a8a;margin-bottom:10px; }
+      .bn-note-subtitle { font-size:13px;color:#475569;margin-bottom:12px;line-height:1.5; }
+      .bn-note-list     { font-size:13px;line-height:1.6;margin:0;padding:0;list-style:none;color:#334155; }
+      .bn-note-list li  { margin-bottom:8px;background:#fff;border:1px solid #dbeafe;border-radius:8px;padding:8px 10px; }
+      .bn-thanks-card {
+        background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;
+        padding:16px;text-align:center;font-size:22px;font-weight:700;color:#1e3a8a;
+        margin-bottom:24px;border:2px solid #93c5fd;
+      }
+
+      .inv-select {
+        width: 100%; padding: 4px 6px; border-radius: 8px;
+        border: 1px solid var(--border); font-size: 0.9rem;
+        background: #fff; cursor: pointer;
+      }
+      .inv-select:focus { outline: none; border-color: var(--primary); }
+      .screenshot-mode .bn-editable     { display:none !important; }
+      .screenshot-mode .bn-readonly-val { display:block !important; }
+      .screenshot-mode .modal-no-print  { display:none !important; }
+
+      @media print {
+        body > *:not(#receiptModal) { display:none !important; }
+        .bn-modal { display:block !important;position:static !important;box-shadow:none !important;width:100% !important;max-height:none !important; }
+        .bn-modal-bar,.modal-no-print { display:none !important; }
+        .bn-editable { border:none !important;background:transparent !important; }
+      }
+
+      /* ══════════════════════════════════════════════════════════
+         Inventory page polish — matches the Receipts page look
+         ══════════════════════════════════════════════════════════ */
+      body.inventory-page .container {
+        max-width: none;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      body.inventory-page .panel.inv-panel {
+        width: 100%;
+        min-height: calc(100vh - 92px);
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+        padding: 2.4rem 3vw 3rem;
+      }
+      body.inventory-page .panel.inv-panel:hover {
+        box-shadow: none;
+        position: static;
+        overflow: visible;
+      }
+      body.inventory-page .panel.inv-panel::after { display: none; }
+      body.inventory-page .panel-header { margin-bottom: 1.4rem; }
+      body.inventory-page .panel-header h2 { font-size: 1.5rem; margin: 0 0 4px; }
+
+      /* Multi-book invoice banner */
+      .inv-banner-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin: 0 0 1.4rem;
+      }
+      .inv-banner {
+        margin: 0;
+        padding: 1.1rem 1.3rem;
+        border: 1px solid rgba(15, 118, 110, 0.22);
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), #f8fbff);
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 1rem; flex-wrap: wrap;
+        box-shadow: 0 6px 18px rgba(15, 118, 110, 0.1);
+        flex: 1 1 320px;
+      }
+      .inv-banner-title { font-weight: 800; color: var(--primary-dark); font-size: 1.02rem; margin-bottom: 4px; }
+      .inv-banner-sub   { color: var(--muted); font-size: 0.92rem; line-height: 1.4; }
+      .inv-banner-btn {
+        text-decoration: none; display: inline-flex; align-items: center;
+        justify-content: center; white-space: nowrap;
+        background: linear-gradient(135deg, var(--primary), #14b8a6);
+        border-color: transparent;
+      }
+      .inv-banner-btn:hover { background: linear-gradient(135deg, var(--primary-dark), #0ea5a4); }
+
+      /* Add-book card */
+      .inv-add-card {
+        margin: 0 0 1.4rem;
+        padding: 1.3rem 1.4rem 1.5rem;
+        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+      }
+      .inv-add-card-title {
+        font-weight: 800; color: var(--text); font-size: 1rem;
+        margin-bottom: 1rem; display: flex; align-items: center; gap: 6px;
+        justify-content: space-between; flex-wrap: wrap;
+      }
+      .inv-add-card .sheet-add { margin-bottom: 0; }
+
+      .inv-filters {
+        background: rgba(248,250,252,0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 0.9rem 1rem;
+        margin-bottom: 1.4rem !important;
+      }
+
+      /* Inventory table — sticky gradient header, pill buttons, hover accent */
+      .inventory-wrap { overflow-x: auto; border-radius: 16px; }
+      .inventory-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+      }
+      .inventory-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: linear-gradient(135deg, #0f766e, #0b3f3b);
+        color: #f8fafc !important;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        padding: 0.9rem 0.9rem;
+        border-bottom: none;
+      }
+      .inventory-table th,
+      .inventory-table td {
+        padding: 0.75rem 0.85rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+        text-align: left;
+        vertical-align: middle;
+        border-right: none;
+      }
+      .inventory-table tbody tr {
+        background: #fff;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      }
+      .inventory-table tbody tr:hover {
+        background: #f8fbff;
+        box-shadow: inset 4px 0 0 rgba(15, 118, 110, 0.55);
+      }
+      .inventory-table td[contenteditable="true"]:focus {
+        background: #eefaf8;
+        box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.35);
+        border-radius: 6px;
+      }
+
+      /* Pill-style action buttons for inventory rows */
+      .inv-action-btn {
+        border-radius: 999px !important;
+        padding: 0.4rem 0.85rem !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        border-width: 1.5px !important;
+        white-space: nowrap;
+        transition: all 0.15s ease;
+      }
+      .inv-action-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(15,23,42,0.14); }
+      .inv-action-btn.sold {
+        background: linear-gradient(135deg, var(--primary), #14b8a6) !important;
+        color: #fff !important; border-color: transparent !important;
+      }
+      .inv-action-btn.reserve {
+        background: rgba(15, 118, 110, 0.08) !important;
+        color: var(--primary-dark) !important; border-color: rgba(15, 118, 110, 0.3) !important;
+      }
+      .inv-action-btn.reserve.is-reserved {
+        background: rgba(107,78,255,0.12) !important;
+        color: #6b4eff !important; border-color: rgba(107,78,255,0.35) !important;
+      }
+      .inv-action-btn.delete {
+        background: rgba(239,68,68,0.08) !important;
+        color: var(--danger) !important; border-color: rgba(239,68,68,0.3) !important;
+      }
+
+      /* Keep Actions column visible while scrolling horizontally */
+      .inventory-table th:last-child,
+      .inventory-table td:last-child {
+        position: sticky;
+        right: 0;
+        background: var(--card-solid, #fff);
+        box-shadow: -2px 0 6px rgba(15,23,42,0.06);
+        z-index: 1;
+      }
+      .inventory-table thead th:last-child {
+        z-index: 3;
+        background: linear-gradient(135deg, #0f766e, #0b3f3b);
+      }
+
+      @media (max-width: 720px) {
+        body.inventory-page .panel.inv-panel { padding: 1.6rem 4vw 2.4rem; }
+        .inventory-wrap { margin: 0 -0.25rem; }
+      }
+    </style>
+
+    <script src="app.js"></script>
+  </body>
+</html>

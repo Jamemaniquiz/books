@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a class="active" href="index.html">Home</a>
+        <a href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>💰 Quick Price Calculator</h2>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">Enter a price to instantly see what 20% and 25% of it comes out to — handy for quick markups or discounts.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+          <div style="flex:1;min-width:180px">
+            <label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">Price (₱)</label>
+            <input type="number" id="pcPrice" placeholder="e.g. 1500" min="0" step="0.01" oninput="calcQuickPercents()" />
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div>
+            <span class="stat-number" id="pcOut20">₱0 (₱0)</span>
+            <span class="stat-label">20% of price (price + 20%)</span>
+          </div>
+          <div>
+            <span class="stat-number" id="pcOut25">₱0 (₱0)</span>
+            <span class="stat-label">25% of price (price + 25%)</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero">
+        <div>
+          <h1>Inventory, Sales & Receipts</h1>
+          <p class="muted">A clean workspace to manage stock, record sales, and keep every receipt organized.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="inventory.html">Manage Inventory</a>
+            <a class="btn" href="receipt-history.html">Past Receipts</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h3>Quick Stats</h3>
+          <div class="stat-grid">
+            <div>
+              <span class="stat-number" id="statTitles">0</span>
+              <span class="stat-label">Titles</span>
+            </div>
+            <div>
+              <span class="stat-number" id="statInStock">0</span>
+              <span class="stat-label">In Stock</span>
+            </div>
+            <div>
+              <span class="stat-number" id="statTotal">₱0</span>
+              <span class="stat-label">Total Sales</span>
+            </div>
+            <div>
+              <span class="stat-number" id="statInventoryValue">₱0</span>
+              <span class="stat-label">Inventory Value</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;color:var(--muted);font-weight:600">
+            Net Revenue: <span id="statNetTotal">₱0</span>
+          </div>
+          <div style="margin-top:6px;color:var(--muted);font-weight:600" title="Money spent on boxes that haven't sold enough yet to earn that cost back — already subtracted from Net Revenue above, shown here on its own so you can see it clearly.">
+            Still Tied Up in Boxes (not profitable yet): <span id="statPendingBoxCost">₱0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recent Activity</h2>
+          <a class="btn ghost" href="inventory.html">Manage Inventory</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Book</th><th>Qty</th><th>Total</th></tr>
+            </thead>
+            <tbody id="recentSales"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Sales Summary</h2></div>
+        <div class="summary-grid" id="summaryGrid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Data & Backup</h2></div>
+        <p class="muted" style="margin-bottom:1rem">Download a full transfer backup of all your books, sales, receipts, purchases, and shipment reviews. Restore it on your new computer anytime.</p>
+          <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center">
+          <button class="btn primary" id="backupBtn">⬇ Download Full Transfer Backup</button>
+          <button class="btn ghost" id="restoreBtn">⬆ Restore from Backup</button>
+          <button class="btn ghost" id="transferHelpBtn">🖥️ Transfer to New Computer</button>
+          <button class="btn ghost" id="eodBtn">📋 End of Day Summary</button>
+          <button class="btn" id="recordPurchaseBtn">📦 Record a Box Purchase</button>
+          <datalist id="purchaseBoxSuggestions"></datalist>
+          <input type="file" id="restoreInput" accept=".json" style="display:none" />
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-header"><h2>Purchases</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Box</th><th>Photo</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
+            <tbody id="purchaseRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>📦 Box Profit &amp; Loss</h2>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">
+          For every box you've bought, this compares what the box cost you against what you've actually earned back from books tagged with that box — so you can see at a glance which boxes made money and which didn't.
+          Tag every book with its Box (in Inventory, Bulk Paste, Scan Receipt, or New Sale) so this stays accurate.
+        </p>
+        <div class="box-chart" id="boxProfitChart"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Box</th>
+                <th>Photo</th>
+                <th>Cost</th>
+                <th>Revenue Earned</th>
+                <th>Unsold Stock (value)</th>
+                <th>Profit / Loss</th>
+              </tr>
+            </thead>
+            <tbody id="boxProfitRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+    <script src="app.js"></script>
+    <script>
+      function calcQuickPercents() {
+        const raw = parseFloat(document.getElementById("pcPrice").value);
+        const price = isNaN(raw) || raw < 0 ? 0 : raw;
+        const amt20 = price * 0.20;
+        const amt25 = price * 0.25;
+        document.getElementById("pcOut20").textContent = `₱${amt20.toFixed(2)} (₱${(price + amt20).toFixed(2)})`;
+        document.getElementById("pcOut25").textContent = `₱${amt25.toFixed(2)} (₱${(price + amt25).toFixed(2)})`;
+      }
+      // Example: for a ₱250 price, 20% is ₱50 (price + 20% = ₱300) and 25% is ₱62.50 (price + 25% = ₱312.50).
+      document.addEventListener("DOMContentLoaded", calcQuickPercents);
+    </script>
+  </body>
+</html>

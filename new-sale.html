@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookNest — New Sale</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ── Invoice design tokens ──────────────────────────────────────────
+           Reuses the site's teal brand (--primary in styles.css) rather than
+           the unrelated blue/purple/yellow this page used to run on its own,
+           and adds a warm paper tone + a serif for the bits that read as
+           "this is a receipt", so the page still feels distinct without
+           inventing a second brand. */
+        :root {
+            --ink: #17302c;
+            --paper: #fffefc;
+            --paper-warm: #f6f1e4;
+            --line: rgba(23, 48, 44, 0.14);
+            --muted: #5c6d68;
+            --teal: #0f766e;
+            --teal-deep: #0b3f3b;
+            --teal-soft: rgba(15, 118, 110, 0.08);
+            --gold: #a9782f;
+            --brick: #a8433a;
+            --brick-soft: rgba(168, 67, 58, 0.09);
+        }
+
+        body { padding-bottom: 3rem; }
+
+        .serif { font-family: "Fraunces", "Iowan Old Style", Georgia, serif; }
+
+        /* ── Page shell ─────────────────────────────────────────────────── */
+        .ns-page { max-width: 980px; }
+
+        .ns-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1.2rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.6rem;
+        }
+
+        .ns-toolbar h1 {
+            font-size: 1.7rem;
+            letter-spacing: -0.01em;
+            margin: 0 0 0.3rem;
+        }
+
+        .ns-toolbar p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 46ch;
+        }
+
+        .ns-toolbar-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── The invoice itself ────────────────────────────────────────── */
+        .invoice {
+            background: var(--paper);
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            box-shadow: 0 26px 60px rgba(11, 30, 27, 0.14);
+            overflow: hidden;
+            animation: rise 0.45s ease both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .invoice { animation: none; }
+        }
+
+        .bn-header {
+            background: var(--teal-deep);
+            color: var(--paper);
+            padding: 30px 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .bn-header-left { display: flex; align-items: center; gap: 16px; }
+
+        .bn-logo-circle {
+            width: 56px;
+            height: 56px;
+            background: var(--paper);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .bn-logo-img { width: 100%; height: 100%; object-fit: cover; }
+
+        .bn-title {
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            margin: 0;
+        }
+
+        .bn-tagline {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 2px 0 0;
+        }
+
+        .bn-invoice-info { text-align: right; }
+
+        .bn-invoice-label {
+            font-size: 15px;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.75);
+            margin: 0 0 4px;
+            font-weight: 500;
+        }
+
+        .bn-invoice-date { color: var(--paper); font-size: 14px; font-weight: 600; }
+
+        /* Section framing */
+        .bn-order-section { margin: 30px 32px 0; }
+
+        .bn-order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.4rem 1.2rem;
+            margin-bottom: 14px;
+        }
+
+        .bn-order-header h2 {
+            font-size: 19px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .bn-order-header .hint {
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .book-finder {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .book-finder input,
+        .book-finder select {
+            width: 100%;
+        }
+
+        .book-finder-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        #bookFinderCount {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--teal-deep);
+            background: var(--teal-soft);
+            padding: 6px 12px;
+            border-radius: 999px;
+        }
+
+        .chip-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+        .genre-chip {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: 0.15s ease;
+        }
+
+        .genre-chip:hover { border-color: var(--teal); color: var(--teal-deep); }
+
+        .genre-chip.active {
+            background: var(--teal);
+            border-color: var(--teal);
+            color: #fff;
+        }
+
+        /* Table */
+        .table-scroll {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+        }
+
+        .bn-table {
+            width: 100%;
+            min-width: 900px;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .bn-table col.col-title    { width: 20%; }
+        .bn-table col.col-author   { width: 14%; }
+        .bn-table col.col-genre    { width: 10%; }
+        .bn-table col.col-type     { width: 10%; }
+        .bn-table col.col-condition{ width: 11%; }
+        .bn-table col.col-qty      { width: 6%; }
+        .bn-table col.col-price    { width: 10%; }
+        .bn-table col.col-total    { width: 10%; }
+        .bn-table col.col-action   { width: 9%; }
+
+        .bn-table thead { background: var(--paper-warm); }
+
+        .bn-table th {
+            color: var(--muted);
+            padding: 10px 10px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .bn-table td {
+            padding: 7px 8px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: middle;
+        }
+
+        .bn-table tbody tr:last-child td { border-bottom: none; }
+        .bn-table tbody tr:hover { background: var(--teal-soft); }
+
+        .bn-table select,
+        .bn-table input {
+            width: 100%;
+            padding: 7px 8px;
+            border-radius: 8px;
+            border: 1.5px solid var(--line);
+            font-size: 13px;
+            font-family: inherit;
+            background: #fff;
+            color: var(--ink);
+        }
+
+        .bn-table input[type="number"] { text-align: center; font-weight: 600; }
+
+        .bn-table select:focus,
+        .bn-table input:focus {
+            outline: none;
+            border-color: var(--teal);
+            box-shadow: 0 0 0 3px var(--teal-soft);
+        }
+
+        .bn-table input:disabled {
+            background: #f3f4f2;
+            color: var(--muted);
+            cursor: not-allowed;
+        }
+
+        .bn-table input.book-total {
+            background: var(--teal-soft);
+            border-color: rgba(15, 118, 110, 0.25);
+            color: var(--teal-deep);
+            font-weight: 700;
+        }
+
+        .btn-add-row {
+            margin: 14px 0 0;
+        }
+
+        /* Totals */
+        .bn-total-section {
+            margin: 26px 32px 0;
+            padding: 26px 28px;
+            background: var(--paper-warm);
+            border-radius: 14px;
+            border: 1px solid var(--line);
+        }
+
+        .bn-total-header {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--teal-deep);
+        }
+
+        .bn-shipping-controls {
+            display: grid;
+            gap: 10px;
+            max-width: 460px;
+            margin: 0 auto 16px;
+        }
+
+        .bn-shipping-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .bn-shipping-row label {
+            font-weight: 600;
+            color: var(--ink);
+            font-size: 13.5px;
+        }
+
+        .bn-shipping-row select,
+        .bn-shipping-row input {
+            padding: 8px 10px;
+            border: 1.5px solid var(--line);
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .bn-shipping-row input { width: 100px; text-align: center; }
+
+        #bubble-wrap-note {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .bn-books-total {
+            display: flex;
+            justify-content: space-between;
+            max-width: 300px;
+            margin: 0 auto 6px;
+            font-size: 14.5px;
+            color: var(--ink);
+        }
+
+        .bn-shipping-note {
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .bn-grand-total {
+            background: var(--teal-deep);
+            color: var(--paper);
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .bn-grand-total .label {
+            display: block;
+            font-size: 12.5px;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .bn-grand-total .amount {
+            font-family: "Fraunces", Georgia, serif;
+            font-size: 32px;
+            font-weight: 600;
+        }
+
+        .bn-pay-notice {
+            text-align: center;
+            font-size: 13px;
+            color: var(--brick);
+            font-weight: 600;
+        }
+
+        /* Info grid */
+        .bn-info-grid {
+            display: flex;
+            gap: 18px;
+            margin: 26px 32px 0;
+            flex-wrap: wrap;
+        }
+
+        .bn-card {
+            flex: 1;
+            min-width: 260px;
+            padding: 22px 24px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: var(--paper);
+        }
+
+        .bn-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            color: var(--teal-deep);
+        }
+
+        .bn-payment-card select { width: 100%; }
+
+        .field-group { margin-bottom: 12px; }
+
+        .field-group:last-child { margin-bottom: 0; }
+
+        .field-label {
+            font-weight: 600;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12.5px;
+        }
+
+        .field-group input,
+        .field-group textarea { width: 100%; }
+
+        .field-group textarea { min-height: 64px; resize: vertical; }
+
+        .bn-note-wrap { margin: 22px 32px 32px; }
+
+        .bn-thanks-card {
+            text-align: center;
+            font-family: "Fraunces", Georgia, serif;
+            font-style: italic;
+            font-size: 17px;
+            color: var(--teal-deep);
+            padding-top: 6px;
+            border-top: 1px solid var(--line);
+        }
+
+        @media print {
+            .ns-toolbar, .site-header, .site-footer { display: none; }
+            .invoice { box-shadow: none; border: none; }
+        }
+
+        @media (max-width: 720px) {
+            .bn-header { text-align: center; justify-content: center; }
+            .bn-invoice-info { text-align: center; }
+            .bn-order-section, .bn-total-section, .bn-info-grid, .bn-note-wrap { margin-left: 18px; margin-right: 18px; }
+            .book-finder { grid-template-columns: 1fr; }
+        }
+
+        /* ── Notice / confirmation dialog (rendered by app.js via showNotice) ── */
+        dialog.action-modal {
+            margin: auto;
+            border: none;
+            border-radius: 18px;
+            padding: 0;
+            width: min(440px, 92vw);
+            background: var(--paper);
+            box-shadow: 0 28px 70px rgba(11, 30, 27, 0.32);
+        }
+        .action-modal::backdrop {
+            background: rgba(11, 30, 27, 0.5);
+            backdrop-filter: blur(3px);
+        }
+        .action-modal__header { padding: 22px 26px 10px; display: flex; gap: 14px; align-items: center; }
+        .action-modal__icon {
+            width: 38px; height: 38px; border-radius: 10px;
+            display: grid; place-items: center;
+            background: var(--teal-soft); color: var(--teal-deep);
+            font-weight: 700; font-size: 14px; flex-shrink: 0;
+        }
+        .action-modal__title { font-size: 17px; font-weight: 700; margin: 0; color: var(--ink); }
+        .action-modal__body { padding: 0 26px 8px; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+        .action-modal__input { margin-top: 14px; display: grid; gap: 6px; }
+        .action-modal__label { font-weight: 600; color: var(--muted); font-size: 13px; }
+        .action-modal__input input {
+            width: 100%; padding: 10px 12px; border-radius: 9px;
+            border: 1.5px solid var(--line); font-size: 14px; font-family: inherit;
+        }
+        .action-modal__input input:focus {
+            outline: none; border-color: var(--teal);
+            box-shadow: 0 0 0 3px var(--teal-soft);
+        }
+        .action-modal__actions { padding: 18px 26px 26px; display: flex; gap: 10px; justify-content: flex-end; }
+        .action-modal .btn { border: 1.5px solid var(--line); padding: 9px 20px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 14px; font-family: inherit; }
+        .action-modal .btn.modal-primary { background: var(--teal); color: #fff; border-color: transparent; }
+        .action-modal .btn.modal-ghost { background: transparent; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a class="active" href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+      </nav>
+    </header>
+
+    <main class="container ns-page">
+        <div class="ns-toolbar">
+            <div>
+                <h1>New sale</h1>
+                <p>Pick books from stock, confirm the buyer's details, and BookNest builds the receipt for you.</p>
+            </div>
+            <div class="ns-toolbar-actions">
+                <a href="inventory.html" class="btn ghost">← Back</a>
+                <button type="button" class="btn" onclick="resetForm()">Reset</button>
+                <button type="button" class="btn primary" onclick="createSale()">Create sale &amp; receipt</button>
+            </div>
+        </div>
+
+        <div class="receipt-box invoice" id="invoice">
+            <!-- Header -->
+            <div class="bn-header">
+                <div class="bn-header-left">
+                    <div class="bn-logo-circle">
+                        <img class="bn-logo-img" src="Assets/Booknest.png" alt="BookNest logo" />
+                    </div>
+                    <div>
+                        <h1 class="bn-title serif">BookNest</h1>
+                        <p class="bn-tagline">Pre-loved &amp; new books</p>
+                    </div>
+                </div>
+                <div class="bn-invoice-info">
+                    <h2 class="bn-invoice-label serif">Order invoice</h2>
+                    <div class="bn-invoice-date" id="current-date">—</div>
+                </div>
+            </div>
+
+            <!-- Order Details -->
+            <div class="bn-order-section">
+                <div class="bn-order-header">
+                    <h2>Books ordered</h2>
+                    <span class="hint">Every field, including price, is editable — fix anything that's off.</span>
+                </div>
+                <div class="book-finder">
+                    <input id="bookSearch" type="search" placeholder="Search by title or author" />
+                    <select id="bookGenreFilter">
+                        <option value="">All genres</option>
+                    </select>
+                    <button type="button" id="clearBookFilters" class="btn ghost">Clear</button>
+                </div>
+                <div class="book-finder-meta">
+                    <span id="bookFinderCount">Showing 0 books</span>
+                    <div id="bookGenreChips" class="chip-row"></div>
+                </div>
+                <div class="table-scroll">
+                <table class="bn-table">
+                    <colgroup>
+                        <col class="col-title"><col class="col-author"><col class="col-genre">
+                        <col class="col-type"><col class="col-condition"><col class="col-qty">
+                        <col class="col-price"><col class="col-total"><col class="col-action">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Genre</th>
+                            <th>Type</th>
+                            <th>Condition</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-items">
+                        <!-- Rows added dynamically -->
+                    </tbody>
+                </table>
+                </div>
+                <button class="btn ghost btn-add-row" onclick="addRow()">+ Add another book</button>
+            </div>
+
+            <!-- Total Section -->
+            <div class="bn-total-section">
+                <div class="bn-total-header">Total due</div>
+                <div class="bn-shipping-controls">
+                    <div class="bn-shipping-row">
+                        <label>Shipping carrier</label>
+                        <select id="shipping-method" onchange="calculateTotal()">
+                            <option value="jnt">🚚 J&amp;T Express</option>
+                            <option value="tiktok">🛍️ TikTok Shop</option>
+                            <option value="piling">📥 Piling</option>
+                        </select>
+                    </div>
+                    <div class="bn-shipping-row">
+                        <label id="sf-fee-label">SF Fee</label>
+                        <input type="number" id="shipping-cost" value="0" min="0" step="0.01" oninput="calculateTotal()" onchange="calculateTotal()">
+                    </div>
+                </div>
+                <div id="bubble-wrap-note" style="display:none">+ ₱20.00 rent fee (TikTok Shop)</div>
+                <div class="bn-books-total"><span>Books total</span><span>₱<span id="books-total">0.00</span></span></div>
+                <div class="bn-shipping-note" id="shipping-note-text">Shipping fee is not included in this invoice.</div>
+                <div class="bn-grand-total">
+                    <span class="label">Amount to pay</span>
+                    <span class="amount" id="grand-total-display">₱ 0.00</span>
+                </div>
+                <div class="bn-pay-notice">Please send this exact amount so it's easy to match to your order.</div>
+            </div>
+
+            <!-- Payment Method and Customer Info -->
+            <div class="bn-info-grid">
+                <!-- Payment Method -->
+                <div class="bn-card bn-payment-card">
+                    <div class="bn-card-title">Payment method</div>
+                    <select id="payment-method">
+                        <option value="GCash">📱 GCash</option>
+                        <option value="GotYme Bank">🏦 GotYme Bank</option>
+                    </select>
+                </div>
+
+                <!-- Customer Info -->
+                <div class="bn-card bn-shipment-card">
+                    <div class="bn-card-title">Customer</div>
+                    <div class="field-group">
+                        <label class="field-label" for="customer-name">Name</label>
+                        <input type="text" id="customer-name" placeholder="Customer name">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="customer-address">Delivery address</label>
+                        <textarea id="customer-address" placeholder="Shipping address"></textarea>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="customer-phone">Phone</label>
+                        <input type="text" id="customer-phone" placeholder="Phone number">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bn-note-wrap">
+                <div class="bn-thanks-card">Thank you for shopping with BookNest.</div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+
+    <script src="app.js"></script>
+    <script>
+        function setSelectValueSafe(select, value) {
+            const v = String(value || '').trim();
+            if (!v) { select.value = select.options[0]?.value || ''; return; }
+            if (![...select.options].some(o => o.value === v)) {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.insertBefore(opt, select.firstChild);
+            }
+            select.value = v;
+        }
+
+        const BOOK_TYPES = ["Paperback","Hardbound","MMPB","Sprayed","Leatherbound","Slipcase","Special Edition","Box Set","Signed","Other"];
+        const BOOK_CONDITIONS = ["New","Pre Loved","Remaindered"];
+
+        function setCurrentDate() {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            const date = new Date().toLocaleDateString('en-US', options);
+            document.getElementById('current-date').textContent = date;
+        }
+
+        function initNewSale() {
+            const books = getBooks();
+            setCurrentDate();
+            initBookFinder();
+            addRow();
+        }
+
+        function escapeHtml(text) {
+            return String(text || '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[c]));
+        }
+
+        function getBookGenres(books) {
+            const priority = ["Fiction","Non-Fiction","Fantasy","Mystery","Romance","Thriller","Horror","Self-Help","Biography","History","Science","Technology","Poetry","Drama","Adventure","Dystopian","Science Fiction","Children's","Young Adult","General","Other"];
+            const found = [...new Set(books.map(b => (b.genre || 'General').trim()).filter(Boolean))];
+            return found.sort((a, b) => {
+                const ai = priority.indexOf(a);
+                const bi = priority.indexOf(b);
+                if (ai !== -1 || bi !== -1) return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                return a.localeCompare(b);
+            });
+        }
+
+        function buildBookOptions(selectedId = '') {
+            const books = getBooks();
+            const search = (document.getElementById('bookSearch')?.value || '').toLowerCase().trim();
+            const genreFilter = document.getElementById('bookGenreFilter')?.value || '';
+            const selectedBook = books.find(b => b.id === selectedId);
+
+            const filtered = books
+                .filter(b => b.stock > 0)
+                .filter(b => !genreFilter || (b.genre || 'General') === genreFilter)
+                .filter(b => {
+                    if (!search) return true;
+                    const hay = `${b.title} ${b.author} ${b.genre}`.toLowerCase();
+                    return hay.includes(search);
+                });
+
+            if (selectedBook && !filtered.some(b => b.id === selectedBook.id)) {
+                filtered.push(selectedBook);
+            }
+
+            filtered.sort((a, b) => {
+                const ga = (a.genre || 'General').localeCompare(b.genre || 'General');
+                if (ga !== 0) return ga;
+                return a.title.localeCompare(b.title);
+            });
+
+            const byGenre = {};
+            filtered.forEach(book => {
+                const genre = book.genre || 'General';
+                if (!byGenre[genre]) byGenre[genre] = [];
+                byGenre[genre].push(book);
+            });
+
+            const groups = getBookGenres(filtered);
+            const options = ['<option value="">-- Select Book --</option>'];
+            groups.forEach(genre => {
+                const items = byGenre[genre] || [];
+                if (!items.length) return;
+                options.push(`<optgroup label="${escapeHtml(genre)} (${items.length})">`);
+                items.forEach(book => {
+                    const selected = book.id === selectedId ? ' selected' : '';
+                    const stockText = book.stock <= 3 ? ` • Low stock: ${book.stock}` : ` • Stock: ${book.stock}`;
+                    options.push(`<option value="${book.id}" data-title="${escapeHtml(book.title)}" data-price="${book.price}" data-stock="${book.stock}" data-author="${escapeHtml(book.author)}" data-genre="${escapeHtml(book.genre)}" data-condition="${escapeHtml(book.condition)}" data-type="${escapeHtml(book.type || 'Paperback')}"${selected}>${escapeHtml(book.title)} — ${escapeHtml(book.author)}${stockText}</option>`);
+                });
+                options.push('</optgroup>');
+            });
+
+            if (!groups.length) {
+                options.push('<option value="">No matching books found</option>');
+            }
+            return options.join('');
+        }
+
+        function getFilteredBooks() {
+            const books = getBooks();
+            const search = (document.getElementById('bookSearch')?.value || '').toLowerCase().trim();
+            const genreFilter = document.getElementById('bookGenreFilter')?.value || '';
+            return books.filter(b => b.stock > 0)
+                .filter(b => !genreFilter || (b.genre || 'General') === genreFilter)
+                .filter(b => {
+                    if (!search) return true;
+                    const hay = `${b.title} ${b.author} ${b.genre}`.toLowerCase();
+                    return hay.includes(search);
+                });
+        }
+
+        function renderGenreChips() {
+            const chips = document.getElementById('bookGenreChips');
+            const countEl = document.getElementById('bookFinderCount');
+            if (!chips || !countEl) return;
+
+            const books = getBooks().filter(b => b.stock > 0);
+            const filtered = getFilteredBooks();
+            countEl.textContent = `Showing ${filtered.length} book${filtered.length === 1 ? '' : 's'}`;
+
+            const genres = getBookGenres(books);
+            const active = document.getElementById('bookGenreFilter')?.value || '';
+            chips.innerHTML = genres.slice(0, 8).map(genre => {
+                const isActive = genre === active;
+                return `
+                    <button type="button" class="genre-chip${isActive ? ' active' : ''}" data-genre-chip="${escapeHtml(genre)}">
+                        ${escapeHtml(genre)}
+                    </button>`;
+            }).join('') + `
+                <button type="button" class="genre-chip" data-genre-chip="">All</button>`;
+
+            chips.querySelectorAll('[data-genre-chip]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const genre = btn.getAttribute('data-genre-chip') || '';
+                    const genreSelect = document.getElementById('bookGenreFilter');
+                    if (genreSelect) genreSelect.value = genre;
+                    refreshBookSelects();
+                    renderGenreChips();
+                });
+            });
+        }
+
+        function refreshBookSelects() {
+            document.querySelectorAll('.book-select').forEach(select => {
+                const current = select.value || '';
+                select.innerHTML = buildBookOptions(current);
+            });
+            renderGenreChips();
+        }
+
+        function initBookFinder() {
+            const books = getBooks();
+            const genreFilter = document.getElementById('bookGenreFilter');
+            const genreOptions = getBookGenres(books);
+            if (genreFilter) {
+                genreFilter.innerHTML = '<option value="">All genres</option>' + genreOptions.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+            }
+
+            document.getElementById('bookSearch')?.addEventListener('input', refreshBookSelects);
+            document.getElementById('bookGenreFilter')?.addEventListener('change', refreshBookSelects);
+            document.getElementById('clearBookFilters')?.addEventListener('click', () => {
+                const search = document.getElementById('bookSearch');
+                const genre = document.getElementById('bookGenreFilter');
+                if (search) search.value = '';
+                if (genre) genre.value = '';
+                refreshBookSelects();
+                renderGenreChips();
+            });
+            renderGenreChips();
+        }
+
+        function createOrderRow() {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>
+                    <select class="book-select" onchange="updateRowPrice(this)">
+                        ${buildBookOptions('')}
+                    </select>
+                </td>
+                <td><input type="text" class="book-author" placeholder="Author" title="Editable — fix if the inventory record was wrong"></td>
+                <td><input type="text" class="book-genre" placeholder="Genre" title="Editable — fix if the inventory record was wrong"></td>
+                <td>
+                    <select class="book-type" title="Editable — fix if this sale differs from the inventory record">
+                        ${BOOK_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                </td>
+                <td>
+                    <select class="book-condition" title="Editable — fix if this sale differs from the inventory record">
+                        ${BOOK_CONDITIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="number" class="book-qty" value="1" min="1" max="1" oninput="calculateTotal()" onchange="calculateTotal()"></td>
+                <td><input type="number" class="book-price" value="0" min="0" step="0.01" oninput="calculateTotal()" onchange="calculateTotal()" title="Editable — fix the price here if there's a mistake"></td>
+                <td><input type="number" class="book-total" value="0" readonly tabindex="-1"></td>
+                <td><button class="btn danger action-btn" onclick="deleteRow(this)">Remove</button></td>
+            `;
+            return newRow;
+        }
+
+        function addRow() {
+            const tbody = document.getElementById('order-items');
+            const newRow = createOrderRow();
+            tbody.appendChild(newRow);
+            calculateTotal();
+        }
+
+        function deleteRow(button) {
+            const tbody = document.getElementById('order-items');
+            if (tbody.children.length > 1) {
+                button.closest('tr').remove();
+                calculateTotal();
+            } else {
+                showNotice('You must have at least one book!');
+            }
+        }
+
+        function updateRowPrice(select) {
+            const row = select.closest('tr');
+            const option = select.options[select.selectedIndex];
+
+            if (!option.value) {
+                row.querySelector('.book-author').value = '';
+                row.querySelector('.book-genre').value = '';
+                setSelectValueSafe(row.querySelector('.book-type'), '');
+                setSelectValueSafe(row.querySelector('.book-condition'), '');
+                row.querySelector('.book-price').value = '0.00';
+                row.querySelector('.book-total').value = '0.00';
+                calculateTotal();
+                return;
+            }
+
+            const price = parseFloat(option.dataset.price) || 0;
+            const stock = parseInt(option.dataset.stock) || 0;
+            const author = option.dataset.author || '';
+            const genre = option.dataset.genre || '';
+            const type = option.dataset.type || 'Paperback';
+            const condition = option.dataset.condition || '';
+
+            row.querySelector('.book-author').value = author;
+            row.querySelector('.book-genre').value = genre;
+            setSelectValueSafe(row.querySelector('.book-type'), type);
+            setSelectValueSafe(row.querySelector('.book-condition'), condition);
+            row.querySelector('.book-price').value = price.toFixed(2);
+
+            const qtyInput = row.querySelector('.book-qty');
+            qtyInput.max = stock;
+            qtyInput.value = 1;
+
+            // If stock is 1 or less, disable quantity field (can't order more)
+            if (stock <= 1) {
+                qtyInput.disabled = true;
+            } else {
+                qtyInput.disabled = false;
+            }
+
+            row.querySelector('.book-total').value = price.toFixed(2);
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let booksTotal = 0;
+            const rows = document.querySelectorAll('#order-items tr');
+
+            rows.forEach(row => {
+                const select = row.querySelector('.book-select');
+                if (select.value) {
+                    const option = select.options[select.selectedIndex];
+                    const stock = parseInt(option.dataset.stock) || 0;
+                    let qty = parseInt(row.querySelector('.book-qty').value) || 1;
+
+                    if (qty > stock) {
+                        qty = stock;
+                        row.querySelector('.book-qty').value = stock;
+                    }
+
+                    const price = Math.max(0, parseFloat(row.querySelector('.book-price').value) || 0);
+                    const lineTotal = price * qty;
+                    row.querySelector('.book-total').value = lineTotal.toFixed(2);
+                    booksTotal += lineTotal;
+                }
+            });
+
+            const sfFee = parseFloat(document.getElementById('shipping-cost').value) || 0;
+            const method = document.getElementById('shipping-method')?.value || 'jnt';
+            const rentFee = method === 'tiktok' ? (typeof TIKTOK_RENT_FEE !== 'undefined' ? TIKTOK_RENT_FEE : 20) : 0;
+            const shippingCost = sfFee + rentFee;
+            const grandTotal = booksTotal + shippingCost;
+
+            const rentNote = document.getElementById('bubble-wrap-note');
+            if (rentNote) rentNote.style.display = method === 'tiktok' ? '' : 'none';
+
+            const sfFeeLabel = document.getElementById('sf-fee-label');
+            if (sfFeeLabel) sfFeeLabel.textContent = method === 'tiktok' ? 'COD TikTok Shipping Fee:' : method === 'piling' ? 'Fee (once shipped):' : 'SF Fee:';
+
+            document.getElementById('books-total').textContent = booksTotal.toFixed(2);
+            document.getElementById('grand-total-display').textContent = `₱ ${grandTotal.toFixed(2)}`;
+
+            // Dynamic shipping note
+            const shippingNote = document.getElementById('shipping-note-text');
+            if (shippingNote) {
+                if (method === 'piling') {
+                    shippingNote.innerHTML = `📥 <strong>Piling</strong> — order is being held/consolidated. It won't be marked ready to ship until the carrier is changed.`;
+                    shippingNote.style.color = '';
+                } else if (shippingCost > 0) {
+                    const rentText = rentFee > 0 ? ` (COD ₱${sfFee.toFixed(2)} + Rent Fee ₱${rentFee.toFixed(2)})` : '';
+                    shippingNote.innerHTML = `Shipping fee <strong style="color:var(--teal);">included</strong> in this invoice. (+₱${shippingCost.toFixed(2)})${rentText}`;
+                    shippingNote.style.color = '';
+                } else {
+                    shippingNote.innerHTML = `Shipping fee is <u>not included</u> in this invoice.`;
+                    shippingNote.style.color = '';
+                }
+            }
+        }
+
+        function validateForm() {
+            const rows = document.querySelectorAll('#order-items tr');
+            let selectedCount = 0;
+
+            rows.forEach(row => {
+                const select = row.querySelector('.book-select');
+                if (select.value) selectedCount++;
+            });
+
+            if (selectedCount < 1) {
+                showNotice('Please select at least 1 book');
+                return false;
+            }
+
+            return true;
+        }
+
+        async function createSale() {
+            if (!validateForm()) return;
+
+            try {
+                const books = getBooks();
+                const sales = getSales();
+                const saleItems = [];
+                const customerName = document.getElementById('customer-name').value.trim().toUpperCase();
+
+                document.querySelectorAll('#order-items tr').forEach(row => {
+                    const select = row.querySelector('.book-select');
+                    if (!select.value) return;
+
+                    const bookId = select.value;
+                    const qty = parseInt(row.querySelector('.book-qty').value) || 0;
+                    const book = books.find(b => b.id === bookId);
+
+                    if (!book || qty <= 0) return;
+
+                    if (book.stock < qty) {
+                        showNotice(`Insufficient stock for "${book.title}". Available: ${book.stock}`);
+                        throw new Error('Stock error');
+                    }
+
+                    // Use what's actually in the row's fields, not the original
+                    // inventory record — the whole point of these fields being
+                    // editable is that the person may have corrected a mistake
+                    // (wrong price, condition, etc.) for this specific sale.
+                    const rowAuthor    = row.querySelector('.book-author')?.value.trim()    || book.author;
+                    const rowGenre     = row.querySelector('.book-genre')?.value.trim()     || book.genre;
+                    const rowType      = row.querySelector('.book-type')?.value             || book.type || "Paperback";
+                    const rowCondition = row.querySelector('.book-condition')?.value        || book.condition;
+                    const rowPrice     = Math.max(0, parseFloat(row.querySelector('.book-price')?.value) || 0);
+
+                    const sale = {
+                        id: `s-${Math.random().toString(36).substr(2, 9)}`,
+                        bookId: book.id,
+                        bookTitle: book.title,
+                        bookAuthor: rowAuthor,
+                        bookGenre: rowGenre,
+                        bookType: rowType,
+                        bookCondition: rowCondition,
+                        unitPrice: rowPrice,
+                        quantity: qty,
+                        discount: 0,
+                        paymentMethod: document.getElementById('payment-method').value,
+                        customer: customerName,
+                        date: new Date().toISOString(),
+                        voided: false
+                    };
+
+                    sales.push(sale);
+                    saleItems.push({
+                        saleId: sale.id,
+                        title: book.title,
+                        author: rowAuthor,
+                        genre: rowGenre,
+                        type: rowType,
+                        condition: rowCondition,
+                        qty: qty,
+                        unitPrice: rowPrice,
+                        discount: 0
+                    });
+
+                    book.stock -= qty;
+                });
+
+                if (saleItems.length < 1) {
+                    showNotice('Please select at least 1 book');
+                    return;
+                }
+
+                saveBooks(books);
+                saveSales(sales);
+
+                // Create and save receipt immediately
+                const receiptId = `r-${Math.random().toString(36).substr(2, 9)}`;
+                const receipts = getReceipts();
+                const sfFee = parseFloat(document.getElementById('shipping-cost').value) || 0;
+                const shippingCarrier = document.getElementById('shipping-method')?.value || 'jnt';
+                const rentFee = shippingCarrier === 'tiktok' ? (typeof TIKTOK_RENT_FEE !== 'undefined' ? TIKTOK_RENT_FEE : 20) : 0;
+                const booksTotal = saleItems.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0);
+
+                const receiptPayload = {
+                    id: receiptId,
+                    date: new Date().toISOString(),
+                    customer: customerName,
+                    address: document.getElementById('customer-address').value || '',
+                    phone: document.getElementById('customer-phone').value || '',
+                    paymentMethod: document.getElementById('payment-method').value,
+                    items: saleItems,
+                    shippingCarrier: shippingCarrier,
+                    shippingCost: sfFee,
+                    total: booksTotal + sfFee + rentFee
+                };
+
+                receipts.push(receiptPayload);
+                saveReceipts(receipts);
+
+                // Show success notice
+                showNotice('✓ Sale & Receipt created successfully!');
+                resetForm();
+
+                // Redirect to receipt history after brief delay
+                setTimeout(() => {
+                    window.location.href = 'receipt-history.html';
+                }, 800);
+            } catch (error) {
+                console.error('Error creating sale:', error);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-address').value = '';
+            document.getElementById('customer-phone').value = '';
+            document.getElementById('payment-method').value = 'GCash';
+            document.getElementById('shipping-cost').value = '0';
+            document.getElementById('shipping-method').value = 'jnt';
+            document.getElementById('order-items').innerHTML = '';
+            document.getElementById('books-total').textContent = '0.00';
+            document.getElementById('grand-total-display').textContent = '₱ 0.00';
+
+            initNewSale();
+        }
+
+        document.addEventListener('DOMContentLoaded', initNewSale);
+    </script>
+</body>
+</html>
