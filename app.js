@@ -76,6 +76,13 @@ const getData    = (key, fallback) => {
 const setData    = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    // Keep the existing synchronous API for the app, but mirror every save
+    // to Supabase in the background. The local cache is updated immediately.
+    if (window.BookNestCloud?.enabled) {
+      window.BookNestCloud.save(key, value).catch(err =>
+        console.error('[BookNest] Cloud save failed for', key, err)
+      );
+    }
     return true;
   } catch (err) {
     console.error("[BookNest] setData failed for", key, err);
@@ -2232,7 +2239,14 @@ const initInventory = () => {
   // first is used as the cover shown in the shop). Built the same way as
   // the box-photo lightbox — a single reusable <dialog>, filled in fresh
   // each time it's opened.
-  const MAX_BOOK_PHOTOS = 6;
+  // Raised from the old cap of 6 — each photo is compressed before storage,
+  // but everything still lives in the browser's localStorage (shared with
+  // every other book, sale, and receipt), which most browsers cap around
+  // 5–10MB total. 20 photos/book is "practically unlimited" for a resale
+  // shop while leaving headroom for the rest of the data. If storage ever
+  // fills up, setData() below already warns the seller instead of failing
+  // silently.
+  const MAX_BOOK_PHOTOS = 20;
   let bookPhotosDialog = null;
   const ensureBookPhotosDialog = () => {
     if (bookPhotosDialog) return bookPhotosDialog;
@@ -2273,20 +2287,20 @@ const initInventory = () => {
     const grid   = dialog.querySelector(".bn-book-photos-grid");
     header.textContent = `${photos.length}/${MAX_BOOK_PHOTOS} photos — the first one is the cover shown in the shop`;
 
-    const cells = [];
-    for (let i = 0; i < MAX_BOOK_PHOTOS; i++) {
-      if (i < photos.length) {
-        cells.push(`
+    // Render exactly the filled photos, plus one "Add" tile if there's room —
+    // no blank filler cells. This lets MAX_BOOK_PHOTOS be a high number
+    // (many books' worth of photos) without drawing dozens of empty boxes.
+    const cells = photos.map((src, i) => `
           <div style="position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:1.5px solid #d9cdb2;background:#efe7d8;">
-            <img src="${photos[i]}" alt="Book photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" data-lightbox-idx="${i}" />
+            <img src="${src}" alt="Book photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" data-lightbox-idx="${i}" />
             ${i === 0 ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(38,33,26,0.7);color:#fff;font-size:10px;text-align:center;padding:2px 0;">Cover</div>` : ""}
             <button type="button" class="bn-book-photo-remove" data-idx="${i}"
               style="position:absolute;top:4px;right:4px;width:22px;height:22px;border:none;border-radius:50%;
               background:rgba(179,38,30,0.92);color:#fff;font-weight:700;font-size:12px;line-height:1;
               cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>`);
-      } else if (i === photos.length) {
-        cells.push(`
+    if (photos.length < MAX_BOOK_PHOTOS) {
+      cells.push(`
           <label class="bn-book-photo-add" style="aspect-ratio:3/4;border-radius:8px;
             border:2px dashed #9C7A34;background:#F8F3E7;display:flex;flex-direction:column;
             align-items:center;justify-content:center;cursor:pointer;color:#8A5A1F;font-size:12px;
@@ -2295,9 +2309,6 @@ const initInventory = () => {
             <span>Add</span>
             <input type="file" accept="image/*" class="bn-book-photo-input" style="display:none;" />
           </label>`);
-      } else {
-        cells.push(`<div></div>`);
-      }
     }
     grid.innerHTML = cells.join("");
 
@@ -3046,6 +3057,32 @@ const getReceiptFlags = (receipt) => {
   return { shipped: false, paid: false, refunded: !!receipt.refunded };
 };
 
+// Shop checkouts (from shop.html) are written into BOTH ".receipts" (so they
+// show in Admin > Receipts) AND ".shop_orders" (so they show in Admin > Shop
+// Orders) as two separate copies of the same sale, linked by a shared id.
+// Marking an order Paid/Shipped from the Receipts screen only ever touched
+// the ".receipts" copy, so the Shop Orders screen kept showing "Pending"
+// forever even after payment was confirmed. Push the same flags into the
+// ".shop_orders" copy any time they change here so both screens agree.
+const SHOP_ORDERS_KEY = ".shop_orders";
+const getShopOrders = () => getData(SHOP_ORDERS_KEY, []);
+const saveShopOrders = (orders) => setData(SHOP_ORDERS_KEY, orders);
+
+const syncShopOrderStatus = (orderId, { shipped, paid }) => {
+  const orders = getShopOrders();
+  const idx = orders.findIndex(o => o.id === orderId);
+  if (idx < 0) return;
+  orders[idx].paid    = paid;
+  orders[idx].shipped = shipped;
+  // Keep the legacy single "status" field (what the Shop Orders screen
+  // most likely renders) in sync too, covering every combination.
+  orders[idx].status = paid && shipped ? "Completed"
+                      : paid            ? "Paid"
+                      : shipped         ? "Shipped"
+                      : "Pending";
+  saveShopOrders(orders);
+};
+
 const setReceiptFlags = (receiptId, patch) => {
   const receipts = getReceipts();
   const idx = receipts.findIndex(r => r.id === receiptId);
@@ -3059,6 +3096,11 @@ const setReceiptFlags = (receiptId, patch) => {
   receipts[idx].shipmentStatus = next.shipped ? "shipped" : "pending";
   receipts[idx].status = next.shipped ? "shipped" : "pending";
   saveReceipts(receipts);
+  // If this receipt came from a shop.html checkout, mirror the new
+  // paid/shipped flags onto its matching ".shop_orders" record too.
+  if (receipts[idx].shopOrder) {
+    syncShopOrderStatus(receiptId, { shipped: next.shipped, paid: next.paid });
+  }
   return receipts[idx];
 };
 
@@ -4171,7 +4213,12 @@ const safeRun = (fn, name) => {
   try { fn(); } catch (err) { console.error(`[BookNest] ${name} failed:`, err); }
 };
 
-const init = () => {
+const init = async () => {
+  // Supabase hydrates localStorage first, so all of the existing BookNest
+  // pages can continue using their original synchronous data functions.
+  if (window.BookNestCloud?.ready) {
+    try { await window.BookNestCloud.ready; } catch (_) {}
+  }
   migrateStorage();
   ensureSeedData();
   safeRun(initDashboard,     "initDashboard");

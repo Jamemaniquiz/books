@@ -196,3 +196,19 @@ Your data is:
 - **Portable** - can restore on new device
 
 **You control everything!**
+
+---
+
+# ☁️ SUPABASE DATABASE (NEW)
+
+This copy of BookNest now syncs its existing store data to Supabase. You do not need Prisma.
+
+1. Open `SUPABASE_SETUP.md`.
+2. In Supabase → SQL Editor, run the table/policy SQL there.
+3. In Supabase → Project Settings → API, copy the **Project URL** and **anon/public key**.
+4. Paste them into `supabase-config.js`.
+5. Upload/deploy the whole folder to Vercel.
+
+The existing BookNest data keys (`.books`, `.sales`, `.receipts`, `.purchases`, `.sellerPayment`, `.shop_orders`) are synced to one Supabase table, so the current pages can keep their existing design and code structure.
+
+⚠️ This first cloud-sync version uses public RLS policies so the existing static site can work without changing its login system. For a production store, migrate seller/admin authentication to Supabase Auth and lock writes down to the seller account.

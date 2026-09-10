@@ -52,6 +52,9 @@
 
     <footer class="site-footer">BookNest © 2026</footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-data.js"></script>
     <script>
       const ORDERS_KEY   = '.shop_orders';
       const BOOKS_KEY    = '.books';
@@ -67,6 +70,9 @@
       function writeLocal(key, value){
         try{
           localStorage.setItem(key, JSON.stringify(value));
+          if(window.BookNestCloud?.enabled){
+            window.BookNestCloud.save(key, value).catch(err => console.error('[BookNest] Cloud save failed for', key, err));
+          }
           return true;
         }catch(e){
           alert('Could not save — your browser storage may be full.');
@@ -173,6 +179,9 @@
         setOrderStatus(btn.dataset.id, btn.dataset.status);
       });
 
+      if (window.BookNestCloud?.ready) {
+        window.BookNestCloud.ready.then(() => render());
+      }
       render();
     </script>
   </body>
