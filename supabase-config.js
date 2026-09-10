@@ -1,14 +1,8 @@
 // ============================================================
 // BookNest Supabase configuration
-//
-// You only need to paste these TWO PUBLIC values from:
-// Supabase Dashboard -> Project Settings -> API
-//
-// Project URL  = https://xxxxx.supabase.co
-// anon key     = the long key labelled "anon / public"
-//
-// IMPORTANT: The anon/public key is intended for browser use.
-// NEVER put a Supabase service_role/secret key in this file.
+// Browser-safe Supabase connection.
+// IMPORTANT: This is the PUBLIC/PUBLISHABLE key.
+// Never put an sb_secret_... key in this website.
 // ============================================================
-window.BOOKNEST_SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
-window.BOOKNEST_SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+window.BOOKNEST_SUPABASE_URL = "https://ryyhsbkuukbtflcetcn.supabase.co";
+window.BOOKNEST_SUPABASE_ANON_KEY = "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
