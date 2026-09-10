@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isSeller() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/sellers/$(request.auth.uid));
+    }
+
+    // Shared shop data: books, orders, receipts — stored as one doc per
+    // key (".books", ".shop_orders", ".receipts", etc). Any signed-in
+    // buyer or seller can read/write, same as the old localStorage did,
+    // just now shared instead of per-device.
+    match /booknest_data/{key} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Buyer profiles: a buyer can create/read/update their own profile;
+    // the seller can read everyone's (for the Buyers admin page).
+    match /buyers/{uid} {
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow read, update: if isSignedIn() && (request.auth.uid == uid || isSeller());
+      allow delete: if false;
+    }
+
+    // Seller accounts: only ever written by hand in the console, never
+    // from the app — this is what makes a login a "seller" login.
+    match /sellers/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Settings (e.g. the Buyers page's second password): seller only.
+    match /settings/{doc} {
+      allow read, write: if isSeller();
+    }
+  }
+}

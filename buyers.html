@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Buyers — BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .lock-screen{ max-width:360px; margin:80px auto; text-align:center; background:var(--panel-bg,#fff); border:1px solid var(--line,#e2ddd0); border-radius:8px; padding:32px 28px; }
+      .lock-screen input{ width:100%; margin:14px 0; padding:10px 12px; border:1px solid var(--line,#e2ddd0); border-radius:6px; font-size:14px; }
+      .buyer-row td{ vertical-align:top; }
+      .history-toggle{ cursor:pointer; color:var(--brick,#A8402A); font-size:12.5px; font-weight:600; }
+      .history-panel{ display:none; background:rgba(0,0,0,0.03); padding:10px 14px; border-radius:6px; margin-top:6px; }
+      .history-panel.open{ display:block; }
+      .history-item{ font-size:12.5px; padding:4px 0; border-bottom:1px solid var(--line,#e2ddd0); display:flex; justify-content:space-between; gap:10px; }
+      .history-item:last-child{ border-bottom:none; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a href="admin.html">Home</a>
+        <a href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+        <a href="orders.html">🛒 Shop Orders</a>
+        <a class="active" href="buyers.html">👤 Buyers</a>
+        <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
+        <a href="#" id="logoutLink">Log out</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <!-- Second password lock, shown even after seller login -->
+      <div class="lock-screen" id="lockScreen">
+        <h2>🔒 Buyers — locked</h2>
+        <p class="muted">This page holds buyer contact info, so it needs a second password even though you're already logged in as the seller.</p>
+        <input type="password" id="lockPass" placeholder="Buyers page password" />
+        <button class="btn primary" id="lockBtn" style="width:100%">Unlock</button>
+        <p class="muted" id="lockErr" style="color:#8A2E2E;display:none;margin-top:10px;">Incorrect password.</p>
+      </div>
+
+      <div id="buyersContent" style="display:none">
+        <section class="panel">
+          <div class="panel-header"><h2>👤 Buyers</h2></div>
+          <p class="muted" style="margin-bottom:1rem">
+            Everyone who has created a buyer account. Passwords are managed by Firebase and are never visible here, even to you — that's what keeps them secure.
+            If a buyer messages you that they forgot their password, click "Send reset link" and Firebase emails them one directly.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Contact</th><th>Email</th><th>Joined</th><th>Orders</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="buyersRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-data.js"></script>
+    <script>
+      const peso = (n) => 'PHP ' + Number(n||0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+      // Must be logged in as the seller to even see the second lock screen.
+      whenAuthReady((user, role)=>{
+        if(!user || role!=='seller'){ window.location.href = 'seller-login.html'; return; }
+        setupLock();
+      });
+
+      // Second password: stored in Firestore at settings/buyersLock.password —
+      // set this once yourself in the Firebase console (see SELLER-SETUP.md).
+      function setupLock(){
+        document.getElementById('lockBtn').addEventListener('click', async ()=>{
+          const entered = document.getElementById('lockPass').value;
+          const errEl = document.getElementById('lockErr');
+          try{
+            const snap = await db.collection('settings').doc('buyersLock').get();
+            const real = snap.exists ? snap.data().password : null;
+            if(real && entered === real){
+              document.getElementById('lockScreen').style.display = 'none';
+              document.getElementById('buyersContent').style.display = 'block';
+              loadBuyers();
+            } else {
+              errEl.style.display = 'block';
+            }
+          }catch(e){
+            errEl.textContent = 'Could not check password — check your connection.';
+            errEl.style.display = 'block';
+          }
+        });
+      }
+
+      async function loadBuyers(){
+        const tbody = document.getElementById('buyersRows');
+        tbody.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+        const buyers = await getAllBuyers();
+        const orders = await readCloud('.shop_orders', []);
+        if(buyers.length===0){
+          tbody.innerHTML = '<tr><td colspan="6" class="muted">No buyer accounts yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = '';
+        buyers.forEach(b=>{
+          const theirOrders = orders.filter(o=>o.buyerUid===b.uid);
+          const joined = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toLocaleDateString('en-PH') : '—';
+          const tr = document.createElement('tr');
+          tr.className = 'buyer-row';
+          tr.innerHTML = `
+            <td>${escapeHtml(b.name||'—')}</td>
+            <td>${escapeHtml(b.contact||'—')}</td>
+            <td>${escapeHtml(b.email||'—')}</td>
+            <td>${joined}</td>
+            <td>
+              <div class="history-toggle" data-uid="${b.uid}">${theirOrders.length} order(s) — view</div>
+              <div class="history-panel" id="hist-${b.uid}">
+                ${theirOrders.length ? theirOrders.map(o=>`
+                  <div class="history-item"><span>${o.id} · ${new Date(o.createdAt).toLocaleDateString('en-PH')}</span><span>${peso(o.total)} · ${o.status}</span></div>
+                `).join('') : '<div class="history-item"><span>No orders yet</span></div>'}
+              </div>
+            </td>
+            <td><button class="btn ghost btn-sm" data-reset="${b.email}">Send reset link</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('.history-toggle').forEach(el=>{
+          el.addEventListener('click', ()=>{
+            document.getElementById('hist-'+el.dataset.uid).classList.toggle('open');
+          });
+        });
+        tbody.querySelectorAll('[data-reset]').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            try{
+              await requestPasswordReset(btn.dataset.reset);
+              alert('Reset link sent to '+btn.dataset.reset);
+            }catch(e){
+              alert('Could not send reset link: '+(e.message||e));
+            }
+          });
+        });
+      }
+
+      function escapeHtml(s){
+        return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      document.getElementById('logoutLink').addEventListener('click', async (e)=>{
+        e.preventDefault();
+        await logout();
+        window.location.href = 'seller-login.html';
+      });
+    </script>
+  </body>
+</html>

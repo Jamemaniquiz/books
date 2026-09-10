@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BookNest Debug Tools - Seller Support</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="admin-gate.js"></script>
+</head>
+<body style="background: #f5f5f5; padding: 20px; font-family: system-ui, sans-serif;">
+  <header class="site-header">
+    <div class="logo">
+      <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+      <span>BookNest</span>
+    </div>
+    <nav class="nav">
+      <a href="admin.html">Home</a>
+      <a href="inventory.html">Inventory & Sales</a>
+      <a href="receipt-history.html">Receipts</a>
+      <a href="orders.html">🛒 Shop Orders</a>
+      <a class="active" href="debug.html">🔧 Debug</a>
+      <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
+    </nav>
+  </header>
+
+  <main class="container" style="max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px;">
+    <h1>🔧 BookNest Debug & Diagnostics</h1>
+    <p style="color: #666;">Use these tools to diagnose and fix common issues with your BookNest store.</p>
+
+    <!-- SECTION 1: Quick Status Check -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #2563eb;">
+      <h2>📊 Quick Status Check</h2>
+      <div id="statusReport" style="font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 13px; line-height: 1.6;">
+        Loading...
+      </div>
+    </section>
+
+    <!-- SECTION 2: Books Inventory -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #16a34a;">
+      <h2>📚 Your Books in Storage</h2>
+      <button onclick="refreshBooks()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🔄 Refresh</button>
+      <div id="booksReport" style="margin-top: 15px; font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 12px; line-height: 1.5; max-height: 400px; overflow-y: auto;">
+        Loading...
+      </div>
+    </section>
+
+    <!-- SECTION 3: Shop Visibility Checker -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #0891b2;">
+      <h2>🛒 Shop Visibility Status</h2>
+      <p style="color: #666; margin-bottom: 15px;">Books with shopVisible=true will appear in your shop.</p>
+      <button onclick="checkShopVisibility()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🔍 Check Visibility</button>
+      <div id="shopVisibilityReport" style="margin-top: 15px; font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 12px; line-height: 1.5; max-height: 400px; overflow-y: auto;">
+        Results will appear here...
+      </div>
+    </section>
+
+    <!-- SECTION 4: Picture Status -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #dc2626;">
+      <h2>📷 Book Pictures Status</h2>
+      <button onclick="checkPictureStatus()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">📸 Check Pictures</button>
+      <div id="picturesReport" style="margin-top: 15px; font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 12px; line-height: 1.5; max-height: 400px; overflow-y: auto;">
+        Results will appear here...
+      </div>
+    </section>
+
+    <!-- SECTION 5: Fix Tools -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #ea580c;">
+      <h2>🔨 Fix Tools</h2>
+      <p style="color: #666; margin-bottom: 15px;">Use these tools to fix common issues.</p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+        <button onclick="fixAllShopVisibility()" style="padding: 15px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">✅ Make ALL Books Visible in Shop</button>
+        
+        <button onclick="fixMissingShopVisibility()" style="padding: 15px; background: #0891b2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">🔧 Fix Books Missing shopVisible Property</button>
+        
+        <button onclick="rebuildBookIndex()" style="padding: 15px; background: #9333ea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">🔄 Rebuild Book Index</button>
+        
+        <button onclick="downloadDebugData()" style="padding: 15px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">💾 Download Debug Data</button>
+      </div>
+
+      <div id="fixReport" style="margin-top: 15px; font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 12px; line-height: 1.5; display: none; max-height: 300px; overflow-y: auto;">
+      </div>
+    </section>
+
+    <!-- SECTION 6: Storage Management -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #b91c1c;">
+      <h2>💾 Storage Management</h2>
+      <p style="color: #666; margin-bottom: 15px;">View and manage your localStorage data.</p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+        <button onclick="viewAllStorage()" style="padding: 15px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">👁️ View All Storage</button>
+        
+        <button onclick="clearAllData()" style="padding: 15px; background: #b91c1c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">🗑️ CLEAR ALL DATA (Undo backup!)</button>
+      </div>
+
+      <div id="storageReport" style="margin-top: 15px; font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 11px; line-height: 1.4; max-height: 400px; overflow-y: auto;">
+      </div>
+    </section>
+
+    <!-- SECTION 7: GCash Setup Check -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #06b6d4;">
+      <h2>💳 GCash Setup Status</h2>
+      <button onclick="checkGCashSetup()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🔍 Check GCash</button>
+      <div id="gcashReport" style="margin-top: 15px; font-family: monospace; white-space: pre-wrap; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; font-size: 12px; line-height: 1.5; max-height: 300px; overflow-y: auto;">
+        Results will appear here...
+      </div>
+    </section>
+
+    <!-- SECTION 8: Console Logs -->
+    <section style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #7c3aed;">
+      <h2>📝 Console Logs (F12 for more)</h2>
+      <p style="color: #666; margin-bottom: 15px;">Open your browser's Developer Tools (Press F12) and go to the Console tab for detailed error messages.</p>
+      <code style="display: block; background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; color: #333; font-size: 12px;">
+        Press F12 → Console tab → Look for [BookNest] messages
+      </code>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">BookNest Debug Tools © 2026</footer>
+
+  <script src="app.js"></script>
+  <script>
+    // Utility to show results
+    function showReport(elementId, content, type = 'info') {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      
+      if (type === 'error') {
+        el.style.color = '#b91c1c';
+        el.style.background = '#fee2e2';
+        el.style.borderColor = '#fecaca';
+      } else if (type === 'success') {
+        el.style.color = '#15803d';
+        el.style.background = '#dcfce7';
+        el.style.borderColor = '#86efac';
+      } else if (type === 'warning') {
+        el.style.color = '#92400e';
+        el.style.background = '#fef3c7';
+        el.style.borderColor = '#fcd34d';
+      }
+      
+      el.textContent = content;
+      el.style.display = 'block';
+      console.log('[BookNest Debug]', content);
+    }
+
+    function showFix(content, type = 'info') {
+      showReport('fixReport', content, type);
+    }
+
+    // Status Check
+    async function refreshStatus() {
+      try {
+        if (typeof getBooks !== 'function') {
+          showReport('statusReport', '❌ ERROR: app.js not loaded properly\n\nTry:\n1. Refresh page (Ctrl+R)\n2. Hard refresh (Ctrl+Shift+R)\n3. Close browser and reopen', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        const sales = typeof getSales === 'function' ? getSales() : [];
+        const receipts = typeof getReceipts === 'function' ? getReceipts() : [];
+        const payment = typeof getSellerPayment === 'function' ? getSellerPayment() : {};
+
+        const booksWithShop = books.filter(b => b.shopVisible).length;
+        const booksWithPics = books.filter(b => b.image).length;
+        const storageUsed = JSON.stringify(localStorage).length;
+        const storageMB = (storageUsed / 1024 / 1024).toFixed(2);
+
+        const report = `✅ BookNest System Status
+
+📚 Books:
+  • Total: ${books.length}
+  • In Shop: ${booksWithShop}
+  • With Pictures: ${booksWithPics}
+  • Shop Visibility: ${booksWithShop > 0 ? '✅ Working' : '⚠️ No books in shop'}
+
+💰 Sales & Orders:
+  • Sales recorded: ${sales.length}
+  • Receipts: ${receipts.length}
+
+💳 GCash Setup:
+  • Phone: ${payment.gcashNumber ? '✅ Set' : '❌ Not set'}
+  • QR Code: ${payment.gcashQR ? '✅ Uploaded' : '❌ Not uploaded'}
+
+💾 Storage:
+  • Used: ${storageMB} MB / 5 MB
+  • Status: ${storageMB < 3 ? '✅ Good' : storageMB < 4.5 ? '⚠️ Getting full' : '❌ Nearly full'}`;
+
+        showReport('statusReport', report, 'success');
+      } catch (err) {
+        showReport('statusReport', '❌ Error checking status:\n' + err.message, 'error');
+      }
+    }
+
+    // Books Report
+    function refreshBooks() {
+      try {
+        if (typeof getBooks !== 'function') {
+          showReport('booksReport', '❌ ERROR: app.js functions not available', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        if (books.length === 0) {
+          showReport('booksReport', '📭 No books in inventory yet.\n\nGo to Inventory & Sales to add books.', 'warning');
+          return;
+        }
+
+        let report = `📚 Books in Storage (${books.length} total)\n`;
+        report += '=' .repeat(60) + '\n\n';
+
+        books.forEach((b, i) => {
+          const shopStatus = b.shopVisible ? '✅ IN SHOP' : '❌ HIDDEN';
+          const picStatus = b.image ? '✅ HAS PIC' : '❌ NO PIC';
+          report += `${i + 1}. "${b.title}"\n`;
+          report += `   Author: ${b.author || '(none)'}\n`;
+          report += `   Price: ₱${b.price} | Stock: ${b.stock}\n`;
+          report += `   Shop: ${shopStatus} | Picture: ${picStatus}\n`;
+          report += `   ID: ${b.id}\n`;
+          if (b.image) {
+            report += `   Picture size: ${(b.image.length / 1024).toFixed(1)} KB\n`;
+          }
+          report += '\n';
+        });
+
+        showReport('booksReport', report, 'info');
+      } catch (err) {
+        showReport('booksReport', '❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Check Shop Visibility
+    function checkShopVisibility() {
+      try {
+        if (typeof getBooks !== 'function') {
+          showReport('shopVisibilityReport', '❌ ERROR: app.js not loaded', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        const inShop = books.filter(b => b.shopVisible);
+        const notInShop = books.filter(b => !b.shopVisible);
+
+        let report = `🛒 Shop Visibility Report\n`;
+        report += '='.repeat(60) + '\n\n';
+
+        if (inShop.length > 0) {
+          report += `✅ IN SHOP (${inShop.length} books)\n`;
+          report += '-'.repeat(60) + '\n';
+          inShop.forEach(b => {
+            report += `• "${b.title}" by ${b.author || '?'} (₱${b.price})\n`;
+          });
+          report += '\n';
+        } else {
+          report += `❌ NO BOOKS IN SHOP!\n\n`;
+        }
+
+        if (notInShop.length > 0) {
+          report += `❌ HIDDEN FROM SHOP (${notInShop.length} books)\n`;
+          report += '-'.repeat(60) + '\n';
+          notInShop.forEach(b => {
+            report += `• "${b.title}" by ${b.author || '?'} - click "Add Shop" in Inventory\n`;
+          });
+        }
+
+        showReport('shopVisibilityReport', report, inShop.length > 0 ? 'success' : 'error');
+      } catch (err) {
+        showReport('shopVisibilityReport', '❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Check Picture Status
+    function checkPictureStatus() {
+      try {
+        if (typeof getBooks !== 'function') {
+          showReport('picturesReport', '❌ ERROR: app.js not loaded', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        const withPics = books.filter(b => b.image);
+        const noPics = books.filter(b => !b.image);
+
+        let report = `📷 Book Pictures Status\n`;
+        report += '='.repeat(60) + '\n\n';
+
+        if (withPics.length > 0) {
+          report += `✅ WITH PICTURES (${withPics.length} books)\n`;
+          report += '-'.repeat(60) + '\n';
+          const totalSize = withPics.reduce((sum, b) => sum + (b.image?.length || 0), 0);
+          report += `Total picture storage: ${(totalSize / 1024).toFixed(1)} KB\n\n`;
+          
+          withPics.forEach(b => {
+            const picSize = (b.image.length / 1024).toFixed(1);
+            const shopStatus = b.shopVisible ? '✅' : '❌';
+            report += `${shopStatus} "${b.title}"\n`;
+            report += `    Size: ${picSize} KB\n`;
+          });
+          report += '\n';
+        }
+
+        if (noPics.length > 0) {
+          report += `❌ WITHOUT PICTURES (${noPics.length} books)\n`;
+          report += '-'.repeat(60) + '\n';
+          noPics.forEach(b => {
+            report += `• "${b.title}" - upload photo in Inventory\n`;
+          });
+        }
+
+        showReport('picturesReport', report, withPics.length > 0 ? 'success' : 'warning');
+      } catch (err) {
+        showReport('picturesReport', '❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Fix: Make ALL books visible
+    function fixAllShopVisibility() {
+      try {
+        if (typeof getBooks !== 'function' || typeof saveBooks !== 'function') {
+          showFix('❌ ERROR: app.js functions not available', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        let fixed = 0;
+
+        books.forEach(b => {
+          if (!b.shopVisible) {
+            b.shopVisible = true;
+            fixed++;
+          }
+        });
+
+        saveBooks(books);
+
+        const message = `✅ FIXED! Made ${fixed} book(s) visible in shop.\n\nRefresh your pages:\n1. Go to Inventory & Sales - refresh it\n2. Go to View Shop - refresh it\n\nYou should see your books now!`;
+        showFix(message, 'success');
+      } catch (err) {
+        showFix('❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Fix: Add missing shopVisible property
+    function fixMissingShopVisibility() {
+      try {
+        if (typeof getBooks !== 'function' || typeof saveBooks !== 'function') {
+          showFix('❌ ERROR: app.js functions not available', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        let fixed = 0;
+
+        books.forEach(b => {
+          if (b.shopVisible === undefined) {
+            b.shopVisible = true;
+            fixed++;
+          }
+        });
+
+        saveBooks(books);
+
+        const message = `✅ FIXED! Added shopVisible property to ${fixed} book(s).\n\nAll books should now be toggleable.`;
+        showFix(message, 'success');
+      } catch (err) {
+        showFix('❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Rebuild Index
+    function rebuildBookIndex() {
+      try {
+        if (typeof getBooks !== 'function' || typeof saveBooks !== 'function') {
+          showFix('❌ ERROR: app.js functions not available', 'error');
+          return;
+        }
+
+        const books = getBooks();
+        let fixed = 0;
+
+        books.forEach(b => {
+          if (!b.id) {
+            b.id = 'bk-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+            fixed++;
+          }
+          if (!b.shopVisible) b.shopVisible = false;
+          if (!b.title) b.title = '(Untitled)';
+          if (!b.author) b.author = 'Unknown';
+          if (!b.price && b.price !== 0) b.price = 0;
+          if (!b.stock && b.stock !== 0) b.stock = 0;
+        });
+
+        saveBooks(books);
+
+        const message = `✅ FIXED! Rebuilt index for ${books.length} book(s).\n\nFixed ${fixed} incomplete entries.`;
+        showFix(message, 'success');
+      } catch (err) {
+        showFix('❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Download Debug Data
+    function downloadDebugData() {
+      try {
+        const data = {};
+        for (const [key, value] of Object.entries(localStorage)) {
+          data[key] = value.length > 10000 ? `[Large data: ${value.length} bytes]` : value;
+        }
+
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `booknest-debug-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showFix('✅ Debug data downloaded! Share this file with support.', 'success');
+      } catch (err) {
+        showFix('❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // View All Storage
+    function viewAllStorage() {
+      try {
+        let report = '💾 All Browser Storage\n';
+        report += '='.repeat(60) + '\n\n';
+
+        for (const [key, value] of Object.entries(localStorage)) {
+          const size = (value.length / 1024).toFixed(1);
+          report += `Key: ${key}\n`;
+          report += `Size: ${size} KB\n`;
+          if (value.length < 200) {
+            report += `Value: ${value}\n`;
+          } else {
+            report += `Value: ${value.substring(0, 100)}... (truncated)\n`;
+          }
+          report += '\n';
+        }
+
+        showReport('storageReport', report, 'info');
+      } catch (err) {
+        showReport('storageReport', '❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Clear All Data
+    function clearAllData() {
+      if (!confirm('🗑️ ARE YOU SURE??\n\nThis will DELETE ALL your books, pictures, orders, and settings!\n\nMake sure you have a backup downloaded first!')) {
+        return;
+      }
+
+      if (!confirm('⚠️ REALLY DELETE EVERYTHING? This cannot be undone!')) {
+        return;
+      }
+
+      try {
+        localStorage.clear();
+        showReport('storageReport', '✅ All data cleared. Refresh page to reset.', 'success');
+      } catch (err) {
+        showReport('storageReport', '❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Check GCash Setup
+    function checkGCashSetup() {
+      try {
+        if (typeof getSellerPayment !== 'function') {
+          showReport('gcashReport', '❌ ERROR: app.js not loaded', 'error');
+          return;
+        }
+
+        const payment = getSellerPayment();
+        let report = '💳 GCash Payment Setup\n';
+        report += '='.repeat(60) + '\n\n';
+
+        if (payment.gcashNumber && payment.gcashQR) {
+          report += `✅ COMPLETE\n\n`;
+          report += `Phone: ${payment.gcashNumber}\n`;
+          report += `QR Code: ✅ Uploaded (${(payment.gcashQR.length / 1024).toFixed(1)} KB)\n\n`;
+          report += `Buyers will see your QR code when paying!`;
+        } else if (payment.gcashNumber || payment.gcashQR) {
+          report += `⚠️ INCOMPLETE\n\n`;
+          report += `Phone: ${payment.gcashNumber ? '✅ ' + payment.gcashNumber : '❌ Not set'}\n`;
+          report += `QR Code: ${payment.gcashQR ? '✅ Uploaded' : '❌ Not uploaded'}\n\n`;
+          report += `Complete setup on Admin Home page`;
+        } else {
+          report += `❌ NOT SET UP\n\n`;
+          report += `Go to Admin Home and set up your:\n`;
+          report += `1. GCash phone number\n`;
+          report += `2. GCash QR code image\n\n`;
+          report += `Buyers need this to send you payment!`;
+        }
+
+        const type = payment.gcashNumber && payment.gcashQR ? 'success' : payment.gcashNumber || payment.gcashQR ? 'warning' : 'error';
+        showReport('gcashReport', report, type);
+      } catch (err) {
+        showReport('gcashReport', '❌ Error: ' + err.message, 'error');
+      }
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        refreshStatus();
+        refreshBooks();
+        checkShopVisibility();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

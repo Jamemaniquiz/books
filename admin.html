@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="admin-gate.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a class="active" href="admin.html">Home</a>
+        <a href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+        <a href="orders.html">🛒 Shop Orders</a>
+        <a href="debug.html">🔧 Debug</a>
+        <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>💰 Quick Price Calculator</h2>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">Enter a price to instantly see what 20% and 25% of it comes out to — handy for quick markups or discounts.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+          <div style="flex:1;min-width:180px">
+            <label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">Price (₱)</label>
+            <input type="number" id="pcPrice" placeholder="e.g. 1500" min="0" step="0.01" oninput="calcQuickPercents()" />
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div>
+            <span class="stat-number" id="pcOut20">₱0 (₱0)</span>
+            <span class="stat-label">20% of price (price + 20%)</span>
+          </div>
+          <div>
+            <span class="stat-number" id="pcOut25">₱0 (₱0)</span>
+            <span class="stat-label">25% of price (price + 25%)</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero">
+        <div>
+          <h1>Inventory, Sales & Receipts</h1>
+          <p class="muted">A clean workspace to manage stock, record sales, and keep every receipt organized.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="inventory.html">Manage Inventory</a>
+            <a class="btn" href="receipt-history.html">Past Receipts</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h3>Quick Stats</h3>
+          <div class="stat-grid">
+            <div>
+              <span class="stat-number" id="statTitles">0</span>
+              <span class="stat-label">Titles</span>
+            </div>
+            <div>
+              <span class="stat-number" id="statInStock">0</span>
+              <span class="stat-label">In Stock</span>
+            </div>
+            <div>
+              <span class="stat-number" id="statTotal">₱0</span>
+              <span class="stat-label">Total Sales</span>
+            </div>
+            <div>
+              <span class="stat-number" id="statInventoryValue">₱0</span>
+              <span class="stat-label">Inventory Value</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;color:var(--muted);font-weight:600">
+            Net Revenue: <span id="statNetTotal">₱0</span>
+          </div>
+          <div style="margin-top:6px;color:var(--muted);font-weight:600" title="Money spent on boxes that haven't sold enough yet to earn that cost back — already subtracted from Net Revenue above, shown here on its own so you can see it clearly.">
+            Still Tied Up in Boxes (not profitable yet): <span id="statPendingBoxCost">₱0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>💳 GCash Payment Setup</h2>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">Configure your GCash account details so buyers know where to send payment. Your GCash QR code and phone number will be displayed to buyers during checkout.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <div style="flex:1;min-width:250px">
+            <label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">GCash Phone Number</label>
+            <input type="tel" id="gcashNumber" placeholder="e.g. 09171234567" />
+          </div>
+          <div style="flex:1;min-width:250px">
+            <label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">GCash QR Code Image</label>
+            <div style="display:flex;gap:0.5rem;align-items:flex-end">
+              <button class="btn ghost" id="uploadGcashQrBtn" style="flex:1">📷 Upload QR Code</button>
+              <button class="btn" id="removeGcashQrBtn" style="display:none">Remove</button>
+            </div>
+          </div>
+        </div>
+        <div id="gcashQrPreview" style="margin-bottom:1rem;text-align:center;display:none">
+          <img id="gcashQrImg" style="max-width:200px;border:1px solid var(--line);border-radius:8px;padding:8px;background:white" />
+        </div>
+        <button class="btn primary" id="saveGcashBtn">💾 Save GCash Details</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recent Activity</h2>
+          <a class="btn ghost" href="inventory.html">Manage Inventory</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Book</th><th>Qty</th><th>Total</th></tr>
+            </thead>
+            <tbody id="recentSales"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Sales Summary</h2></div>
+        <div class="summary-grid" id="summaryGrid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Data & Backup</h2></div>
+        <p class="muted" style="margin-bottom:1rem">Download a full transfer backup of all your books, sales, receipts, purchases, and shipment reviews. Restore it on your new computer anytime.</p>
+          <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center">
+          <button class="btn primary" id="backupBtn">⬇ Download Full Transfer Backup</button>
+          <button class="btn ghost" id="restoreBtn">⬆ Restore from Backup</button>
+          <button class="btn ghost" id="transferHelpBtn">🖥️ Transfer to New Computer</button>
+          <button class="btn ghost" id="eodBtn">📋 End of Day Summary</button>
+          <button class="btn" id="recordPurchaseBtn">📦 Record a Box Purchase</button>
+          <datalist id="purchaseBoxSuggestions"></datalist>
+          <input type="file" id="restoreInput" accept=".json" style="display:none" />
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-header"><h2>Purchases</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Box</th><th>Photo</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
+            <tbody id="purchaseRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>📦 Box Profit &amp; Loss</h2>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">
+          For every box you've bought, this compares what the box cost you against what you've actually earned back from books tagged with that box — so you can see at a glance which boxes made money and which didn't.
+          Tag every book with its Box (in Inventory, Bulk Paste, Scan Receipt, or New Sale) so this stays accurate.
+        </p>
+        <div class="box-chart" id="boxProfitChart"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Box</th>
+                <th>Photo</th>
+                <th>Cost</th>
+                <th>Revenue Earned</th>
+                <th>Unsold Stock (value)</th>
+                <th>Profit / Loss</th>
+              </tr>
+            </thead>
+            <tbody id="boxProfitRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+    <script src="app.js"></script>
+    <script>
+      function calcQuickPercents() {
+        const raw = parseFloat(document.getElementById("pcPrice").value);
+        const price = isNaN(raw) || raw < 0 ? 0 : raw;
+        const amt20 = price * 0.20;
+        const amt25 = price * 0.25;
+        document.getElementById("pcOut20").textContent = `₱${amt20.toFixed(2)} (₱${(price + amt20).toFixed(2)})`;
+        document.getElementById("pcOut25").textContent = `₱${amt25.toFixed(2)} (₱${(price + amt25).toFixed(2)})`;
+      }
+      
+      function setupGcashPayment() {
+        console.log("Setting up GCash Payment...");
+        
+        // Create file input
+        let gcashQrFileInput = document.getElementById("gcashQrFileInput");
+        if (!gcashQrFileInput) {
+          gcashQrFileInput = document.createElement("input");
+          gcashQrFileInput.type = "file";
+          gcashQrFileInput.accept = "image/*";
+          gcashQrFileInput.id = "gcashQrFileInput";
+          gcashQrFileInput.style.display = "none";
+          document.body.appendChild(gcashQrFileInput);
+          console.log("✓ File input created");
+        }
+
+        // Load existing data
+        try {
+          if (typeof getSellerPayment === "undefined") {
+            console.warn("getSellerPayment not available yet");
+            return;
+          }
+          const payment = getSellerPayment();
+          console.log("Loaded payment data:", payment);
+          
+          if (document.getElementById("gcashNumber")) {
+            document.getElementById("gcashNumber").value = payment.gcashNumber || "";
+            console.log("✓ GCash number loaded:", payment.gcashNumber);
+          }
+          if (payment.gcashQR && document.getElementById("gcashQrImg")) {
+            document.getElementById("gcashQrImg").src = payment.gcashQR;
+            document.getElementById("gcashQrPreview").style.display = "block";
+            document.getElementById("removeGcashQrBtn").style.display = "inline-block";
+            console.log("✓ QR code preview loaded");
+          }
+        } catch (err) {
+          console.warn("Could not load GCash data:", err.message);
+        }
+
+        // Upload button
+        const uploadBtn = document.getElementById("uploadGcashQrBtn");
+        if (uploadBtn) {
+          uploadBtn.addEventListener("click", () => {
+            console.log("Upload QR button clicked");
+            gcashQrFileInput.click();
+          });
+          console.log("✓ Upload button handler attached");
+        } else {
+          console.warn("uploadGcashQrBtn not found");
+        }
+
+        // File change handler
+        gcashQrFileInput.addEventListener("change", async () => {
+          const file = gcashQrFileInput.files && gcashQrFileInput.files[0];
+          gcashQrFileInput.value = "";
+          if (!file) return;
+          console.log("QR file selected:", file.name);
+          try {
+            if (typeof compressImageFile === "undefined") {
+              console.error("compressImageFile not available");
+              alert("System not ready. Please refresh the page.");
+              return;
+            }
+            const dataUrl = await compressImageFile(file, 400, 0.8);
+            document.getElementById("gcashQrImg").src = dataUrl;
+            document.getElementById("gcashQrPreview").style.display = "block";
+            document.getElementById("removeGcashQrBtn").style.display = "inline-block";
+            window.tempGcashQR = dataUrl;
+            console.log("✓ QR image processed and preview shown");
+          } catch (err) {
+            console.error("QR upload failed:", err);
+            alert("Could not process that image. Try a smaller file.");
+          }
+        });
+        console.log("✓ File change handler attached");
+
+        // Remove button
+        const removeBtn = document.getElementById("removeGcashQrBtn");
+        if (removeBtn) {
+          removeBtn.addEventListener("click", () => {
+            console.log("Remove QR button clicked");
+            document.getElementById("gcashQrImg").src = "";
+            document.getElementById("gcashQrPreview").style.display = "none";
+            document.getElementById("removeGcashQrBtn").style.display = "none";
+            window.tempGcashQR = "";
+            console.log("✓ QR preview cleared");
+          });
+          console.log("✓ Remove button handler attached");
+        }
+
+        // Save button
+        const saveBtn = document.getElementById("saveGcashBtn");
+        if (saveBtn) {
+          saveBtn.addEventListener("click", () => {
+            console.log("Save GCash button clicked");
+            const number = document.getElementById("gcashNumber").value.trim();
+            if (!number && !window.tempGcashQR) {
+              alert("Please enter a GCash number or upload a QR code.");
+              return;
+            }
+            try {
+              if (typeof getSellerPayment === "undefined" || typeof saveSellerPayment === "undefined") {
+                alert("System functions not ready. Please refresh the page.");
+                return;
+              }
+              const payment = getSellerPayment();
+              payment.gcashNumber = number;
+              if (window.tempGcashQR) {
+                payment.gcashQR = window.tempGcashQR;
+                window.tempGcashQR = "";
+              }
+              saveSellerPayment(payment);
+              console.log("✓ GCash details saved:", payment);
+              alert("✓ GCash details saved successfully!");
+            } catch (err) {
+              console.error("Save failed:", err);
+              alert("Error saving GCash details. Check console (F12).");
+            }
+          });
+          console.log("✓ Save button handler attached");
+        } else {
+          console.warn("saveGcashBtn not found");
+        }
+        
+        console.log("GCash setup complete!");
+      }
+      
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log("DOM Content Loaded - initializing...");
+        calcQuickPercents();
+        // Wait a bit for app.js to load
+        setTimeout(() => {
+          setupGcashPayment();
+        }, 100);
+      });
+    </script>
+  </body>
+</html>

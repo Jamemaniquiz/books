@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shop Orders - BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="admin-gate.js"></script>
+    <style>
+      .order-card{ border:1px solid var(--line, #e2ddd0); border-radius:8px; margin-bottom:14px; background:var(--panel-bg, #fff); overflow:hidden; }
+      .order-head{ display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:rgba(0,0,0,0.03); border-bottom:1px solid var(--line, #e2ddd0); flex-wrap:wrap; gap:8px; }
+      .order-id{ font-weight:700; }
+      .status-pill{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px; letter-spacing:0.02em; }
+      .status-Pending{ background:#F1DCC4; color:#8A5A1F; }
+      .status-Paid{ background:#D8E6D9; color:#2E5A34; }
+      .status-Shipped{ background:#D6E1EC; color:#2A4A6B; }
+      .status-Cancelled{ background:#E9D6D6; color:#8A2E2E; }
+      .order-body{ padding:14px 18px; font-size:13.5px; }
+      .order-body .line{ display:flex; justify-content:space-between; padding:3px 0; color:#666; }
+      .order-buyer{ margin-bottom:8px; }
+      .order-actions{ padding:12px 18px; border-top:1px solid var(--line, #e2ddd0); display:flex; gap:8px; flex-wrap:wrap; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a href="admin.html">Home</a>
+        <a href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+        <a class="active" href="orders.html">🛒 Shop Orders</a>
+        <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Shop Orders</h2>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">
+          Orders placed by buyers through <strong>shop.html</strong>. Mark them Paid once you've confirmed payment,
+          then Shipped once they're on the way. Buyers can look up their own order status with their Order ID on the
+          shop's "Track order" tab.
+        </p>
+        <div id="ordersList"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+
+    <script>
+      const ORDERS_KEY   = '.shop_orders';
+      const BOOKS_KEY    = '.books';
+      const RECEIPTS_KEY = '.receipts';
+      const peso = (n) => 'PHP ' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+      function readLocal(key, fallback){
+        try{
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        }catch(e){ return fallback; }
+      }
+      function writeLocal(key, value){
+        try{
+          localStorage.setItem(key, JSON.stringify(value));
+          return true;
+        }catch(e){
+          alert('Could not save — your browser storage may be full.');
+          return false;
+        }
+      }
+
+      function getOrders(){ return readLocal(ORDERS_KEY, []); }
+      function saveOrders(orders){ return writeLocal(ORDERS_KEY, orders); }
+
+      // Adjust the shared book stock (same records inventory.html and shop.html
+      // read/write) by `sign` × each item's qty in the order — sign=+1 to give
+      // stock back (cancel), sign=-1 to take it again (un-cancel).
+      function adjustStockForOrder(order, sign){
+        const books = readLocal(BOOKS_KEY, []);
+        const updated = books.map(b=>{
+          const item = (order.items||[]).find(i=>i.id===b.id);
+          if(!item) return b;
+          const next = (Number(b.stock)||0) + sign * (Number(item.qty)||0);
+          return {...b, stock: Math.max(0, next)};
+        });
+        writeLocal(BOOKS_KEY, updated);
+      }
+
+      // Keep the matching Receipt (same id as the order) in sync with the
+      // order's status, so Admin > Receipts reflects paid/shipped/refunded
+      // the same way it does for manually-recorded sales.
+      function syncReceiptWithStatus(orderId, status){
+        const receipts = readLocal(RECEIPTS_KEY, []);
+        const idx = receipts.findIndex(r => r.id === orderId);
+        if(idx < 0) return;
+        receipts[idx] = {
+          ...receipts[idx],
+          paid:     status === 'Paid' || status === 'Shipped',
+          shipped:  status === 'Shipped',
+          refunded: status === 'Cancelled',
+        };
+        writeLocal(RECEIPTS_KEY, receipts);
+      }
+
+      function setOrderStatus(id, status){
+        const orders = getOrders();
+        const order = orders.find(o => o.id === id);
+        if(!order || order.status === status) return;
+
+        const wasCancelled = order.status === 'Cancelled';
+        const willCancel    = status === 'Cancelled';
+        // Only touch stock on the transition into/out of Cancelled, not on
+        // every status change (Pending → Paid → Shipped don't move stock).
+        if(willCancel && !wasCancelled) adjustStockForOrder(order, +1);       // give stock back
+        else if(!willCancel && wasCancelled) adjustStockForOrder(order, -1);  // take it again
+
+        const updated = orders.map(o => o.id===id ? {...o, status} : o);
+        if(saveOrders(updated)){
+          syncReceiptWithStatus(id, status);
+          render();
+        }
+      }
+
+      function render(){
+        const orders = getOrders();
+        const list = document.getElementById('ordersList');
+        if(orders.length===0){
+          list.innerHTML = '<p class="muted" style="padding:20px 0;text-align:center;">No orders yet — they\'ll show up here as soon as a buyer checks out on the shop.</p>';
+          return;
+        }
+        list.innerHTML = orders.map(o => {
+          const itemLines = (o.items||[]).map(i =>
+            `<div class="line"><span>${escapeHtml(i.title)} × ${i.qty}</span><span>${peso(i.price*i.qty)}</span></div>`
+          ).join('');
+          const statuses = ['Pending','Paid','Shipped','Cancelled'].filter(s => s !== o.status);
+          const actionBtns = statuses.map(s =>
+            `<button class="btn ghost" data-action="set-status" data-id="${o.id}" data-status="${s}">Mark ${s}</button>`
+          ).join('');
+          return `
+            <div class="order-card">
+              <div class="order-head">
+                <div>
+                  <div class="order-id">${o.id}</div>
+                  <div class="muted" style="font-size:12px;">${new Date(o.createdAt).toLocaleString()}</div>
+                </div>
+                <span class="status-pill status-${o.status}">${o.status}</span>
+              </div>
+              <div class="order-body">
+                <div class="order-buyer"><strong>${escapeHtml(o.buyerName)}</strong> · ${escapeHtml(o.contact)}</div>
+                <div class="muted" style="margin-bottom:8px;">${escapeHtml(o.address)}</div>
+                ${itemLines}
+                <div class="line" style="font-weight:700;color:#222;border-top:1px solid var(--line, #e2ddd0);margin-top:6px;padding-top:8px;">
+                  <span>Total via ${escapeHtml(o.paymentMode)}</span><span>${peso(o.total)}</span>
+                </div>
+              </div>
+              <div class="order-actions">${actionBtns}</div>
+            </div>`;
+        }).join('');
+      }
+
+      function escapeHtml(s){
+        return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      document.getElementById('ordersList').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="set-status"]');
+        if(!btn) return;
+        setOrderStatus(btn.dataset.id, btn.dataset.status);
+      });
+
+      render();
+    </script>
+  </body>
+</html>

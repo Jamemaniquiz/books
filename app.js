@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   sales:    ".sales",
   receipts: ".receipts",
   purchases: ".purchases",
+  sellerPayment: ".sellerPayment",
 };
 
 const LEGACY_KEYS = {
@@ -97,6 +98,15 @@ const getBooks    = ()         => getData(STORAGE_KEYS.books,    []).map(b => ({
   box:    (b.box    === undefined || b.box    === null) ? "" : String(b.box),
   price:  Number(b.price) || 0,
   stock:  Number.isFinite(Number(b.stock)) ? Number(b.stock) : 0,
+  shopVisible: b.shopVisible === true, // Only show in shop if explicitly set to true
+  // A short seller-written note on condition/edition/etc — shown to buyers
+  // on the shop's book detail view.
+  description: (b.description === undefined || b.description === null) ? "" : String(b.description),
+  // Multiple cover photos. Older records only ever had a single `image` —
+  // keep reading that as a one-photo gallery so nothing old breaks.
+  images: Array.isArray(b.images) && b.images.filter(Boolean).length
+    ? b.images.filter(Boolean)
+    : (b.image ? [b.image] : []),
   // Each layaway hold reserves exactly one copy, so a title with several
   // copies in stock can have several *independent* layaways running at once.
   // Older data only ever stored a single reserved/reservedFor/layawayReceiptId
@@ -115,6 +125,8 @@ const saveBooks   = (books)    => {
 };
 const saveSales   = (sales)    => setData(STORAGE_KEYS.sales,    sales);
 const saveReceipts= (receipts) => setData(STORAGE_KEYS.receipts, receipts);
+const getSellerPayment = () => getData(STORAGE_KEYS.sellerPayment, { gcashNumber: "", gcashQR: "" });
+const saveSellerPayment = (data) => setData(STORAGE_KEYS.sellerPayment, data);
 
 const ensureSeedData = () => {
   // Seed data disabled — BookNest only saves YOUR books, not sample data.
@@ -1751,6 +1763,12 @@ const initInventory = () => {
         <td>
           ${reservedBadge}
           <div class="action-group">
+            ${book.images && book.images.length
+              ? `<img src="${book.images[0]}" class="book-photo-thumb" data-action="view-book-photo" data-id="${book.id}" title="Click to view cover photo" />`
+              : ""}
+            <button class="btn ghost action-btn inv-action-btn" data-action="manage-book-photos" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="Add, remove, or reorder this book's photos">🖼 Photos${book.images && book.images.length ? ` (${book.images.length})` : ""}</button>
+            <button class="btn ghost action-btn inv-action-btn" data-action="edit-book-description" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="${book.description ? "Edit the description buyers see" : "Add a description — condition, edition, notes, etc."}">${book.description ? "📝 Desc ✓" : "📝 Add Desc"}</button>
+            <button class="btn primary action-btn inv-action-btn${book.shopVisible ? " active" : ""}" data-action="toggle-shop" data-id="${book.id}" title="${book.shopVisible ? "Remove from shop" : "Add to shop"}" style="font-size:11px;padding:3px 8px;min-width:0;">${book.shopVisible ? "🛒 In Shop" : "➕ Add Shop"}</button>
             <button class="btn primary action-btn inv-action-btn sold" data-action="sold"    data-id="${book.id}">Sold</button>
             <button class="btn ghost action-btn inv-action-btn reserve${holds.length ? " is-reserved" : ""}" data-action="layaway" data-id="${book.id}"${availableForLayaway <= 0 ? " disabled title=\"Every copy of this book is already on layaway — cancel a hold above to free one up\"" : ""}>${availableForLayaway > 0 ? "🗓️ Layaway" : "Fully Reserved"}</button>
             <button class="btn ghost action-btn inv-action-btn delete" data-action="delete"  data-id="${book.id}">Delete</button>
@@ -1857,7 +1875,10 @@ const initInventory = () => {
           type:       normalizeType(book.type),
           condition:  normalizeCondition(book.condition),
           box:        String(book.box || "").trim(),
+          shopVisible: false,
           layawayHolds: [],
+          description: "",
+          images: [],
         });
       });
       
@@ -2207,6 +2228,173 @@ const initInventory = () => {
     initDashboard();
   });
 
+  // Book photos: a small dialog per book supporting several photos (the
+  // first is used as the cover shown in the shop). Built the same way as
+  // the box-photo lightbox — a single reusable <dialog>, filled in fresh
+  // each time it's opened.
+  const MAX_BOOK_PHOTOS = 6;
+  let bookPhotosDialog = null;
+  const ensureBookPhotosDialog = () => {
+    if (bookPhotosDialog) return bookPhotosDialog;
+    const dialog = document.createElement("dialog");
+    dialog.className = "action-modal";
+    dialog.style.width = "min(460px, 92vw)";
+    dialog.innerHTML = `
+      <div class="action-modal__header">
+        <div class="action-modal__icon">🖼</div>
+        <h3 class="action-modal__title">Book Photos</h3>
+      </div>
+      <div class="action-modal__body">
+        <div class="bn-book-photos-header" style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;"></div>
+        <div class="bn-book-photos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
+      </div>
+      <div class="action-modal__actions">
+        <button class="btn modal-primary" data-action="close" type="button">Done</button>
+      </div>
+    `;
+    document.body.appendChild(dialog);
+    dialog.querySelector("[data-action='close']").addEventListener("click", () => dialog.close());
+    bookPhotosDialog = dialog;
+    return dialog;
+  };
+
+  const saveBookPhotos = (bookId, photos) => {
+    const books = getBooks();
+    const target = books.find(b => b.id === bookId);
+    if (!target) return;
+    target.images = photos.slice(0, MAX_BOOK_PHOTOS);
+    target.image  = target.images[0] || ""; // keep the legacy single-photo field in sync
+    saveBooks(books);
+  };
+
+  const renderBookPhotosGrid = (bookId, photos) => {
+    const dialog = ensureBookPhotosDialog();
+    const header = dialog.querySelector(".bn-book-photos-header");
+    const grid   = dialog.querySelector(".bn-book-photos-grid");
+    header.textContent = `${photos.length}/${MAX_BOOK_PHOTOS} photos — the first one is the cover shown in the shop`;
+
+    const cells = [];
+    for (let i = 0; i < MAX_BOOK_PHOTOS; i++) {
+      if (i < photos.length) {
+        cells.push(`
+          <div style="position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:1.5px solid #d9cdb2;background:#efe7d8;">
+            <img src="${photos[i]}" alt="Book photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" data-lightbox-idx="${i}" />
+            ${i === 0 ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(38,33,26,0.7);color:#fff;font-size:10px;text-align:center;padding:2px 0;">Cover</div>` : ""}
+            <button type="button" class="bn-book-photo-remove" data-idx="${i}"
+              style="position:absolute;top:4px;right:4px;width:22px;height:22px;border:none;border-radius:50%;
+              background:rgba(179,38,30,0.92);color:#fff;font-weight:700;font-size:12px;line-height:1;
+              cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>`);
+      } else if (i === photos.length) {
+        cells.push(`
+          <label class="bn-book-photo-add" style="aspect-ratio:3/4;border-radius:8px;
+            border:2px dashed #9C7A34;background:#F8F3E7;display:flex;flex-direction:column;
+            align-items:center;justify-content:center;cursor:pointer;color:#8A5A1F;font-size:12px;
+            font-weight:700;text-align:center;gap:4px;">
+            <span style="font-size:22px;">＋</span>
+            <span>Add</span>
+            <input type="file" accept="image/*" class="bn-book-photo-input" style="display:none;" />
+          </label>`);
+      } else {
+        cells.push(`<div></div>`);
+      }
+    }
+    grid.innerHTML = cells.join("");
+
+    grid.querySelectorAll("[data-lightbox-idx]").forEach(img => {
+      img.addEventListener("click", () => openPhotoLightbox(photos[parseInt(img.dataset.lightboxIdx, 10)], "Book Photo"));
+    });
+
+    grid.querySelectorAll(".bn-book-photo-remove").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        photos.splice(idx, 1);
+        saveBookPhotos(bookId, photos);
+        renderBookPhotosGrid(bookId, photos);
+      });
+    });
+
+    const fileInput = grid.querySelector(".bn-book-photo-input");
+    if (fileInput) {
+      fileInput.addEventListener("change", async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (photos.length >= MAX_BOOK_PHOTOS) return;
+        try {
+          const dataUrl = await compressImageFile(file, 700, 0.75);
+          photos.push(dataUrl);
+          saveBookPhotos(bookId, photos);
+        } catch (err) {
+          console.error("[BookNest] book photo upload failed:", err);
+          showNotice("Could not process that photo. Try a smaller image.", "Photo Upload Failed");
+        }
+        renderBookPhotosGrid(bookId, photos);
+      });
+    }
+  };
+
+  const openBookPhotosManager = (bookId) => {
+    const book = getBooks().find(b => b.id === bookId);
+    if (!book) return;
+    const dialog = ensureBookPhotosDialog();
+    dialog.querySelector(".action-modal__title").textContent = book.title ? `Photos — ${book.title}` : "Book Photos";
+    const photos = [...(book.images || [])];
+    renderBookPhotosGrid(bookId, photos);
+    dialog.addEventListener("close", () => refresh(), { once: true });
+    dialog.showModal();
+  };
+
+  // Book description — a short free-text note (condition, edition, notes)
+  // shown to buyers on the shop's book detail view.
+  let bookDescriptionDialog = null;
+  const ensureBookDescriptionDialog = () => {
+    if (bookDescriptionDialog) return bookDescriptionDialog;
+    const dialog = document.createElement("dialog");
+    dialog.className = "action-modal";
+    dialog.style.width = "min(440px, 92vw)";
+    dialog.innerHTML = `
+      <div class="action-modal__header">
+        <div class="action-modal__icon">📝</div>
+        <h3 class="action-modal__title">Description</h3>
+      </div>
+      <div class="action-modal__body">
+        <p style="font-size:12.5px;color:#64748b;margin:0 0 10px;">Tell buyers about this copy's condition, edition, or anything else worth mentioning.</p>
+        <textarea class="bn-book-desc-field" rows="5" style="width:100%;box-sizing:border-box;padding:10px;font:inherit;border:1.5px solid #d9cdb2;border-radius:8px;resize:vertical;" placeholder="e.g. Pre-loved, light shelf wear on the cover, no markings inside."></textarea>
+      </div>
+      <div class="action-modal__actions">
+        <button class="btn modal-ghost" data-action="cancel" type="button">Cancel</button>
+        <button class="btn modal-primary" data-action="save" type="button">Save</button>
+      </div>
+    `;
+    document.body.appendChild(dialog);
+    bookDescriptionDialog = dialog;
+    return dialog;
+  };
+
+  const openBookDescriptionEditor = (bookId) => {
+    const book = getBooks().find(b => b.id === bookId);
+    if (!book) return;
+    const dialog = ensureBookDescriptionDialog();
+    dialog.querySelector(".action-modal__title").textContent = book.title ? `Description — ${book.title}` : "Description";
+    const field = dialog.querySelector(".bn-book-desc-field");
+    field.value = book.description || "";
+    const cancelBtn = dialog.querySelector("[data-action='cancel']");
+    const saveBtn   = dialog.querySelector("[data-action='save']");
+    cancelBtn.onclick = () => dialog.close();
+    saveBtn.onclick = () => {
+      const books = getBooks();
+      const target = books.find(b => b.id === bookId);
+      if (target) {
+        target.description = field.value.trim();
+        saveBooks(books);
+        refresh();
+      }
+      dialog.close();
+    };
+    dialog.showModal();
+    setTimeout(() => field.focus(), 50);
+  };
+
   rows.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -2214,6 +2402,23 @@ const initInventory = () => {
     const action = target.dataset.action;
     if (!id || !action) return;
     const books = getBooks();
+
+    if (action === "manage-book-photos") {
+      openBookPhotosManager(id);
+      return;
+    }
+
+    if (action === "edit-book-description") {
+      openBookDescriptionEditor(id);
+      return;
+    }
+
+    if (action === "view-book-photo") {
+      const book = books.find(b => b.id === id);
+      const cover = book?.images?.[0] || book?.image;
+      if (cover) openPhotoLightbox(cover, book.title || "Book Photo");
+      return;
+    }
 
     if (action === "delete") {
       const bookToDelete = books.find(b => b.id === id);
@@ -2225,6 +2430,20 @@ const initInventory = () => {
         saveBooks([...getBooks(), bookToDelete]);
         refresh();
       });
+    }
+
+    if (action === "toggle-shop") {
+      const book = books.find(b => b.id === id);
+      if (!book) return;
+      book.shopVisible = book.shopVisible !== true; // Toggle: if undefined or false, set to true; if true, set to false
+      saveBooks(books);
+      refresh();
+      showNotice(
+        book.shopVisible
+          ? `"${book.title}" is now visible in the shop.`
+          : `"${book.title}" has been removed from the shop.`,
+        book.shopVisible ? "Added to Shop" : "Removed from Shop"
+      );
     }
 
     if (action === "sold") {
