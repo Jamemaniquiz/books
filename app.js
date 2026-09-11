@@ -1797,10 +1797,9 @@ const initInventory = () => {
   const normalizeCondition = (c) => {
     if (!c) return "Pre Loved";
     const s = String(c).toLowerCase().replace(/[-_\s]+/g,"");
-    if (s === "new" || s === "brandnew") return "Brand New";
+    if (s === "new") return "New";
     if (s === "preloved" || s === "used" || s === "good") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
-    if (s === "damaged" || s === "damage") return "Damaged";
     return "Pre Loved";
   };
 
@@ -1975,10 +1974,9 @@ const initInventory = () => {
   const matchCondition = (raw) => {
     const s = String(raw || "").toLowerCase().replace(/[-_\s]+/g, "");
     if (!s) return null;
-    if (s === "new" || s === "brandnew") return "Brand New";
+    if (s === "new") return "New";
     if (s === "preloved" || s === "used" || s === "good" || s === "secondhand") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
-    if (s === "damaged" || s === "damage") return "Damaged";
     return null;
   };
 
@@ -2894,7 +2892,6 @@ const initReceiptHistory = () => {
             <button class="rc-btn ${shipped ? "shipped" : isPiling ? "piling" : "ship-now"}" data-action="toggle-shipped" data-id="${r.id}"${isPiling ? ` disabled title="Items are in Piling mode — change the shipping carrier before marking as shipped"` : ""}>${shipBtnLabel}</button>
             <button class="rc-btn ${paid ? "shipped" : "ship-now"}" data-action="toggle-paid" data-id="${r.id}">${paidBtnLabel}</button>
             <button class="rc-btn ${refunded ? "refunded" : "refund-now"}" data-action="toggle-refunded" data-id="${r.id}" title="${refunded ? "Undo refund" : "Refund this order — removes its amount from Total Revenue"}">${refundBtnLabel}</button>
-            <button class="rc-btn waybill" data-action="waybill-receipt" data-id="${r.id}" title="Attach the waybill photo and download a thank-you card to send the buyer">${r.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill"}</button>
             <button class="rc-btn" data-action="review-receipt" data-id="${r.id}">📝 Review</button>
             <button class="rc-btn view" data-action="view-receipt" data-id="${r.id}">View</button>
             <button class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}">Edit</button>
@@ -2948,12 +2945,10 @@ const initReceiptHistory = () => {
       const updated = setReceiptFlags(id, { shipped: !shipped });
       if (updated) {
         render();
-        // Just marked as shipped — prompt right away to attach the waybill
         // photo so a thank-you card can be sent to the buyer.
-        if (wasNotShipped) openWaybillModal(updated);
+
       }
     }
-    if (action === "waybill-receipt") { openWaybillModal(receipt); }
     if (action === "toggle-paid") {
       const { paid } = getReceiptFlags(receipt);
       const updated = setReceiptFlags(id, { paid: !paid });
@@ -3191,250 +3186,9 @@ const renderShipmentControls = (receipt) => {
     };
   }
 
-  const waybillBtn = document.getElementById("openWaybillBtn");
-  if (waybillBtn) {
-    waybillBtn.textContent = receipt.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill";
-    waybillBtn.onclick = () => openWaybillModal(receipt);
-  }
+
+
 };
-
-// ── Waybill thank-you card (sent to buyer after shipping) ──────────────
-const renderWaybillPreview = (photoSrc) => {
-  const wrap = document.getElementById("waybillPhotoWrap");
-  if (!wrap) return;
-  if (isValidPhotoSrc(photoSrc)) {
-    wrap.classList.add("has-photo");
-    wrap.innerHTML = `<img src="${photoSrc}" alt="Waybill photo" />`;
-  } else {
-    wrap.classList.remove("has-photo");
-    wrap.innerHTML = `
-      <div class="bn-waybill-photo-empty">
-        <div class="bn-waybill-photo-icon">📮</div>
-        <div>No waybill photo attached yet</div>
-      </div>`;
-  }
-};
-
-const openWaybillModal = (receiptOrId) => {
-  const modal = document.getElementById("waybillModal");
-  if (!modal) return;
-  const receipt = typeof receiptOrId === "string"
-    ? getReceipts().find(r => r.id === receiptOrId)
-    : (getReceipts().find(r => r.id === receiptOrId.id) || receiptOrId);
-  if (!receipt) return;
-
-  const idLabel = document.getElementById("waybill-bn-id");
-  if (idLabel) idLabel.textContent = receipt.id;
-
-  const photoInput = document.getElementById("waybillPhotoInput");
-  if (photoInput) photoInput.value = "";
-
-  renderWaybillPreview(receipt.waybillPhoto);
-
-  if (photoInput) {
-    photoInput.onchange = async () => {
-      const file = photoInput.files?.[0];
-      if (!file) return;
-      try {
-        const dataUrl = await compressImageFile(file);
-        renderWaybillPreview(dataUrl);
-      } catch {
-        showNotice("Couldn't read that image. Please try a different photo.", "Error");
-      }
-    };
-  }
-
-  const saveBtn = document.getElementById("saveWaybillBtn");
-  if (saveBtn) {
-    saveBtn.onclick = async () => {
-      const file = photoInput?.files?.[0];
-      if (!file) {
-        showNotice("Choose a waybill photo first, then save.", "Nothing to save");
-        return;
-      }
-      let dataUrl;
-      try {
-        dataUrl = await compressImageFile(file);
-      } catch {
-        showNotice("Couldn't read that image. Please try a different photo.", "Error");
-        return;
-      }
-      const receipts = getReceipts();
-      const idx = receipts.findIndex(r => r.id === receipt.id);
-      if (idx < 0) return;
-      receipts[idx].waybillPhoto = dataUrl;
-      saveReceipts(receipts);
-      renderWaybillPreview(dataUrl);
-      showNotice("Waybill photo saved. You can now download the card to send to the buyer.", "Saved");
-      render();
-    };
-  }
-
-  const removeBtn = document.getElementById("removeWaybillBtn");
-  if (removeBtn) {
-    removeBtn.onclick = () => {
-      const receipts = getReceipts();
-      const idx = receipts.findIndex(r => r.id === receipt.id);
-      if (idx < 0) return;
-      delete receipts[idx].waybillPhoto;
-      saveReceipts(receipts);
-      if (photoInput) photoInput.value = "";
-      renderWaybillPreview(null);
-      render();
-    };
-  }
-
-  const downloadBtn = document.getElementById("downloadWaybillBtn");
-  if (downloadBtn) {
-    downloadBtn.onclick = async () => {
-      const wrapHasPhoto = document.getElementById("waybillPhotoWrap")?.classList.contains("has-photo");
-      if (!wrapHasPhoto) {
-        showNotice("Attach and save a waybill photo before downloading the card.", "Nothing to download");
-        return;
-      }
-      await downloadReceipt("waybillPrintArea", `Waybill_${receipt.id}`);
-    };
-  }
-
-  modal.showModal();
-
-  const closeBtn = document.getElementById("closeWaybillModal");
-  if (closeBtn) closeBtn.onclick = () => modal.close();
-};
-
-const openShipmentReviewModal = (receiptOrId) => {
-  const modal = document.getElementById("shipmentReviewModal");
-  if (!modal) return;
-  const receipt = typeof receiptOrId === "string"
-    ? getReceipts().find(r => r.id === receiptOrId)
-    : (getReceipts().find(r => r.id === receiptOrId.id) || receiptOrId);
-  if (!receipt) return;
-
-  const idLabel = document.getElementById("review-bn-id");
-  if (idLabel) idLabel.textContent = receipt.id;
-
-  const reviewText = document.getElementById("shipmentReviewText");
-  const photoInput = document.getElementById("shipmentReviewPhotos");
-  if (reviewText) reviewText.value = "";
-  if (photoInput) photoInput.value = "";
-
-  renderShipmentReviews(receipt);
-
-  const saveReviewBtn = document.getElementById("saveShipmentReviewBtn");
-  if (saveReviewBtn) {
-    saveReviewBtn.onclick = async () => {
-      await openShipmentReviewComposer(receipt);
-      const updated = getReceipts().find(r => r.id === receipt.id) || receipt;
-      renderShipmentReviews(updated);
-    };
-  }
-
-  modal.showModal();
-
-  const closeBtn = document.getElementById("closeShipmentReviewModal");
-  if (closeBtn) closeBtn.onclick = () => modal.close();
-};
-
-const openShipmentReviewComposer = async (receipt) => {
-  const text = document.getElementById("shipmentReviewText");
-  const photoInput = document.getElementById("shipmentReviewPhotos");
-  if (text) text.focus();
-  const files = Array.from(photoInput?.files || []).slice(0, MAX_SHIPMENT_REVIEW_PHOTOS);
-  const reviewText = text?.value.trim() || "";
-  if (!reviewText && files.length === 0) {
-    showNotice("Please add a note or at least one photo before saving the review.", "Nothing to save");
-    return;
-  }
-  const photos = [];
-  for (const file of files) {
-    try {
-      photos.push(await compressImageFile(file));
-    } catch {
-      // skip bad file
-    }
-  }
-  const receipts = getReceipts();
-  const idx = receipts.findIndex(r => r.id === receipt.id);
-  if (idx < 0) return;
-  receipts[idx].shipmentReviews = Array.isArray(receipts[idx].shipmentReviews) ? receipts[idx].shipmentReviews : [];
-  receipts[idx].shipmentReviews.push({
-    id: createId("rev"),
-    date: new Date().toISOString(),
-    text: reviewText,
-    photos,
-  });
-  saveReceipts(receipts);
-  showNotice("Shipment review saved.", "Saved");
-  const updated = receipts[idx];
-  renderShipmentReviews(updated);
-  text.value = "";
-  if (photoInput) photoInput.value = "";
-};
-
-const renderReceiptPhotosReadOnly = (receipt) => {
-  const photosSection = document.getElementById("view-bn-photos-section");
-  const photosGrid    = document.getElementById("view-bn-photos-grid");
-  if (!photosSection || !photosGrid) return;
-  const rawPhotos = Array.isArray(receipt.photos) ? receipt.photos : [];
-  const photos = rawPhotos.filter(isValidPhotoSrc);
-  console.log("[BookNest] rendering photos for receipt", receipt.id,
-    "— stored:", rawPhotos.length, "valid:", photos.length,
-    photos.length ? photos.map(p => p.slice(0, 30) + "...") : "(none)");
-
-  // Auto-repair: if some stored entries were corrupted/empty (e.g. from an earlier
-  // bug), quietly clean them out of storage so they don't keep showing as blank boxes.
-  if (rawPhotos.length !== photos.length) {
-    const receipts = getReceipts();
-    const idx = receipts.findIndex(r => r.id === receipt.id);
-    if (idx >= 0) {
-      receipts[idx].photos = photos;
-      saveReceipts(receipts);
-      console.log("[BookNest] auto-removed", rawPhotos.length - photos.length, "corrupted photo entr(y/ies) from receipt", receipt.id);
-    }
-  }
-
-  const headerEl = photosSection.querySelector(".bn-photos-header");
-  if (headerEl) headerEl.textContent = "📷 ITEM / SHIPPING PHOTOS";
-  if (photos.length > 0) {
-    photosGrid.innerHTML = photos.map((src, i) => `
-      <div class="bn-photo-cell" style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;background:#e8f0fe;box-shadow:0 4px 12px rgba(15,23,42,0.08);">
-        <img src="${src}" alt="Receipt photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;"
-          onerror="this.parentElement.innerHTML='&lt;div style=&quot;display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:11px;color:#94a3b8;text-align:center;padding:4px;&quot;&gt;⚠ Photo unavailable&lt;/div&gt;'" />
-      </div>`
-    ).join("");
-    photosSection.style.display = "";
-  } else {
-    photosGrid.innerHTML = "";
-    photosSection.style.display = "none";
-  }
-};
-
-const MAX_RECEIPT_PHOTOS = 4;
-
-const compressImageFile = (file, maxDim = 900, quality = 0.75) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          const ratio = Math.min(maxDim / width, maxDim / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
 
 // ── Receipt photos (editable, max 4) ────────────────────────────────────
 const renderReceiptPhotosEditable = (currentPhotos, onChange) => {

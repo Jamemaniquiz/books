@@ -49,8 +49,7 @@
       }
       .choices{
         display:grid;
-        grid-template-columns:minmax(0,420px);
-        justify-content:center;
+        grid-template-columns:1fr 1fr;
         gap:20px;
       }
       @media (max-width:520px){
@@ -107,6 +106,11 @@
           <div class="choice-icon">🛒</div>
           <div class="choice-title">I'm a Buyer</div>
           <div class="choice-desc">Browse books, add to cart, and check out — no account needed.</div>
+        </a>
+        <a class="choice-card admin" href="admin.html">
+          <div class="choice-icon">🔒</div>
+          <div class="choice-title">I'm the Admin</div>
+          <div class="choice-desc">Manage inventory, sales, and orders. Passcode required.</div>
         </a>
       </div>
 
