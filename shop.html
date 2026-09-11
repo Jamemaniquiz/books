@@ -338,7 +338,8 @@
   .empty h3{ margin-bottom:8px; }
 
   /* CART / TABLE */
-  .cart-badge{position:absolute;top:-9px;right:-10px;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:#c62828;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900;line-height:1;box-shadow:0 3px 10px rgba(198,40,40,.35);border:2px solid #fff;animation:cartPop .25s ease both}.cart-bump{animation:cartPop .28s ease both}@keyframes cartPop{0%{transform:scale(.55);opacity:.2}70%{transform:scale(1.14);opacity:1}100%{transform:scale(1);opacity:1}}
+  .cart-badge{position:absolute;top:-9px;right:-10px;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:#c62828;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900;line-height:1;box-shadow:0 3px 10px rgba(198,40,40,.35);border:2px solid #fff;animation:cartPop .25s ease both}.cart-bump{animation:cartPop .28s ease both}
+  .cart-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:10px;padding:12px 14px 12px 16px;border-radius:14px;background:var(--ink);color:var(--white);box-shadow:0 12px 34px rgba(0,0,0,.22);font-size:14px;font-weight:700;max-width:min(92vw,420px);animation:toastIn .2s ease both}.cart-toast__icon{font-size:19px}.cart-toast__link{border:0;background:rgba(255,255,255,.14);color:#fff;padding:7px 10px;border-radius:9px;font:inherit;font-size:12px;cursor:pointer}.cart-toast__link:hover{background:rgba(255,255,255,.22)}@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px) scale(.98)}to{opacity:1;transform:translate(-50%,0) scale(1)}}@keyframes cartPop{0%{transform:scale(.55);opacity:.2}70%{transform:scale(1.14);opacity:1}100%{transform:scale(1);opacity:1}}
   .cart-row{
     display:grid;
     grid-template-columns:64px 1fr 110px 90px 90px 32px;
@@ -979,20 +980,32 @@
   function cartTotal(){ return cartItems().reduce((sum,i)=>sum+i.price*i.qty,0); }
 
   function addToCart(id){
-    const book = state.books.find(b=>b.id===id);
-    if(!book) return;
+    // Shop cards use the Shop Listing ID, while Inventory uses the source
+    // book ID. Resolve the listing first so the cart always works.
+    const book = state.shopBooks.find(b=>String(b.id)===String(id));
+    if(!book) { showToast('⚠️ This book is no longer available.'); return; }
     const current = state.cart[id]||0;
-    if(current >= availableStock(book)){ showToast('No more stock available'); return; }
+    const maxStock = availableStock(book);
+    if(current >= maxStock){ showToast('⚠️ No more stock available for this book.'); return; }
     const wasEmpty = cartCount() === 0;
+    const next = {...state.cart, [id]:current+1};
     setState({
-      cart:{...state.cart, [id]:current+1},
-      cartStartedAt: wasEmpty ? Date.now() : state.cartStartedAt
+      cart:next,
+      cartStartedAt: wasEmpty ? Date.now() : state.cartStartedAt,
+      toast:'🛒 Added to cart — '+(current+1)+' item'+(current+1===1?'':'s')
     });
-    showToast('🛒 Added to cart • '+cartCount()+' item'+(cartCount()===1?'':'s')+' in cart');
+    // Bring attention to the cart badge without reloading the page.
+    requestAnimationFrame(()=>{
+      document.querySelectorAll('.cart-badge').forEach(el=>{
+        el.classList.remove('cart-bump');
+        void el.offsetWidth;
+        el.classList.add('cart-bump');
+      });
+    });
   }
   function setCartQty(id, qty){
-    const book = state.books.find(b=>b.id===id);
-    qty = Math.max(0, Math.min(qty, book?availableStock(book):qty));
+    const book = state.shopBooks.find(b=>String(b.id)===String(id));
+    qty = Math.max(0, Math.min(qty, book?availableStock(book)+Number(state.cart[id]||0):qty));
     const next = {...state.cart};
     if(qty<=0){ delete next[id]; } else { next[id]=qty; }
     const nowEmpty = Object.values(next).reduce((a,b)=>a+b,0) === 0;
@@ -1284,7 +1297,7 @@
     body.appendChild(el('div',{class:'meta'},[book.condition||'']));
     const actions = el('div',{class:'card-actions'});
     const detailsBtn = el('button',{class:'btn btn-outline', onclick:()=>openBookDetail(book.id)},['Details']);
-    const addBtn = el('button',{class:'btn btn-primary', onclick:()=>openAddConfirm(book.id)},['Add to cart']);
+    const addBtn = el('button',{class:'btn btn-primary', onclick:()=>addToCart(book.id)},['Add to cart']);
     if(out) addBtn.disabled = true;
     actions.appendChild(detailsBtn);
     actions.appendChild(addBtn);
@@ -1346,7 +1359,7 @@
 
     const addBtn = el('button',{
       class:'btn btn-primary', style:'width:100%;justify-content:center;margin-top:16px;padding:12px;',
-      onclick:()=>openAddConfirm(book.id)
+      onclick:()=>addToCart(book.id)
     },[out?'Out of stock':'Add to cart']);
     if(out) addBtn.disabled = true;
     modal.appendChild(addBtn);
@@ -2112,18 +2125,16 @@
     const bookModal = bookDetailModal();
     if(bookModal) root.appendChild(bookModal);
 
-    // Added LAST (on top of the book detail modal) so the "are you sure?"
-    // confirmation is never hidden behind it — this popup should always be
-    // the thing the buyer sees when they click Add to cart.
-    const addConfirmModal = addToCartConfirmModal();
-    if(addConfirmModal) root.appendChild(addConfirmModal);
-
     const lb = lightboxOverlay();
     if(lb) root.appendChild(lb);
 
     if(state.toast){
-      const t = el('div',{style:'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--white); padding:10px 18px; border-radius:4px; font-size:13.5px; z-index:100;'},[state.toast]);
-      root.appendChild(t);
+      const toast = el('div',{class:'cart-toast','role':'status','aria-live':'polite'},[
+        el('span',{class:'cart-toast__icon'},['🛒']),
+        el('span',{},[state.toast.replace(/^🛒\s*/, '')]),
+        state.toast.includes('Added to cart') ? el('button',{class:'cart-toast__link',onclick:()=>setState({view:'cart',toast:null})},['View cart']) : null
+      ]);
+      root.appendChild(toast);
     }
   }
 
@@ -2150,6 +2161,5 @@
   setInterval(tickCartCountdown, 1000);
 })();
 </script>
-<script src="mobile-enhancements.js"></script>
 </body>
 </html>

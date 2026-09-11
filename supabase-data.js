@@ -53,53 +53,10 @@
   });
   const readLocal = key => { try { const raw=localStorage.getItem(key); return raw==null?null:JSON.parse(raw); } catch(e){ return null; } };
   const writeLocal = (key,value) => { try { localStorage.setItem(key,JSON.stringify(value)); return true; } catch(e){ console.warn("[BookNest] cache write failed",key,e); return false; } };
-
-  // Mobile-safe cloud snapshots: .books can contain many base64 photos. Store that
-  // one dataset gzip-compressed inside JSONB, while keeping the browser-side value
-  // as the normal array so the rest of BookNest does not need to change.
-  const bytesToBase64 = bytes => {
-    let binary=''; const chunk=0x8000;
-    for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
-    return btoa(binary);
-  };
-  const base64ToBytes = b64 => {
-    const binary=atob(b64), bytes=new Uint8Array(binary.length);
-    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
-    return bytes;
-  };
-  const encodeCloudValue = async (key,value) => {
-    if(key!=='.books' || typeof CompressionStream==='undefined') return value;
-    try{
-      const json=JSON.stringify(value);
-      const cs=new CompressionStream('gzip');
-      const stream=new Blob([json]).stream().pipeThrough(cs);
-      const compressed=new Uint8Array(await new Response(stream).arrayBuffer());
-      const packed={__booknestCompressed:'gzip-base64-v1',data:bytesToBase64(compressed)};
-      // Only use compression when it actually makes the JSON smaller.
-      return JSON.stringify(packed).length < json.length ? packed : value;
-    }catch(e){
-      console.warn('[BookNest] gzip compression unavailable; using normal cloud value.',e);
-      return value;
-    }
-  };
-  const decodeCloudValue = async value => {
-    if(!value || value.__booknestCompressed!=='gzip-base64-v1') return value;
-    try{
-      const bytes=base64ToBytes(value.data);
-      if(typeof DecompressionStream==='undefined') throw new Error('DecompressionStream unavailable');
-      const ds=new DecompressionStream('gzip');
-      const text=await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();
-      return JSON.parse(text);
-    }catch(e){
-      console.error('[BookNest] Could not decompress cloud books snapshot:',e);
-      throw e;
-    }
-  };
   const queues = new Map();
   async function rawSave(key,value){
-    const cloudValue=await encodeCloudValue(key,value);
-    const body={key,value:cloudValue,updated_at:new Date().toISOString()};
-    const approxBytes=new Blob([JSON.stringify(cloudValue)]).size;
+    const body={key,value,updated_at:new Date().toISOString()};
+    const approxBytes=new Blob([JSON.stringify(value)]).size;
     console.log(`[BookNest] Supabase save ${key}: ${(approxBytes/1024).toFixed(0)} KB`);
     const {error}=await client.from(CLOUD_TABLE).upsert(body,{onConflict:'key'});
     if(error){ console.error(`[BookNest] Supabase save failed for ${key}:`,error); throw error; }
@@ -155,10 +112,8 @@
       // downloading seller receipts/purchases and prevents unrelated data from being
       // rendered during startup. Missing requested cloud keys are intentionally empty.
       for(const key of wanted){
-        if(Object.prototype.hasOwnProperty.call(byKey,key)){
-          const decoded=await decodeCloudValue(byKey[key].value);
-          writeLocal(key,decoded);
-        } else localStorage.removeItem(key);
+        if(Object.prototype.hasOwnProperty.call(byKey,key)) writeLocal(key,byKey[key].value);
+        else localStorage.removeItem(key);
       }
       window.BookNestCloud.lastSync={ok:true,at:new Date().toISOString(),keys:rows.map(r=>r.key)};
       window.dispatchEvent(new CustomEvent('booknest-cloud-ready',{detail:{ok:true,keys:rows.map(r=>r.key)}}));
