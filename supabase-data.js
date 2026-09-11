@@ -6,7 +6,21 @@
   const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   const CLOUD_TABLE = "booknest_data";
-  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings"];
+  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".site_status"];
+  // One-time clean-slate migration for this rebuilt BookNest release.
+  // It only clears browser caches; the matching SQL reset file clears the
+  // shared cloud snapshot. After this flag is recorded, future deploys do not
+  // wipe newly entered books again.
+  const RESET_VERSION = "2026-09-11-clean-v5";
+  try {
+    if (localStorage.getItem("booknest_cloud_reset_version") !== RESET_VERSION) {
+      KEYS.forEach(key => localStorage.removeItem(key));
+      localStorage.setItem("booknest_cloud_reset_version", RESET_VERSION);
+      localStorage.removeItem("booknest_cloud_reset_warning_seen");
+    }
+  } catch (e) {
+    console.warn("[BookNest] clean-slate cache reset could not complete", e);
+  }
   const hasConfig = () => typeof window.supabase !== "undefined" && SUPABASE_URL.startsWith("https://") && !!SUPABASE_PUBLISHABLE_KEY;
   if (!hasConfig()) {
     window.BookNestCloud = {enabled:false, ready:Promise.resolve(false), save:async()=>false, pull:async()=>false, refresh:async()=>false, pushLocalData:async()=>false};
@@ -37,12 +51,12 @@
     try{
       const rows=await getCloudRows();
       const byKey=Object.fromEntries(rows.map(r=>[r.key,r]));
-      // A successful cloud read is authoritative. Never let an empty local
-      // browser overwrite an existing cloud key. Only seed genuinely missing
-      // keys, and only when local data exists.
+      // Cloud is authoritative whenever a row exists. A missing cloud key is
+      // intentionally left empty; we do NOT resurrect stale browser data.
+      // This is what makes a brand-new browser safe and predictable.
       for(const key of KEYS){
         if(Object.prototype.hasOwnProperty.call(byKey,key)) writeLocal(key,byKey[key].value);
-        else { const local=readLocal(key); if(local!==null) await save(key,local); }
+        else localStorage.removeItem(key);
       }
       window.BookNestCloud.lastSync={ok:true,at:new Date().toISOString(),keys:rows.map(r=>r.key)};
       window.dispatchEvent(new CustomEvent('booknest-cloud-ready',{detail:{ok:true,keys:rows.map(r=>r.key)}}));
@@ -63,6 +77,18 @@
   }
   async function pushLocalData(){
     const rows=[]; for(const key of KEYS){const local=readLocal(key);if(local!==null) rows.push(save(key,local));} await Promise.all(rows); return true;
+  }
+  let realtimeTimer=null;
+  function scheduleRealtimePull(){
+    clearTimeout(realtimeTimer);
+    realtimeTimer=setTimeout(()=>pullWithRetry(),180);
+  }
+  try{
+    client.channel('booknest-data-live')
+      .on('postgres_changes',{event:'*',schema:'public',table:CLOUD_TABLE},scheduleRealtimePull)
+      .subscribe();
+  }catch(e){
+    console.warn('[BookNest] Realtime subscription unavailable; polling fallback remains active.',e);
   }
   window.BookNestCloud={enabled:true,client,ready:pullWithRetry(),save,pull:pullWithRetry,refresh:pullWithRetry,pushLocalData,lastSync:null};
 })();

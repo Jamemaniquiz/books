@@ -160,6 +160,29 @@
       </section>
     </main>
 
+      <section class="panel" id="buyerSiteLockPanel" style="border:1px solid #e6d5af;background:linear-gradient(180deg,#fffdf8,#f6efdf);">
+        <div class="panel-header">
+          <div>
+            <h2>🔒 Buyer Site Availability</h2>
+            <p class="muted" style="margin:.35rem 0 0">Turn this on when BookNest is temporarily unavailable. Buyers will see your <strong>Sorry</strong> message and cannot enter the buyer shop until you open it again.</p>
+          </div>
+          <span id="buyerSiteStatusBadge" style="display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;font-size:11px;font-weight:900;background:#e8f4ec;color:#2c6b47;white-space:nowrap">● BUYER SITE OPEN</span>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:16px">
+          <label style="display:flex;align-items:center;gap:10px;font-weight:800;cursor:pointer">
+            <input id="buyerSiteLockToggle" type="checkbox" style="width:20px;height:20px;accent-color:#a8402a">
+            <span>Lock the buyer side</span>
+          </label>
+          <button class="btn ghost" id="buyerSiteRefreshBtn" type="button">↻ Refresh status</button>
+          <span id="buyerSiteSaveState" class="muted" style="font-size:12px"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(240px,1fr) 180px;gap:12px;margin-top:14px">
+          <input id="buyerSiteMessage" type="text" maxlength="220" value="Sorry! The BookNest buyer site is down for now. Please check back later — we will be back as soon as possible. Thank you for your patience. 📚" aria-label="Buyer site message">
+          <button class="btn primary" id="buyerSiteSaveMessageBtn" type="button">💾 Save message</button>
+        </div>
+        <p class="muted" style="margin:.55rem 0 0;font-size:11.5px">The lock is shared through Supabase, so it takes effect on the public Vercel site and other devices.</p>
+      </section>
+
       <section class="panel seller-account-panel" id="sellerAccount">
         <div class="account-heading">
           <div>
@@ -199,6 +222,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-data.js"></script>
+    <script src="site-status.js"></script>
     <script src="app.js"></script>
     <script>
       function calcQuickPercents() {
@@ -376,10 +400,50 @@
         });
       }
 
+      async function setupBuyerSiteControl() {
+        const toggle=document.getElementById('buyerSiteLockToggle');
+        const badge=document.getElementById('buyerSiteStatusBadge');
+        const msg=document.getElementById('buyerSiteMessage');
+        const saveMsg=document.getElementById('buyerSiteSaveMessageBtn');
+        const refresh=document.getElementById('buyerSiteRefreshBtn');
+        const state=document.getElementById('buyerSiteSaveState');
+        const paint=(status)=>{
+          const locked=!!status?.locked;
+          toggle.checked=locked;
+          badge.textContent=locked?'● BUYER SITE LOCKED':'● BUYER SITE OPEN';
+          badge.style.background=locked?'#fff0ef':'#e8f4ec';
+          badge.style.color=locked?'#a32b22':'#2c6b47';
+          if(status?.message) msg.value=status.message;
+          state.textContent=status?.updatedAt?('Last updated '+new Date(status.updatedAt).toLocaleTimeString()):'';
+        };
+        try {
+          if(window.BookNestCloud?.ready) await window.BookNestCloud.ready.catch(()=>{});
+          const initial=window.BookNestSiteStatus?.read ? window.BookNestSiteStatus.read() : {locked:false};
+          paint(initial);
+        } catch(e){}
+        document.addEventListener('booknest-site-status',e=>paint(e.detail||{}));
+        toggle.addEventListener('change',async()=>{
+          toggle.disabled=true; state.textContent='Saving…';
+          try {
+            const status=await window.BookNestSiteStatus.setStatus({locked:toggle.checked});
+            paint(status); state.textContent=toggle.checked?'Buyer site locked.':'Buyer site opened.';
+          } catch(e){
+            toggle.checked=!toggle.checked; state.textContent='Could not save to Supabase. Check connection.';
+          } finally { toggle.disabled=false; }
+        });
+        saveMsg.addEventListener('click',async()=>{
+          saveMsg.disabled=true; state.textContent='Saving…';
+          try { const status=await window.BookNestSiteStatus.setStatus({message:msg.value.trim()||window.BookNestSiteStatus.defaults.message}); paint(status); state.textContent='Message saved to Supabase.'; }
+          catch(e){ state.textContent='Could not save message to Supabase.'; } finally { saveMsg.disabled=false; }
+        });
+        refresh.addEventListener('click',async()=>{refresh.disabled=true; state.textContent='Refreshing…'; try{paint(await window.BookNestSiteStatus.refresh());state.textContent='Status refreshed.';}finally{refresh.disabled=false;}});
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
         console.log("DOM Content Loaded - initializing...");
         calcQuickPercents();
         setupSellerAccount();
+        setupBuyerSiteControl();
         // Wait a bit for app.js to load
         setTimeout(() => {
           setupGcashPayment();

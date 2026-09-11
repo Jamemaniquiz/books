@@ -748,6 +748,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="supabase-data.js"></script>
+<script src="site-status.js"></script>
 <script src="app.js"></script>
 <script>
 (function(){
@@ -804,6 +805,14 @@
   function saveCatalog(books){ return writeLocal(BOOKS_KEY, books); }
   function loadOrders(){ return readLocal(ORDERS_KEY, []); }
   function loadListings(){ return readLocal(SHOP_LISTINGS_KEY, []); }
+  function buildShopBooks(books, listings){
+    const byId = new Map((books||[]).map(b=>[String(b.id), b]));
+    return (listings||[]).map(l=>{
+      const source=byId.get(String(l.sourceBookId));
+      if(!source) return null;
+      return {...source,...l,id:l.id,shopListingId:l.id,sourceBookId:source.id,stock:Number(l.shopStock ?? source.stock)||0,shopStock:Number(l.shopStock ?? source.stock)||0,shopVisible:true};
+    }).filter(Boolean);
+  }
   function saveOrders(orders){ return writeLocal(ORDERS_KEY, orders); }
   function getGuestId(){
     try{
@@ -885,6 +894,7 @@
     books: loadCatalog(),
     orders: loadOrders(),
     listings: loadListings(),
+    shopBooks: buildShopBooks(loadCatalog(), loadListings()),
     cart:{}, // id -> qty  (in-memory only, resets on reload)
     search:'',
     genreFilter:'',
@@ -951,15 +961,15 @@
   // Refresh the catalog from storage each time we come back to the shop
   // view, so stock the seller just changed in Inventory shows up here too.
   function refreshCatalog(){
-    const listings = loadListings();
-    setState({listings, books: loadCatalog()});
+    const books=loadCatalog(), listings=loadListings();
+    setState({listings, books, shopBooks:buildShopBooks(books,listings)});
   }
 
   // ---------- cart logic ----------
   function cartCount(){ return Object.values(state.cart).reduce((a,b)=>a+b,0); }
   function cartItems(){
     return Object.entries(state.cart).map(([id,qty])=>{
-      const book = state.books.find(b=>b.id===id);
+      const book = state.shopBooks.find(b=>b.id===id);
       return book ? {...book, qty} : null;
     }).filter(Boolean);
   }
@@ -1008,7 +1018,7 @@
   }
   function addToCartConfirmModal(){
     if(!state.addConfirmBookId) return null;
-    const book = state.books.find(b=>b.id===state.addConfirmBookId);
+    const book = state.shopBooks.find(b=>b.id===state.addConfirmBookId);
     if(!book){ return null; }
     const backdrop = el('div',{class:'modal-backdrop', onclick:(e)=>{ if(e.target===backdrop) closeAddConfirm(); }});
     const modal = el('div',{class:'modal', style:'max-width:420px;'});
@@ -1249,7 +1259,7 @@
     // so we don't pile up timers in the background.
     const stopWatch = setInterval(()=>{
       if(!document.body.contains(wrap)){ clearInterval(timer); clearInterval(stopWatch); }
-    }, 3000);
+    }, 1000);
 
     return wrap;
   }
@@ -1284,7 +1294,7 @@
   // every detail the seller has entered, including their description.
   function bookDetailModal(){
     if(!state.viewingBookId) return null;
-    const book = state.books.find(b=>String(b.id)===String(state.viewingBookId)) || state.books.find(b=>String(b.shopListingId)===String(state.viewingBookId));
+    const book = state.shopBooks.find(b=>String(b.id)===String(state.viewingBookId)) || state.shopBooks.find(b=>String(b.shopListingId)===String(state.viewingBookId));
     if(!book) return null;
     const images = bookImages(book);
     const idx = images.length ? Math.min(state.viewingImageIndex||0, images.length-1) : 0;
@@ -1374,7 +1384,7 @@
 
     // Main shop: one simple All Products catalogue. Genre is only a filter;
     // it never creates separate shelves or sections.
-    const visibleBooks = state.books.filter(b=>b.shopVisible !== false);
+    const visibleBooks = state.shopBooks;
     const allGenres = Array.from(new Set(
       visibleBooks.map(b=>b.genre || 'General')
     )).sort((a,b)=>a.localeCompare(b));
@@ -1625,6 +1635,7 @@
     const wrap = el('div');
     const panel = el('div',{class:'panel confirm-box'});
     panel.appendChild(el('div',{class:'meta'},['ORDER PLACED']));
+    panel.appendChild(el('img',{src:'thank-you.gif',alt:'Thank you',style:'display:block;max-width:180px;max-height:170px;width:auto;height:auto;margin:10px auto 8px;object-fit:contain;border-radius:12px;'}));
     panel.appendChild(el('div',{class:'big'},[o?o.id:'']));
     panel.appendChild(el('p',{},['Thanks, '+(o?o.buyerName:'')+'! Please send '+peso(o?o.total:0)+' via '+(o?o.paymentMode:'')+' and keep your reference number.']));
     
@@ -2120,11 +2131,12 @@
       state.books = loadCatalog();
       state.orders = loadOrders();
       state.listings = loadListings();
+      state.shopBooks = buildShopBooks(state.books,state.listings);
       render();
     });
   }
   window.addEventListener('booknest-cloud-ready', (e)=>{
-    if(e.detail?.ok){ state.books=loadCatalog(); state.orders=loadOrders(); state.listings=loadListings(); render(); }
+    if(e.detail?.ok){ state.books=loadCatalog(); state.orders=loadOrders(); state.listings=loadListings(); state.shopBooks=buildShopBooks(state.books,state.listings); render(); }
   });
 
   render();
@@ -2138,10 +2150,11 @@
         state.books = loadCatalog();
         state.orders = loadOrders();
         state.listings = loadListings();
+        state.shopBooks = buildShopBooks(state.books,state.listings);
         render();
       }catch(e){ console.warn('[BookNest] Store refresh failed',e); }
     }
-  }, 10000);
+  }, 3000);
   // Live per-second countdown of the cart's 1-hour hold, plus expiry check.
   setInterval(tickCartCountdown, 1000);
 })();

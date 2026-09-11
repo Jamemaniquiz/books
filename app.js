@@ -2425,26 +2425,46 @@ const initInventory = () => {
       const bookToDelete = books.find(b => b.id === id);
       if (!bookToDelete) return;
       const remaining = books.filter(b => b.id !== id);
+      // Deleting an Inventory record must also delete its storefront listing.
+      // Otherwise the buyer shop can display a ghost/orphan listing.
+      let listings=[];
+      try{ listings=JSON.parse(localStorage.getItem('.shop_listings')||'[]'); }catch{ listings=[]; }
+      const removedListings=listings.filter(x=>String(x.sourceBookId)===String(id));
+      const remainingListings=listings.filter(x=>String(x.sourceBookId)!==String(id));
       saveBooks(remaining);
+      try{
+        localStorage.setItem('.shop_listings',JSON.stringify(remainingListings));
+        if(window.BookNestCloud?.enabled) window.BookNestCloud.save('.shop_listings',remainingListings).catch(console.error);
+      }catch(e){console.error(e)}
       refresh();
-      showUndoToast(`Deleted "${bookToDelete.title || "book"}".`, () => {
+      showUndoToast(`Deleted "${bookToDelete.title || "book"}"${removedListings.length?' and removed its Shop listing':''}.`, () => {
         saveBooks([...getBooks(), bookToDelete]);
+        if(removedListings.length){
+          const restored=[...getData('.shop_listings',[]),...removedListings];
+          try{localStorage.setItem('.shop_listings',JSON.stringify(restored));if(window.BookNestCloud?.enabled)window.BookNestCloud.save('.shop_listings',restored).catch(console.error)}catch(e){console.error(e)}
+        }
         refresh();
       });
+      return;
     }
 
     if (action === "toggle-shop") {
       const book = books.find(b => b.id === id);
       if (!book) return;
-      book.shopVisible = book.shopVisible !== true; // Toggle: if undefined or false, set to true; if true, set to false
+      const rawListings = localStorage.getItem('.shop_listings');
+      let listings=[]; try{listings=rawListings?JSON.parse(rawListings):[]}catch{listings=[]}
+      const existingIndex=listings.findIndex(x=>String(x.sourceBookId)===String(book.id));
+      if(existingIndex>=0){
+        listings.splice(existingIndex,1);
+        book.shopVisible=false;
+      }else{
+        listings.push({id:`LIST-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`,sourceBookId:book.id,title:book.title,author:book.author||'',genre:book.genre||'General',price:Number(book.price)||0,type:book.type||'Paperback',condition:book.condition||'Pre Loved',variant:book.variant||'',shopStock:Math.max(1,Number(book.stock)||0),images:Array.isArray(book.images)&&book.images.length?book.images.slice(0,8):(book.image?[book.image]:[]),description:book.description||'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+        book.shopVisible=true;
+      }
       saveBooks(books);
+      try{localStorage.setItem('.shop_listings',JSON.stringify(listings));if(window.BookNestCloud?.enabled)window.BookNestCloud.save('.shop_listings',listings).catch(console.error)}catch(e){console.error(e)}
       refresh();
-      showNotice(
-        book.shopVisible
-          ? `"${book.title}" is now visible in the shop.`
-          : `"${book.title}" has been removed from the shop.`,
-        book.shopVisible ? "Added to Shop" : "Removed from Shop"
-      );
+      showNotice(existingIndex>=0?`"${book.title}" was removed from the Shop.`:`"${book.title}" was added to the Shop.`, existingIndex>=0?"Removed from Shop":"Added to Shop");
     }
 
     if (action === "sold") {
