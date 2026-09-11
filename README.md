@@ -402,3 +402,7 @@ Feel free to modify, extend, and customize for your needs.
 **Happy selling!** 📚💰
 
 For questions, issues, or feature requests, check the documentation guides first!
+
+
+## Shared-device sync fix
+The current build syncs each BookNest data key independently. A second device with empty localStorage will download existing Supabase records instead of overwriting them, and missing optional cloud keys are seeded only when that specific key is absent. The storefront also refreshes the shared snapshot periodically.

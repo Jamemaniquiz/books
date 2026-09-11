@@ -1948,7 +1948,7 @@
   function buildBuyerSidebar(){
     const spine = el('div',{class:'spine buyer-spine'});
     spine.appendChild(el('div',{class:'brand'},[
-      el('img',{class:'brand-logo-image',src:'asset/1.png',alt:'BookNest'}),
+      el('img',{class:'brand-logo-image',src:'logo.png',alt:'BookNest'}),
       el('div',{class:'brand-mark'},['BookNest']),
       el('div',{class:'brand-sub'},['PRE-LOVED BOOKS'])
     ]));
@@ -2033,7 +2033,7 @@
     const inner = el('div',{class:'shop-brand-panel-inner'});
 
     const brand = el('div',{class:'shop-brand-copy'},[
-      el('div',{class:'shop-brand-mark'},[el('img',{src:'asset/1.png',alt:'BookNest logo',style:'width:58px;height:58px;object-fit:contain;background:#fff;border-radius:12px;padding:5px;'})]),
+      el('div',{class:'shop-brand-mark'},[el('img',{src:'logo.png',alt:'BookNest logo',style:'width:58px;height:58px;object-fit:contain;background:#fff;border-radius:12px;padding:5px;'})]),
       el('div',{},[
         el('strong',{},['BookNest']),
         el('span',{},['Pre-loved books • New books • Layaway available'])
@@ -2123,8 +2123,25 @@
       render();
     });
   }
+  window.addEventListener('booknest-cloud-ready', (e)=>{
+    if(e.detail?.ok){ state.books=loadCatalog(); state.orders=loadOrders(); state.listings=loadListings(); render(); }
+  });
 
   render();
+  // Refresh the shared storefront periodically so a second device sees
+  // seller inventory/listing changes without having to clear local storage.
+  // Cart/checkout state stays local to this buyer and is never overwritten.
+  setInterval(async ()=>{
+    if(window.BookNestCloud?.refresh && !state.checkoutOpen){
+      try{
+        await window.BookNestCloud.refresh();
+        state.books = loadCatalog();
+        state.orders = loadOrders();
+        state.listings = loadListings();
+        render();
+      }catch(e){ console.warn('[BookNest] Store refresh failed',e); }
+    }
+  }, 10000);
   // Live per-second countdown of the cart's 1-hour hold, plus expiry check.
   setInterval(tickCartCountdown, 1000);
 })();

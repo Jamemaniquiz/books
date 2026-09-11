@@ -81,3 +81,7 @@ If the cloud table is empty on the first setup, the first browser that already h
 This first version uses public Supabase policies so your existing static HTML/JavaScript site can work without requiring you to rebuild your login system. That means a technically knowledgeable visitor could potentially modify cloud data.
 
 For a production store, the next step should be to move the seller/buyer authentication to Supabase Auth and change the policies so only the seller can modify inventory, receipts, payment settings, and order status. Do that before relying on the database for sensitive business records.
+
+
+## Shared-device sync fix
+The current build syncs each BookNest data key independently. A second device with empty localStorage will download existing Supabase records instead of overwriting them, and missing optional cloud keys are seeded only when that specific key is absent. The storefront also refreshes the shared snapshot periodically.

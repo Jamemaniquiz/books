@@ -4222,6 +4222,17 @@ const init = () => {
   window.addEventListener("booknest-cloud-ready", () => {
     requestAnimationFrame(() => renderSellerWorkspace());
   }, { once: true });
+  // Keep seller pages aligned with the shared Supabase snapshot.
+  setInterval(async () => {
+    if (window.BookNestCloud?.refresh) {
+      try {
+        await window.BookNestCloud.refresh();
+        requestAnimationFrame(() => renderSellerWorkspace());
+      } catch (e) {
+        console.warn('[BookNest] Seller cloud refresh failed', e);
+      }
+    }
+  }, 10000);
 };
 
 document.addEventListener("DOMContentLoaded", init);
