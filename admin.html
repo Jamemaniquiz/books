@@ -299,7 +299,7 @@
               alert("System not ready. Please refresh the page.");
               return;
             }
-            const dataUrl = await compressImageFile(file, 400, 0.8);
+            const dataUrl = window.BookNestCompressImage ? await window.BookNestCompressImage(file, 500, 0.82) : await compressImageFile(file, 400, 0.8);
             document.getElementById("gcashQrImg").src = dataUrl;
             document.getElementById("gcashQrPreview").style.display = "block";
             document.getElementById("removeGcashQrBtn").style.display = "inline-block";

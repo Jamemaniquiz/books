@@ -34,7 +34,7 @@
   <div id="variantHelp" class="shop-note" style="display:none"></div>
   <form id="shopForm"><div id="variantList" class="variant-list"></div><div class="builder-actions"><button class="btn primary" type="submit">Publish selected books</button><button class="btn ghost" id="clearFormBtn" type="button">Clear</button></div></form>
 </section>
-<section class="panel shop-panel"><div class="panel-header"><div><h2>Current Shop Listings</h2><p class="muted">This list is the storefront source. A book appears in the buyer Shop only when it is listed here.</p></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="cleanupBtn" class="btn ghost" type="button">Clean stale listings</button><span id="listingCount">0 listings</span></div></div><div id="currentListings" class="current-listings"></div></section>
+<section class="panel shop-panel"><div class="panel-header"><div><h2>Current Shop Listings</h2><p class="muted">This list is the storefront source. A book appears in the buyer Shop only when it is listed here.</p></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="cleanupBtn" class="btn ghost" type="button">Clean stale listings</button><button id="clearAllShopBtn" class="btn danger" type="button">Clear all Shop books</button><span id="listingCount">0 listings</span></div></div><div id="currentListings" class="current-listings"></div></section>
 </main>
 <template id="variantTemplate"><article class="variant-card"><div class="variant-card-top"><div><span class="variant-number">SHOP BOOK</span><h3 class="variant-title"></h3><div class="source-summary"></div></div><button type="button" class="remove-variant btn ghost">Remove</button></div><div class="copy-note variant-rule"></div><div class="form-grid"><label class="field">Shop price (₱)<input class="shop-price" type="number" min="0" step="0.01" required/><small class="stock-help"></small></label><label class="field">Shop quantity<input class="shop-qty" type="number" min="1" step="1" value="1" required/><small class="stock-help"></small></label><label class="field">Shop variant name<input class="shop-variant" type="text" placeholder="Only needed when multiple same-title copies are listed"></label><label class="field">Condition<select class="shop-condition"><option>Pre Loved</option><option>Brand New</option><option>Damaged</option><option>Remaindered</option></select></label><label class="field full">Shop description<textarea class="shop-description" rows="4"></textarea></label><div class="condition-notes"><div class="condition-notes-title">Condition notes <span>Tap what applies</span></div><div class="condition-checks"><label><input type="checkbox" class="condition-note" value="Creases"><span>Creases</span></label><label><input type="checkbox" class="condition-note" value="Foxing"><span>Foxing</span></label><label><input type="checkbox" class="condition-note" value="Water damage"><span>Water damage</span></label><label><input type="checkbox" class="condition-note" value="Tanning / yellowing"><span>Tanning / yellowing</span></label><label><input type="checkbox" class="condition-note" value="Highlights"><span>Highlights</span></label><label><input type="checkbox" class="condition-note" value="Underlines"><span>Underlines</span></label><label><input type="checkbox" class="condition-note" value="Tears"><span>Tears</span></label><label><input type="checkbox" class="condition-note" value="Bent corners"><span>Bent corners</span></label><label><input type="checkbox" class="condition-note" value="Writing / annotations"><span>Writing / annotations</span></label></div><small>Selected notes are added to the Shop description automatically.</small></div><div class="field full photo-field"><div class="photo-field-head"><div><strong>Pictures for this exact shop book</strong><small>Copied from this Inventory record. Upload replacements or extra photos without touching the Inventory photos.</small></div><label class="btn ghost upload-btn">＋ Add pictures<input class="variant-images" type="file" accept="image/*" multiple/></label></div><div class="photo-previews"></div></div></div></article></template>
 <div id="editModal" class="modal-backdrop" aria-hidden="true"><div class="edit-modal"><div class="edit-head"><div><h2>Edit shop book</h2><p id="editIdentity"></p></div><button id="closeEdit" class="btn ghost" type="button">Close</button></div><form id="editForm"><input type="hidden" id="editId"><div class="form-grid"><label class="field">Price (₱)<input id="editPrice" type="number" min="0" step="0.01" required></label><label class="field">Shop quantity<input id="editQty" type="number" min="0" step="1" required></label><label class="field">Variant name<input id="editVariant" type="text"></label><label class="field">Condition<select id="editCondition"><option>Pre Loved</option><option>Brand New</option><option>Damaged</option><option>Remaindered</option></select></label><label class="field full">Shop description<textarea id="editDescription" rows="5"></textarea></label><div class="condition-notes"><div class="condition-notes-title">Condition notes <span>Tap what applies</span></div><div class="condition-checks"><label><input type="checkbox" class="edit-condition-note" value="Creases"><span>Creases</span></label><label><input type="checkbox" class="edit-condition-note" value="Foxing"><span>Foxing</span></label><label><input type="checkbox" class="edit-condition-note" value="Water damage"><span>Water damage</span></label><label><input type="checkbox" class="edit-condition-note" value="Tanning / yellowing"><span>Tanning / yellowing</span></label><label><input type="checkbox" class="edit-condition-note" value="Highlights"><span>Highlights</span></label><label><input type="checkbox" class="edit-condition-note" value="Underlines"><span>Underlines</span></label><label><input type="checkbox" class="edit-condition-note" value="Tears"><span>Tears</span></label><label><input type="checkbox" class="edit-condition-note" value="Bent corners"><span>Bent corners</span></label><label><input type="checkbox" class="edit-condition-note" value="Writing / annotations"><span>Writing / annotations</span></label></div><small>Selected notes are added to the Shop description automatically.</small></div><div class="field full photo-field"><div class="photo-field-head"><div><strong>Shop photos</strong><small>These belong to this Shop listing only.</small></div><label class="btn ghost upload-btn">＋ Add pictures<input id="editPhotos" type="file" accept="image/*" multiple></label></div><div id="editImages" class="edit-images"></div></div></div><div class="edit-actions"><button class="btn primary" type="submit">Save changes</button><button class="btn ghost" id="cancelEdit" type="button">Cancel</button></div></form></div></div>
@@ -69,6 +69,32 @@
  const picker=$('inventoryPicker'),variantList=$('variantList');
  function bookLabel(b){return `${b.title||'Untitled'}${b.variant?' — '+b.variant:''}`}
  function sameTitleCount(title, ids){const k=String(title||'').trim().toLowerCase();return ids.map(id=>books.find(b=>String(b.id)===String(id))).filter(b=>String(b?.title||'').trim().toLowerCase()===k).length}
+ async function ensureAllInStockBooksListed(){
+   const existing=new Set(listings.map(x=>String(x.sourceBookId)));
+   let changed=false;
+   for(const b of books){
+     const stock=Math.max(0,Number(b.stock)||0);
+     if(stock<=0 || existing.has(String(b.id))) continue;
+     listings.push({
+       id:makeId(), sourceBookId:b.id, title:b.title, author:b.author||'', genre:b.genre||'General',
+       price:Number(b.price)||0, type:b.type||'Paperback', condition:b.condition||'Pre Loved',
+       variant:'', shopStock:1, images:imagesOf(b).slice(0,8), description:b.description||'',
+       updatedAt:new Date().toISOString(), createdAt:new Date().toISOString()
+     });
+     existing.add(String(b.id)); changed=true;
+   }
+   // Repair old listings too: if Inventory says a copy exists, Shop shows 1.
+   listings=listings.map(l=>{
+     const source=books.find(b=>String(b.id)===String(l.sourceBookId));
+     if(!source) return l;
+     return {...l,shopStock:(Number(source.stock)||0)>0?1:0};
+   });
+   if(changed || listings.some((l,i)=>String(l.shopStock)!==String((books.find(b=>String(b.id)===String(l.sourceBookId))?.stock||0)>0?1:0))){
+     saveLocal(LISTINGS_KEY,listings);
+     await saveCloud(LISTINGS_KEY,listings);
+   }
+ }
+
  function renderPicker(){
    const available=books.filter(b=>(Number(b.stock)||0)>0 && (!filter || [b.title,b.author,b.variant,b.condition,b.genre].join(' ').toLowerCase().includes(filter)));
    $('pickerEmpty').style.display=available.length?'none':'block';
@@ -123,7 +149,7 @@
    card.querySelector('.variant-images').addEventListener('change',async e=>{const files=[...e.target.files].slice(0,8);if(!files.length)return;card._images=await filesToData(files);renderPreviews(preview,card._images.map((src,i)=>({src,name:`Shop photo ${i+1}`})));e.target.value=''});
    card.querySelector('.remove-variant').onclick=()=>{card.remove();if(!variantList.children.length)$('variantHelp').style.display='none'};variantList.appendChild(node);
  }
- function filesToData(files){return Promise.all(files.map(f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})))}
+ function filesToData(files){return Promise.all(files.map(async f=>{if(window.BookNestCompressImage){return await window.BookNestCompressImage(f,800,0.62)}return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}))}
  function renderPreviews(el,arr){el.innerHTML='';arr.slice(0,8).forEach((x,i)=>{const d=document.createElement('div');d.className='photo-preview';d.innerHTML=`<img src="${x.src}" alt=""><span>${esc(x.name)}</span>`;el.appendChild(d)})}
  async function publish(e){
    e.preventDefault();
@@ -134,7 +160,7 @@
    const touchedSourceIds=new Set();
    for(const card of cards){
      const b=books.find(x=>String(x.id)===String(card.dataset.bookId)); if(!b) continue;
-     const qty=Number(card.querySelector('.shop-qty').value), price=Number(card.querySelector('.shop-price').value);
+     const qty=Number(b.stock)>0 ? 1 : 0, price=Number(card.querySelector('.shop-price').value);
      if(!Number.isInteger(qty)||qty<1||qty>Number(b.stock||0)){alert(`Shop quantity for ${b.title} must be between 1 and ${Number(b.stock)||0}.`);return}
      if(!Number.isFinite(price)||price<0){alert(`Enter a valid price for ${b.title}.`);return}
      const titleKey=String(b.title||'').trim().toLowerCase();
@@ -186,44 +212,52 @@
  $('closeEdit').onclick=closeEdit;$('cancelEdit').onclick=closeEdit;$('editModal').addEventListener('click',e=>{if(e.target===$('editModal'))closeEdit()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEdit()});
  function clear(){selected=[];variantList.innerHTML='';$('variantHelp').style.display='none';renderPicker();updateSelection()}
  $('buildBtn').onclick=build;$('shopForm').onsubmit=publish;$('clearFormBtn').onclick=clear;$('cleanupBtn').onclick=cleanupStaleListings;
+ async function clearAllShop(){
+   const count=listings.length;
+   if(!count){alert('The Shop is already empty.');return}
+   if(!confirm(`Clear ALL ${count} book${count===1?'':'s'} from the Shop? Inventory will NOT be deleted.`)) return;
+   const previous=listings;
+   listings=[];
+   if(!saveLocal(LISTINGS_KEY,listings)){listings=previous;return}
+   const ok=await saveCloud(LISTINGS_KEY,listings);
+   if(!ok){listings=previous;saveLocal(LISTINGS_KEY,listings);alert('Could not confirm clearing the Shop in Supabase. No Shop books were removed from the cloud.');return}
+   selected=[];variantList.innerHTML='';$('variantHelp').style.display='none';renderPicker();updateSelection();renderListings();
+   alert(`✓ Cleared ${count} book${count===1?'':'s'} from the Shop. Inventory is unchanged.`);
+ }
+ $('clearAllShopBtn').onclick=clearAllShop;
  function setCloudStatus(ok){const el=$('cloudStatus');if(!el)return;el.textContent=ok?'● Supabase connected':'● Supabase connection problem';el.className='cloud-status '+(ok?'ok':'err');}
  async function forceShopRefresh(){const btn=$('forceShopRefresh');if(btn){btn.disabled=true;btn.textContent='Refreshing…'}try{if(window.BookNestCloud?.refresh)await window.BookNestCloud.refresh();books=read(BOOKS_KEY);listings=read(LISTINGS_KEY);renderPicker();updateSelection();renderListings();setCloudStatus(!!window.BookNestCloud?.lastSync?.ok)}finally{if(btn){btn.disabled=false;btn.textContent='↻ Refresh now'}}}
  $('forceShopRefresh')?.addEventListener('click',forceShopRefresh);
- let backgroundSyncBusy=false;
-let lastShopSyncSignature='';
-async function backgroundShopSync(){
-  if(backgroundSyncBusy || document.visibilityState!=='visible' || document.querySelector('.modal.open')) return;
-  backgroundSyncBusy=true;
-  try{
-    if(window.BookNestCloud?.refresh) await window.BookNestCloud.refresh();
-    const nextBooks=read(BOOKS_KEY);
-    const nextListings=read(LISTINGS_KEY);
-    const signature=JSON.stringify({books:nextBooks,listings:nextListings});
-    if(signature!==lastShopSyncSignature){
-      lastShopSyncSignature=signature;
-      books=nextBooks;
-      listings=nextListings;
-      renderPicker();
-      updateSelection();
-      renderListings();
-      setCloudStatus(!!window.BookNestCloud?.lastSync?.ok);
-    }
-  }catch(e){
-    console.warn('[BookNest] Background sync skipped:',e);
-  }finally{
-    backgroundSyncBusy=false;
-  }
-}
-// Automatic sync is intentionally infrequent and happens in the background.
-// Realtime updates remain the primary mechanism, so the page never reloads.
-setInterval(backgroundShopSync,30000);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') backgroundShopSync();});
+ // Supabase Realtime handles live Shop updates. No periodic polling means
+ // seller forms remain stable while the shared catalog changes elsewhere.
+ window.addEventListener('booknest-cloud-ready', async (e)=>{
+   if(!e.detail?.ok) return;
+   const active=document.activeElement;
+   const editing=active && active.matches('input,textarea,select,[contenteditable="true"]');
+   books=read(BOOKS_KEY); listings=read(LISTINGS_KEY);
+   if(!editing){ renderPicker(); updateSelection(); renderListings(); }
+ });
  async function init(){
   setCloudStatus(false);
   if(window.BookNestCloud?.ready){
     try{ await window.BookNestCloud.ready; }catch(e){}
   }
   books=read(BOOKS_KEY);
+  listings=read(LISTINGS_KEY);
+  // One-time cleanup requested by the seller: remove every existing storefront
+  // listing, but keep Inventory untouched. New listings can be published normally.
+  const SHOP_CLEAR_VERSION='2026-09-12-shop-clear-v1';
+  let shopWasCleared=false;
+  try{ shopWasCleared=localStorage.getItem('booknest_shop_clear_version')===SHOP_CLEAR_VERSION; }catch(e){}
+  if(!shopWasCleared){
+    listings=[];
+    saveLocal(LISTINGS_KEY,listings);
+    if(window.BookNestCloud?.enabled) await saveCloud(LISTINGS_KEY,listings);
+    try{localStorage.setItem('booknest_shop_clear_version',SHOP_CLEAR_VERSION)}catch(e){}
+  }
+  // Do not automatically repopulate the Shop from Inventory. Inventory stays
+  // intact; the seller chooses which books to publish.
+
   listings=read(LISTINGS_KEY);
 
   // HARD RULE: every Inventory row is a separate physical entity.
@@ -286,7 +320,21 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   setCloudStatus(!!window.BookNestCloud?.lastSync?.ok);
   renderPicker();updateSelection();renderListings();
  }
- window.addEventListener('booknest-cloud-ready', (e)=>{ setCloudStatus(!!e.detail?.ok); if(e.detail?.ok){ books=read(BOOKS_KEY); listings=read(LISTINGS_KEY); renderPicker(); updateSelection(); renderListings(); } });
+ window.addEventListener('booknest-cloud-ready', async (e)=>{
+   setCloudStatus(!!e.detail?.ok);
+   if(!e.detail?.ok) return;
+   books=read(BOOKS_KEY); listings=read(LISTINGS_KEY);
+   const active=document.activeElement;
+   const editing=active && active.matches('input,textarea,select,[contenteditable="true"]');
+   if(!editing){ renderPicker(); updateSelection(); renderListings(); }
+ });
+ window.addEventListener('storage',(e)=>{
+   if(e.key!==BOOKS_KEY && e.key!==LISTINGS_KEY) return;
+   books=read(BOOKS_KEY); listings=read(LISTINGS_KEY);
+   const active=document.activeElement;
+   const editing=active && active.matches('input,textarea,select,[contenteditable="true"]');
+   if(!editing){ renderPicker(); updateSelection(); renderListings(); }
+ });
  init();
 })();
 </script>

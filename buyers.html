@@ -23,8 +23,8 @@
 <main class="container">
   <section class="panel">
     <div class="panel-header"><h2>👤 Buyers</h2></div>
-    <div class="buyer-note"><strong>Customer accounts are enabled.</strong><br><span class="muted">Facebook contact information is shown when the buyer provides it. Buyer passwords are protected by Supabase Auth and are never displayed here in plain text or as a reusable password hash. If a buyer forgets a password, use the password-reset link on the buyer login page.</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Facebook</th><th>Password</th><th>Orders</th><th>Total spent</th></tr></thead><tbody id="buyersRows"></tbody></table></div>
+    <div class="buyer-note"><strong>Customer accounts are enabled.</strong><br><span class="muted">Buyer accounts use phone + password. The seller can see the buyer password here so it can be provided when a buyer forgets it. A SHA-256 password hash is also kept with the account record.</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Facebook</th><th>Password</th><th>Password hash</th><th>Orders</th><th>Total spent</th><th>Actions</th></tr></thead><tbody id="buyersRows"></tbody></table></div>
   </section>
 </main>
 <footer class="site-footer">BookNest © 2026</footer>
@@ -35,23 +35,33 @@
 const peso=n=>'PHP '+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 function read(key,fallback=[]){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch(e){return fallback}}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(){
+async function render(){
   const rows=document.getElementById('buyersRows');
-  const orders=read('.shop_orders',[]);
+  const orders=read('.shop_orders',[]); const accounts=read('.buyer_accounts',[]);
   const map=new Map();
+  accounts.filter(a=>!a.deleted).forEach(a=>map.set(String(a.id),{id:a.id,name:a.name||'—',contact:a.phone||'—',facebook:a.facebook||'—',password:a.password||'—',hash:a.passwordHash||'—',count:0,total:0}));
   orders.forEach(o=>{
-    const key=String(o.buyerId||o.buyerEmail||o.contact||o.buyerName||'Unknown').toLowerCase();
-    if(!map.has(key)) map.set(key,{name:o.buyerName||'—',contact:o.contact||'—',email:o.buyerEmail||'—',facebook:o.buyerFacebook||'—',count:0,total:0});
-    const b=map.get(key);
-    b.count++;
-    b.total+=Number(o.total||o.grandTotal||0);
-    if((!b.facebook||b.facebook==='—') && o.buyerFacebook) b.facebook=o.buyerFacebook;
-    if((!b.email||b.email==='—') && o.buyerEmail) b.email=o.buyerEmail;
+    const key=String(o.buyerId||o.contact||o.buyerName||'Unknown').toLowerCase();
+    let b=map.get(String(o.buyerId||''));
+    if(!b){
+      b={id:o.buyerId||'',name:o.buyerName||'—',contact:o.contact||'—',facebook:o.buyerFacebook||'—',password:'—',hash:'—',count:0,total:0}; map.set(String(b.id||key),b);
+    }
+    b.count++; b.total+=Number(o.total||o.grandTotal||0);
+    if((!b.facebook||b.facebook==='—')&&o.buyerFacebook)b.facebook=o.buyerFacebook;
+    if((!b.contact||b.contact==='—')&&o.contact)b.contact=o.contact;
   });
   const buyers=[...map.values()].sort((a,b)=>b.total-a.total);
-  if(!buyers.length){rows.innerHTML='<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">No shop orders yet.</td></tr>';return}
-  rows.innerHTML=buyers.map(b=>`<tr class="buyer-row"><td><strong>${esc(b.name)}</strong></td><td>${esc(b.contact)}</td><td>${esc(b.email)}</td><td>${b.facebook && b.facebook!=='—' ? (String(b.facebook).startsWith('http') ? `<a href="${esc(b.facebook)}" target="_blank" rel="noopener noreferrer">Open Facebook</a>` : esc(b.facebook)) : '—'}</td><td><span title="Password is protected by Supabase Auth">🔒 Protected</span></td><td>${b.count}</td><td><strong>${peso(b.total)}</strong></td></tr>`).join('')
+  if(!buyers.length){rows.innerHTML='<tr><td colspan="9" class="muted" style="text-align:center;padding:20px">No buyer accounts yet.</td></tr>';return}
+  rows.innerHTML=buyers.map(b=>`<tr class="buyer-row"><td><strong>${esc(b.name)}</strong></td><td>${esc(b.contact)}</td><td>${b.facebook&&b.facebook!=='—'?(String(b.facebook).startsWith('http')?`<a href="${esc(b.facebook)}" target="_blank" rel="noopener noreferrer">Open Facebook</a>`:esc(b.facebook)):'—'}</td><td><code style="word-break:break-all">${esc(b.password)}</code></td><td><code style="word-break:break-all;font-size:10px">${esc(b.hash)}</code></td><td>${b.count}</td><td><strong>${peso(b.total)}</strong></td><td><button class="history-toggle" type="button" onclick="deleteBuyer('${esc(b.id)}')">Delete buyer</button></td></tr>`).join('');
 }
+async function deleteBuyer(id){
+  if(!id||!confirm('Delete this buyer account? Their old orders will remain, but the account will no longer be active.'))return;
+  const accounts=read('.buyer_accounts',[]); const next=accounts.map(a=>String(a.id)===String(id)?{...a,deleted:true,deletedAt:new Date().toISOString()}:a);
+  localStorage.setItem('.buyer_accounts',JSON.stringify(next));
+  try{if(window.BookNestCloud?.enabled) await window.BookNestCloud.save('.buyer_accounts',next)}catch(e){}
+  render();
+}
+window.deleteBuyer=deleteBuyer;
 document.addEventListener('DOMContentLoaded',()=>{render();window.addEventListener('booknest-cloud-ready',render);});
 </script>
 <script src="mobile-enhancements.js"></script>

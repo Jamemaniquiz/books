@@ -1332,7 +1332,7 @@ const bindPurchaseActionsOnce = () => {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 320;
+        const maxDim = 600;
         let width = img.width, height = img.height;
         if (width > height && width > maxDim) { height = height * (maxDim / width); width = maxDim; }
         else if (height > maxDim) { width = width * (maxDim / height); height = maxDim; }
@@ -1340,7 +1340,7 @@ const bindPurchaseActionsOnce = () => {
         canvas.width = Math.round(width);
         canvas.height = Math.round(height);
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
         const purchases = getPurchases();
         const target = purchases.find(p => p.id === purchaseId);
         if (target) {
@@ -3298,7 +3298,7 @@ const renderReceiptPhotosReadOnly = (receipt) => {
 
 const MAX_RECEIPT_PHOTOS = 4;
 
-const compressImageFile = (file, maxDim = 900, quality = 0.75) =>
+const compressImageFile = (file, maxDim = 800, quality = 0.62) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;

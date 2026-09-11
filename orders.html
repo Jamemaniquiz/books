@@ -16,11 +16,12 @@
       .status-Paid{ background:#D8E6D9; color:#2E5A34; }
       .status-Shipped{ background:#D6E1EC; color:#2A4A6B; }
       .status-Cancelled{ background:#E9D6D6; color:#8A2E2E; }
+      .status-Archived{ background:#e8e5df; color:#5f5b54; }
       .order-body{ padding:14px 18px; font-size:13.5px; }
       .order-body .line{ display:flex; justify-content:space-between; padding:3px 0; color:#666; }
       .order-buyer{ margin-bottom:8px; }
       .order-actions{ padding:12px 18px; border-top:1px solid var(--line, #e2ddd0); display:flex; gap:8px; flex-wrap:wrap; }
-      .delete-order{background:#fff0ef!important;color:#a32b22!important;border-color:#e1aaa5!important}
+      .delete-order{background:#fff0ef!important;color:#a32b22!important;border-color:#e1aaa5!important}.proof-view{margin-top:12px;padding:12px;border:1px solid var(--line,#e2ddd0);border-radius:10px;background:#fafafa}.proof-thumb{width:120px;height:150px;object-fit:cover;border-radius:8px;border:1px solid #ddd;cursor:zoom-in;display:block}.proof-empty{font-size:12px;color:#777}.proof-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}.proof-modal.open{display:flex}.proof-modal img{max-width:95vw;max-height:90vh;object-fit:contain;background:#fff;border-radius:10px}.proof-close{position:absolute;top:14px;right:18px;border:0;background:#fff;border-radius:999px;width:42px;height:42px;font-size:24px;cursor:pointer}
     </style>
   <script src="seller-nav.js"></script><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
@@ -28,7 +29,7 @@
   <body>
     <header class="site-header">
       <div class="logo">
-        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <img class="logo-image" src="logo.png" alt="BookNest logo" />
         <span>BookNest</span>
       </div>
       <nav class="nav">
@@ -55,6 +56,7 @@
     </main>
 
     <footer class="site-footer">BookNest © 2026</footer>
+    <div id="proofModal" class="proof-modal" aria-hidden="true"><button id="proofClose" class="proof-close" type="button">×</button><img id="proofModalImg" alt="GCash payment proof"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -117,19 +119,14 @@
         writeLocal(RECEIPTS_KEY, receipts);
       }
 
-      function deleteOrder(id){
+      function archiveOrder(id){
         const orders = getOrders();
         const order = orders.find(o => o.id === id);
         if(!order) return;
-        if(!confirm('Delete order '+id+'? This removes it from Shop Orders and the matching receipt.')) return;
-        // If the order was not already cancelled, its stock is still counted as sold/reserved.
-        // Give it back before removing the order so deleting an active order does not silently lose stock.
-        if(order.status !== 'Cancelled') adjustStockForOrder(order, +1);
-        const updated = orders.filter(o => o.id !== id);
+        if(!confirm('Archive order '+id+'? The order will remain in history and will not be deleted.')) return;
+        if(order.status === 'Cancelled' && !order.archived) { /* stock was already returned on cancellation */ }
+        const updated = orders.map(o => o.id===id ? {...o, archived:true, archivedAt:new Date().toISOString()} : o);
         saveOrders(updated);
-        const receipts = readLocal(RECEIPTS_KEY, []);
-        const nextReceipts = receipts.filter(r => r.id !== id);
-        if(nextReceipts.length !== receipts.length) writeLocal(RECEIPTS_KEY, nextReceipts);
         render();
       }
 
@@ -145,7 +142,7 @@
         if(willCancel && !wasCancelled) adjustStockForOrder(order, +1);       // give stock back
         else if(!willCancel && wasCancelled) adjustStockForOrder(order, -1);  // take it again
 
-        const updated = orders.map(o => o.id===id ? {...o, status} : o);
+        const updated = orders.map(o => o.id===id ? {...o, status, ...(willCancel ? {archived:true, archivedAt:new Date().toISOString()} : {})} : o);
         if(saveOrders(updated)){
           syncReceiptWithStatus(id, status);
           render();
@@ -155,38 +152,50 @@
       function render(){
         const orders = getOrders();
         const list = document.getElementById('ordersList');
-        if(orders.length===0){
+        const activeOrders = orders.filter(o => !o.archived);
+        const archivedOrders = orders.filter(o => !!o.archived);
+        if(!orders.length){
           list.innerHTML = '<p class="muted" style="padding:20px 0;text-align:center;">No orders yet — they\'ll show up here as soon as a buyer checks out on the shop.</p>';
           return;
         }
-        list.innerHTML = orders.map(o => {
+        const renderOrder = o => {
           const itemLines = (o.items||[]).map(i =>
             `<div class="line"><span>${escapeHtml(i.title)} × ${i.qty}</span><span>${peso(i.price*i.qty)}</span></div>`
           ).join('');
-          const statuses = ['Pending','Paid','Shipped','Cancelled'].filter(s => s !== o.status);
+          // Archived orders are history: don't allow status changes that could
+          // accidentally take stock back out after a cancellation/refund.
+          const statuses = o.archived ? [] : ['Pending','Paid','Shipped','Cancelled'].filter(s => s !== o.status);
           const actionBtns = statuses.map(s =>
-            `<button class="btn ghost" data-action="set-status" data-id="${o.id}" data-status="${s}">Mark ${s}</button>`
+            `<button class="btn ghost" data-action="set-status" data-id="${escapeHtml(o.id)}" data-status="${s}">Mark ${s}</button>`
           ).join('');
+          const archiveBtn = o.archived ? '' : `<button class="btn ghost delete-order" data-action="archive-order" data-id="${escapeHtml(o.id)}">🗄 Archive Order</button>`;
           return `
             <div class="order-card">
               <div class="order-head">
                 <div>
-                  <div class="order-id">${o.id}</div>
+                  <div class="order-id">${escapeHtml(o.id)}</div>
                   <div class="muted" style="font-size:12px;">${new Date(o.createdAt).toLocaleString()}</div>
                 </div>
-                <span class="status-pill status-${o.status}">${o.status}</span>
+                <span class="status-pill status-${escapeHtml(o.status)}">${escapeHtml(o.status)}</span>
               </div>
               <div class="order-body">
                 <div class="order-buyer"><strong>${escapeHtml(o.buyerName)}</strong> · ${escapeHtml(o.contact)}</div>
-                <div class="muted" style="margin-bottom:8px;">${escapeHtml(o.address)}</div>
+                <div class="muted" style="margin-bottom:4px;">${escapeHtml(o.address)}</div>
+                ${o.buyerFacebook?`<div class="muted" style="margin-bottom:8px;">Facebook: ${escapeHtml(o.buyerFacebook)}</div>`:''}
                 ${itemLines}
                 <div class="line" style="font-weight:700;color:#222;border-top:1px solid var(--line, #e2ddd0);margin-top:6px;padding-top:8px;">
                   <span>Total via ${escapeHtml(o.paymentMode)}</span><span>${peso(o.total)}</span>
                 </div>
+                <div class="line"><span>Courier</span><span>${escapeHtml(o.courier||'J&T')}</span></div>
+                <div class="proof-view">${o.proofOfPayment ? `<div style="font-weight:800;margin-bottom:8px;">📸 GCash payment proof — uploaded</div><img class="proof-thumb" data-proof="${escapeHtml(o.id)}" src="${escapeHtml(o.proofOfPayment)}" alt="GCash payment proof" loading="lazy"><div class="muted" style="font-size:11px;margin-top:6px;">Tap the image to view it larger.</div>` : '<div class="proof-empty">No payment proof uploaded.</div>'}</div>
               </div>
-              <div class="order-actions">${actionBtns}<button class="btn ghost delete-order" data-action="delete-order" data-id="${escapeHtml(o.id)}">🗑 Delete Order</button></div>
+              ${actionBtns||archiveBtn ? `<div class="order-actions">${actionBtns}${archiveBtn}</div>` : ''}
             </div>`;
-        }).join('');
+        };
+        const activeHtml = activeOrders.map(renderOrder).join('');
+        const archivedHtml = archivedOrders.length ? `<details style="margin-top:18px;"><summary style="cursor:pointer;font-weight:800;padding:10px 0;">🗄 Archived Orders (${archivedOrders.length})</summary><div style="margin-top:10px;">${archivedOrders.map(renderOrder).join('')}</div></details>` : '';
+        list.innerHTML = activeHtml || '<p class="muted" style="padding:20px 0;text-align:center;">No active orders.</p>';
+        list.insertAdjacentHTML('beforeend', archivedHtml);
       }
 
       function escapeHtml(s){
@@ -194,14 +203,23 @@
       }
 
       document.getElementById('ordersList').addEventListener('click', (e) => {
-        const deleteBtn = e.target.closest('[data-action="delete-order"]');
-        if(deleteBtn){ deleteOrder(deleteBtn.dataset.id); return; }
+        const archiveBtn = e.target.closest('[data-action="archive-order"]');
+        if(archiveBtn){ archiveOrder(archiveBtn.dataset.id); return; }
         const btn = e.target.closest('[data-action="set-status"]');
         if(!btn) return;
         setOrderStatus(btn.dataset.id, btn.dataset.status);
       });
 
-      window.addEventListener('booknest-cloud-ready', () => render(), { once: true });
+      const proofModal=document.getElementById('proofModal'), proofModalImg=document.getElementById('proofModalImg');
+      document.getElementById('ordersList').addEventListener('click',e=>{const img=e.target.closest('[data-proof]');if(!img)return;proofModalImg.src=img.src;proofModal.classList.add('open');proofModal.setAttribute('aria-hidden','false');});
+      document.getElementById('proofClose').onclick=()=>{proofModal.classList.remove('open');proofModal.setAttribute('aria-hidden','true');proofModalImg.src='';};
+      proofModal.addEventListener('click',e=>{if(e.target===proofModal)document.getElementById('proofClose').click()});
+      window.addEventListener('booknest-cloud-ready', (e) => {
+        if(!e.detail?.ok) return;
+        const active=document.activeElement;
+        const editing=active && active.matches('input,textarea,select,[contenteditable="true"]');
+        if(!editing) render();
+      });
       render();
     </script>
   <script src="mobile-enhancements.js"></script>

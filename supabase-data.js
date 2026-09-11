@@ -6,7 +6,7 @@
   const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   const CLOUD_TABLE = "booknest_data";
-  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".site_status"];
+  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".cart_holds",".site_status",".buyer_accounts"];
   // One-time clean-slate migration for this rebuilt BookNest release.
   // It only clears browser caches; the matching SQL reset file clears the
   // shared cloud snapshot. After this flag is recorded, future deploys do not
@@ -54,9 +54,10 @@
   const readLocal = key => { try { const raw=localStorage.getItem(key); return raw==null?null:JSON.parse(raw); } catch(e){ return null; } };
   const writeLocal = (key,value) => { try { localStorage.setItem(key,JSON.stringify(value)); return true; } catch(e){ console.warn("[BookNest] cache write failed",key,e); return false; } };
 
-  // Mobile-safe cloud snapshots: .books can contain many base64 photos. Store that
-  // one dataset gzip-compressed inside JSONB, while keeping the browser-side value
-  // as the normal array so the rest of BookNest does not need to change.
+  // Mobile-safe cloud snapshots: image-heavy datasets can contain base64 photos.
+  // Store every sufficiently large dataset gzip-compressed inside JSONB, while
+  // keeping the browser-side value normal so the rest of BookNest does not change.
+  // This covers books, shop listings, payment proofs, receipts, purchases, etc.
   const bytesToBase64 = bytes => {
     let binary=''; const chunk=0x8000;
     for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
@@ -68,9 +69,10 @@
     return bytes;
   };
   const encodeCloudValue = async (key,value) => {
-    if(key!=='.books' || typeof CompressionStream==='undefined') return value;
+    if(typeof CompressionStream==='undefined') return value;
     try{
       const json=JSON.stringify(value);
+      if(json.length < 2048 || (value && value.__booknestCompressed)) return value;
       const cs=new CompressionStream('gzip');
       const stream=new Blob([json]).stream().pipeThrough(cs);
       const compressed=new Uint8Array(await new Response(stream).arrayBuffer());
@@ -117,8 +119,8 @@
     const map={
       "":".books,.shop_listings,.site_status",
       "index.html":[".books",".shop_listings",".site_status"],
-      "shop.html":[".books",".shop_listings",".shop_orders",".site_status"],
-      "buyer-login.html":[".site_status"],
+      "shop.html":[".books",".shop_listings",".shop_orders",".cart_holds",".site_status"],
+      "buyer-login.html":[".site_status",".buyer_accounts"],
       "add-books.html":[".books",".shop_listings"],
       "inventory.html":[".books",".sales",".purchases"],
       "admin.html":[".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".site_status"],
@@ -127,7 +129,7 @@
       "receipt-history.html":[".receipts",".sales"],
       "new-sale.html":[".books",".sales",".receipts"],
       "bundle-sale.html":[".books",".sales"],
-      "buyers.html":[".shop_orders"],
+      "buyers.html":[".shop_orders",".buyer_accounts"],
       "seller-login.html":[],
       "rules.html":[]
     };
@@ -185,14 +187,14 @@
     clearTimeout(realtimeTimer);
     const changedKey=payload?.new?.key || payload?.old?.key;
     const wanted=changedKey && PAGE_KEYS.includes(changedKey) ? [changedKey] : PAGE_KEYS;
-    realtimeTimer=setTimeout(()=>pullWithRetry(wanted),250);
+    realtimeTimer=setTimeout(()=>pullWithRetry(wanted),80);
   }
   try{
     client.channel('booknest-data-live')
       .on('postgres_changes',{event:'*',schema:'public',table:CLOUD_TABLE},payload=>scheduleRealtimePull(payload))
       .subscribe();
   }catch(e){
-    console.warn('[BookNest] Realtime subscription unavailable; polling fallback remains active.',e);
+    console.warn('[BookNest] Realtime subscription unavailable.',e);
   }
   window.BookNestCloud={enabled:true,client,ready:PAGE_KEYS.length?pullWithRetry(PAGE_KEYS):Promise.resolve(true),save,pull:pullWithRetry,refresh:pullWithRetry,pushLocalData,lastSync:null};
 })();
