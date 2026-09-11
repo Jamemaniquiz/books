@@ -6,3 +6,6 @@
 // ============================================================
 window.BOOKNEST_SUPABASE_URL = "https://ryyhsbkuukbctflcetcn.supabase.co";
 window.BOOKNEST_SUPABASE_ANON_KEY = "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
+
+// Connection diagnostics (safe to expose in the browser).
+window.BOOKNEST_SUPABASE_CONFIGURED = true;
