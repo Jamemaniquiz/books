@@ -1797,9 +1797,10 @@ const initInventory = () => {
   const normalizeCondition = (c) => {
     if (!c) return "Pre Loved";
     const s = String(c).toLowerCase().replace(/[-_\s]+/g,"");
-    if (s === "new") return "New";
+    if (s === "new" || s === "brandnew") return "Brand New";
     if (s === "preloved" || s === "used" || s === "good") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
+    if (s === "damaged" || s === "damage") return "Damaged";
     return "Pre Loved";
   };
 
@@ -1974,9 +1975,10 @@ const initInventory = () => {
   const matchCondition = (raw) => {
     const s = String(raw || "").toLowerCase().replace(/[-_\s]+/g, "");
     if (!s) return null;
-    if (s === "new") return "New";
+    if (s === "new" || s === "brandnew") return "Brand New";
     if (s === "preloved" || s === "used" || s === "good" || s === "secondhand") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
+    if (s === "damaged" || s === "damage") return "Damaged";
     return null;
   };
 
