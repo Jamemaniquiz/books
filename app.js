@@ -4238,21 +4238,15 @@ const renderSellerWorkspace = () => {
 // and the same workspace is refreshed when the cloud snapshot arrives. This
 // removes the old 5–10 second blank/loading wait on seller pages.
 const init = () => {
+  // Render once on page load. Supabase Realtime will notify this page when
+  // shared data actually changes; we intentionally do NOT poll every few
+  // seconds because polling makes the UI feel like it is constantly
+  // refreshing and can interrupt typing/selection.
   renderSellerWorkspace();
-  window.addEventListener("booknest-cloud-ready", () => {
+  window.addEventListener("booknest-cloud-ready", (event) => {
+    if (!event.detail?.ok) return;
     requestAnimationFrame(() => renderSellerWorkspace());
-  }, { once: true });
-  // Keep seller pages aligned with the shared Supabase snapshot.
-  setInterval(async () => {
-    if (window.BookNestCloud?.refresh) {
-      try {
-        await window.BookNestCloud.refresh();
-        requestAnimationFrame(() => renderSellerWorkspace());
-      } catch (e) {
-        console.warn('[BookNest] Seller cloud refresh failed', e);
-      }
-    }
-  }, 10000);
+  });
 };
 
 document.addEventListener("DOMContentLoaded", init);

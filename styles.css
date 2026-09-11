@@ -1616,3 +1616,6 @@ body:has(.inventory-page) table tbody tr:hover{background:#fffdf8;transform:tran
 @media(max-width:720px){body:has(.shop-manager-page) .shop-hero::before{right:8px;font-size:70px}body:has(.seller-hero) .seller-hero::before{display:none}}
 .bn-click-pop{animation:bnClickPop .22s ease}
 @keyframes bnClickPop{50%{transform:scale(.97)}100%{transform:none}}
+
+/* Animated user-supplied BookNest status art: blended to the warm paper palette. */
+.bn-gif-blended{background:#F8F3E7;border-radius:12px;display:block;overflow:hidden;}

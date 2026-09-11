@@ -28,7 +28,7 @@
     s.textContent=`
       #bn-site-locked{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:22px;background:linear-gradient(150deg,#273b30,#18251f);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#263329;overflow:auto}
       #bn-site-locked .bn-lock-card{width:min(560px,100%);background:#f8f3e7;border:1px solid rgba(255,255,255,.25);border-radius:26px;padding:34px 30px;text-align:center;box-shadow:0 28px 80px rgba(0,0,0,.35)}
-      #bn-site-locked img.bn-lock-gif{display:block;max-width:220px;max-height:190px;width:auto;height:auto;margin:0 auto 10px;object-fit:contain}
+      #bn-site-locked img.bn-lock-gif{display:block;max-width:220px;max-height:190px;width:auto;height:auto;margin:2px auto 10px;object-fit:contain;background:#f8f3e7;border-radius:12px;mix-blend-mode:normal}
       #bn-site-locked h1{font:600 31px/1.1 Georgia,serif;margin:7px 0 12px;color:#263329}
       #bn-site-locked p{margin:0 auto 16px;max-width:460px;color:#665f52;line-height:1.65;font-size:14px}
       #bn-site-locked .bn-lock-note{display:inline-block;padding:8px 12px;border-radius:999px;background:#ede3c9;color:#6d592f;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
@@ -53,7 +53,7 @@
     }
     const title=String(status.title||DEFAULT.title);
     const msg=String(status.message||DEFAULT.message);
-    o.innerHTML=`<div class="bn-lock-card"><span class="bn-lock-note">BUYER SITE CURRENTLY OFFLINE</span><img class="bn-lock-gif" src="site-closed.gif" alt="Sorry — BookNest is temporarily closed"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(msg)}</p><div class="bn-lock-actions"><a class="primary" href="index.html">Back to BookNest</a><a href="seller-login.html">Seller access</a></div></div>`;
+    o.innerHTML=`<div class="bn-lock-card"><span class="bn-lock-note">BUYER SITE CURRENTLY OFFLINE</span><img class="bn-lock-gif" src="site-closed.gif?v=3" alt="Sorry — BookNest is temporarily closed"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(msg)}</p><div class="bn-lock-actions"><a class="primary" href="index.html">Back to BookNest</a><a href="seller-login.html">Seller access</a></div></div>`;
     document.documentElement.style.overflow='hidden';
   }
   function hideLocked(){
@@ -101,7 +101,11 @@
       await refresh();
       if(document.body) document.body.classList.remove('bn-site-locking');
     },0);
-    setInterval(()=>{ if(isBuyerPage()) refresh().catch(()=>{}); },1200);
+    // Re-check only when Supabase reports a real cloud-data change.
+    // There is intentionally no 1.2s polling loop.
+    window.addEventListener('booknest-cloud-ready', (e)=>{
+      if(isBuyerPage() && e.detail?.ok) refresh().catch(()=>{});
+    });
   }
 
   window.BookNestSiteStatus={key:KEY,defaults:{...DEFAULT},read:readLocal,refresh,setStatus,showLocked,hideLocked};

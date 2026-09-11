@@ -254,3 +254,7 @@ Your BookNest shop is ready!
 - You get paid instantly ✅
 
 **Start selling books today!** 📚💰
+
+
+## Auto-refresh behavior (2026-09-11)
+BookNest no longer polls seller/store pages on a timer. Pages render once on load and update only when Supabase Realtime reports an actual shared-data change. Manual Refresh buttons remain available where provided. The cart countdown remains a local 1-second timer because it updates the hold timer, not the page.

@@ -223,3 +223,7 @@ BookNest v2.0 - Seller Ready Edition
 
 ## Shared-device sync fix
 The current build syncs each BookNest data key independently. A second device with empty localStorage will download existing Supabase records instead of overwriting them, and missing optional cloud keys are seeded only when that specific key is absent. The storefront also refreshes the shared snapshot periodically.
+
+
+## Auto-refresh behavior (2026-09-11)
+BookNest no longer polls seller/store pages on a timer. Pages render once on load and update only when Supabase Realtime reports an actual shared-data change. Manual Refresh buttons remain available where provided. The cart countdown remains a local 1-second timer because it updates the hold timer, not the page.

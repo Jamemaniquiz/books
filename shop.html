@@ -1635,7 +1635,7 @@
     const wrap = el('div');
     const panel = el('div',{class:'panel confirm-box'});
     panel.appendChild(el('div',{class:'meta'},['ORDER PLACED']));
-    panel.appendChild(el('img',{src:'thank-you.gif',alt:'Thank you',style:'display:block;max-width:180px;max-height:170px;width:auto;height:auto;margin:10px auto 8px;object-fit:contain;border-radius:12px;'}));
+    panel.appendChild(el('img',{src:'thank-you.gif?v=3',alt:'Thank you',style:'display:block;max-width:190px;max-height:178px;width:auto;height:auto;margin:8px auto 8px;object-fit:contain;border-radius:12px;background:var(--paper-light);padding:0;'}));
     panel.appendChild(el('div',{class:'big'},[o?o.id:'']));
     panel.appendChild(el('p',{},['Thanks, '+(o?o.buyerName:'')+'! Please send '+peso(o?o.total:0)+' via '+(o?o.paymentMode:'')+' and keep your reference number.']));
     
@@ -2140,22 +2140,10 @@
   });
 
   render();
-  // Refresh the shared storefront periodically so a second device sees
-  // seller inventory/listing changes without having to clear local storage.
-  // Cart/checkout state stays local to this buyer and is never overwritten.
-  setInterval(async ()=>{
-    if(window.BookNestCloud?.refresh && !state.checkoutOpen){
-      try{
-        await window.BookNestCloud.refresh();
-        state.books = loadCatalog();
-        state.orders = loadOrders();
-        state.listings = loadListings();
-        state.shopBooks = buildShopBooks(state.books,state.listings);
-        render();
-      }catch(e){ console.warn('[BookNest] Store refresh failed',e); }
-    }
-  }, 3000);
-  // Live per-second countdown of the cart's 1-hour hold, plus expiry check.
+  // No polling here. The Supabase Realtime listener in supabase-data.js
+  // triggers a cloud pull only when shared data changes, and the listener
+  // above re-renders the storefront from that new snapshot.
+  // This keeps the page stable instead of refreshing every few seconds.
   setInterval(tickCartCountdown, 1000);
 })();
 </script>

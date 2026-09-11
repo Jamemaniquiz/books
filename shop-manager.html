@@ -171,7 +171,35 @@
  function setCloudStatus(ok){const el=$('cloudStatus');if(!el)return;el.textContent=ok?'● Supabase connected':'● Supabase connection problem';el.className='cloud-status '+(ok?'ok':'err');}
  async function forceShopRefresh(){const btn=$('forceShopRefresh');if(btn){btn.disabled=true;btn.textContent='Refreshing…'}try{if(window.BookNestCloud?.refresh)await window.BookNestCloud.refresh();books=read(BOOKS_KEY);listings=read(LISTINGS_KEY);renderPicker();updateSelection();renderListings();setCloudStatus(!!window.BookNestCloud?.lastSync?.ok)}finally{if(btn){btn.disabled=false;btn.textContent='↻ Refresh now'}}}
  $('forceShopRefresh')?.addEventListener('click',forceShopRefresh);
- setInterval(()=>{if(document.visibilityState==='visible' && !document.querySelector('.modal.open')) forceShopRefresh()},1500);
+ let backgroundSyncBusy=false;
+let lastShopSyncSignature='';
+async function backgroundShopSync(){
+  if(backgroundSyncBusy || document.visibilityState!=='visible' || document.querySelector('.modal.open')) return;
+  backgroundSyncBusy=true;
+  try{
+    if(window.BookNestCloud?.refresh) await window.BookNestCloud.refresh();
+    const nextBooks=read(BOOKS_KEY);
+    const nextListings=read(LISTINGS_KEY);
+    const signature=JSON.stringify({books:nextBooks,listings:nextListings});
+    if(signature!==lastShopSyncSignature){
+      lastShopSyncSignature=signature;
+      books=nextBooks;
+      listings=nextListings;
+      renderPicker();
+      updateSelection();
+      renderListings();
+      setCloudStatus(!!window.BookNestCloud?.lastSync?.ok);
+    }
+  }catch(e){
+    console.warn('[BookNest] Background sync skipped:',e);
+  }finally{
+    backgroundSyncBusy=false;
+  }
+}
+// Automatic sync is intentionally infrequent and happens in the background.
+// Realtime updates remain the primary mechanism, so the page never reloads.
+setInterval(backgroundShopSync,30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') backgroundShopSync();});
  async function init(){
   setCloudStatus(false);
   if(window.BookNestCloud?.ready){
