@@ -6,6 +6,7 @@
     <title>BookNest — New Sale</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
+    <script src="seller-nav.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
@@ -503,7 +504,7 @@
         .action-modal .btn.modal-primary { background: var(--teal); color: #fff; border-color: transparent; }
         .action-modal .btn.modal-ghost { background: transparent; color: var(--muted); }
     </style>
-<script src="seller-nav.js"></script></head>
+</head>
 <body>
     <header class="site-header">
       <div class="logo">
@@ -515,6 +516,7 @@
         <a class="active" href="inventory.html">Inventory &amp; Sales</a>
         <a href="receipt-history.html">Receipts</a>
         <a href="orders.html">🛒 Shop Orders</a>
+        <a href="buyers.html">👤 Buyers</a>
         <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
       </nav>
     </header>
@@ -571,7 +573,7 @@
                 <table class="bn-table">
                     <colgroup>
                         <col class="col-title"><col class="col-author"><col class="col-genre">
-                        <col class="col-type"><col class="col-qty">
+                        <col class="col-type"><col class="col-condition"><col class="col-qty">
                         <col class="col-price"><col class="col-total"><col class="col-action">
                     </colgroup>
                     <thead>
@@ -580,7 +582,8 @@
                             <th>Author</th>
                             <th>Genre</th>
                             <th>Type</th>
-                                                        <th>Qty</th>
+                            <th>Condition</th>
+                            <th>Qty</th>
                             <th>Price</th>
                             <th>Total</th>
                             <th></th>
@@ -853,6 +856,9 @@
                     </select>
                 </td>
                 <td>
+                    <select class="book-condition" title="Editable — fix if this sale differs from the inventory record">
+                        ${BOOK_CONDITIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
                 </td>
                 <td><input type="number" class="book-qty" value="1" min="1" max="1" oninput="calculateTotal()" onchange="calculateTotal()"></td>
                 <td><input type="number" class="book-price" value="0" min="0" step="0.01" oninput="calculateTotal()" onchange="calculateTotal()" title="Editable — fix the price here if there's a mistake"></td>
@@ -887,7 +893,8 @@
                 row.querySelector('.book-author').value = '';
                 row.querySelector('.book-genre').value = '';
                 setSelectValueSafe(row.querySelector('.book-type'), '');
-                        row.querySelector('.book-price').value = '0.00';
+                setSelectValueSafe(row.querySelector('.book-condition'), '');
+                row.querySelector('.book-price').value = '0.00';
                 row.querySelector('.book-total').value = '0.00';
                 calculateTotal();
                 return;
@@ -903,6 +910,7 @@
             row.querySelector('.book-author').value = author;
             row.querySelector('.book-genre').value = genre;
             setSelectValueSafe(row.querySelector('.book-type'), type);
+            setSelectValueSafe(row.querySelector('.book-condition'), condition);
             row.querySelector('.book-price').value = price.toFixed(2);
 
             const qtyInput = row.querySelector('.book-qty');
@@ -1023,7 +1031,7 @@
                     const rowAuthor    = row.querySelector('.book-author')?.value.trim()    || book.author;
                     const rowGenre     = row.querySelector('.book-genre')?.value.trim()     || book.genre;
                     const rowType      = row.querySelector('.book-type')?.value             || book.type || "Paperback";
-                    const rowCondition = book.condition || "Pre Loved";
+                    const rowCondition = row.querySelector('.book-condition')?.value        || book.condition;
                     const rowPrice     = Math.max(0, parseFloat(row.querySelector('.book-price')?.value) || 0);
 
                     const sale = {

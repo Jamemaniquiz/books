@@ -6,6 +6,7 @@
     <title>Shop Orders - BookNest</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
+    <script src="seller-nav.js"></script>
     <style>
       .order-card{ border:1px solid var(--line, #e2ddd0); border-radius:8px; margin-bottom:14px; background:var(--panel-bg, #fff); overflow:hidden; }
       .order-head{ display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:rgba(0,0,0,0.03); border-bottom:1px solid var(--line, #e2ddd0); flex-wrap:wrap; gap:8px; }
@@ -19,9 +20,8 @@
       .order-body .line{ display:flex; justify-content:space-between; padding:3px 0; color:#666; }
       .order-buyer{ margin-bottom:8px; }
       .order-actions{ padding:12px 18px; border-top:1px solid var(--line, #e2ddd0); display:flex; gap:8px; flex-wrap:wrap; }
-      .delete-order{background:#fff0ef!important;color:#a32b22!important;border-color:#e1aaa5!important}
     </style>
-  <script src="seller-nav.js"></script></head>
+  </head>
   <body>
     <header class="site-header">
       <div class="logo">
@@ -33,6 +33,7 @@
         <a href="inventory.html">Inventory &amp; Sales</a>
         <a href="receipt-history.html">Receipts</a>
         <a class="active" href="orders.html">🛒 Shop Orders</a>
+        <a href="buyers.html">👤 Buyers</a>
         <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
       </nav>
     </header>
@@ -114,23 +115,7 @@
         writeLocal(RECEIPTS_KEY, receipts);
       }
 
-      function deleteOrder(id){
-        const orders = getOrders();
-        const order = orders.find(o => o.id === id);
-        if(!order) return;
-        if(!confirm('Delete order '+id+'? This removes it from Shop Orders and the matching receipt.')) return;
-        // If the order was not already cancelled, its stock is still counted as sold/reserved.
-        // Give it back before removing the order so deleting an active order does not silently lose stock.
-        if(order.status !== 'Cancelled') adjustStockForOrder(order, +1);
-        const updated = orders.filter(o => o.id !== id);
-        saveOrders(updated);
-        const receipts = readLocal(RECEIPTS_KEY, []);
-        const nextReceipts = receipts.filter(r => r.id !== id);
-        if(nextReceipts.length !== receipts.length) writeLocal(RECEIPTS_KEY, nextReceipts);
-        render();
-      }
-
-      function setOrderStatus(id, status){
+      async function setOrderStatus(id, status){
         const orders = getOrders();
         const order = orders.find(o => o.id === id);
         if(!order || order.status === status) return;
@@ -145,8 +130,35 @@
         const updated = orders.map(o => o.id===id ? {...o, status} : o);
         if(saveOrders(updated)){
           syncReceiptWithStatus(id, status);
+          if(window.BookNestCloud?.flush) await window.BookNestCloud.flush();
           render();
         }
+      }
+
+      // Remove an old shop order without leaving the inventory/receipt in a
+      // broken state. Pending orders still hold stock, so deleting one gives
+      // those copies back. Cancelled orders already returned their stock.
+      // Paid/Shipped orders keep their stock deducted because they represent
+      // completed sales. The matching shop receipt is removed as well.
+      async function deleteOrder(id){
+        const orders = getOrders();
+        const order = orders.find(o => o.id === id);
+        if(!order) return;
+
+        const ok = confirm(`Delete order ${order.id}? This cannot be undone.`);
+        if(!ok) return;
+
+        if(order.status !== 'Cancelled' && order.status !== 'Paid' && order.status !== 'Shipped'){
+          adjustStockForOrder(order, +1);
+        }
+
+        const remainingOrders = orders.filter(o => o.id !== id);
+        if(!saveOrders(remainingOrders)) return;
+
+        const receipts = readLocal(RECEIPTS_KEY, []);
+        writeLocal(RECEIPTS_KEY, receipts.filter(r => r.id !== id));
+        if(window.BookNestCloud?.flush) await window.BookNestCloud.flush();
+        render();
       }
 
       function render(){
@@ -164,6 +176,7 @@
           const actionBtns = statuses.map(s =>
             `<button class="btn ghost" data-action="set-status" data-id="${o.id}" data-status="${s}">Mark ${s}</button>`
           ).join('');
+          const deleteBtn = `<button class="btn ghost" style="color:#8A2E2E;border-color:#d7b0b0;" data-action="delete-order" data-id="${o.id}">Delete</button>`;
           return `
             <div class="order-card">
               <div class="order-head">
@@ -181,7 +194,7 @@
                   <span>Total via ${escapeHtml(o.paymentMode)}</span><span>${peso(o.total)}</span>
                 </div>
               </div>
-              <div class="order-actions">${actionBtns}<button class="btn ghost delete-order" data-action="delete-order" data-id="${escapeHtml(o.id)}">🗑 Delete Order</button></div>
+              <div class="order-actions">${actionBtns}${deleteBtn}</div>
             </div>`;
         }).join('');
       }
@@ -191,14 +204,18 @@
       }
 
       document.getElementById('ordersList').addEventListener('click', (e) => {
-        const deleteBtn = e.target.closest('[data-action="delete-order"]');
-        if(deleteBtn){ deleteOrder(deleteBtn.dataset.id); return; }
-        const btn = e.target.closest('[data-action="set-status"]');
+        const btn = e.target.closest('[data-action]');
         if(!btn) return;
-        setOrderStatus(btn.dataset.id, btn.dataset.status);
+        if(btn.dataset.action === 'set-status'){
+          setOrderStatus(btn.dataset.id, btn.dataset.status);
+        }else if(btn.dataset.action === 'delete-order'){
+          deleteOrder(btn.dataset.id);
+        }
       });
 
-      window.addEventListener('booknest-cloud-ready', () => render(), { once: true });
+      if (window.BookNestCloud?.ready) {
+        window.BookNestCloud.ready.then(() => render());
+      }
       render();
     </script>
   </body>

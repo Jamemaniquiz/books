@@ -1,55 +1,96 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Buyers — BookNest</title>
-<link rel="stylesheet" href="styles.css" />
-<script src="admin-gate.js"></script>
-<style>
-  .buyer-row td{vertical-align:top}.buyer-note{padding:12px 14px;border:1px solid var(--line,#e2ddd0);border-radius:8px;background:rgba(0,0,0,.025);margin-bottom:18px}.history-toggle{cursor:pointer;color:var(--brick,#A8402A);font-size:12.5px;font-weight:600}.history-panel{display:none;background:rgba(0,0,0,.03);padding:10px 14px;border-radius:6px;margin-top:6px}.history-panel.open{display:block}.history-item{font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line,#e2ddd0);display:flex;justify-content:space-between;gap:10px}.history-item:last-child{border-bottom:none}
-</style>
-<script src="seller-nav.js"></script></head>
-<body>
-<header class="site-header">
-  <div class="logo"><img class="logo-image" src="asset/1.png" alt="BookNest logo" /><span>BookNest</span></div>
-  <nav class="nav">
-    <a href="admin.html">Home</a><a href="inventory.html">Inventory &amp; Sales</a><a href="receipt-history.html">Receipts</a><a href="orders.html">🛒 Shop Orders</a><a class="active" href="buyers.html">👤 Buyers</a><a href="shop.html" style="margin-left:auto">🛒 View Shop</a><a href="admin.html">Seller Center</a>
-  </nav>
-</header>
-<main class="container">
-  <section class="panel">
-    <div class="panel-header"><h2>👤 Buyers</h2></div>
-    <div class="buyer-note"><strong>Customer accounts are enabled.</strong><br><span class="muted">Facebook contact information is shown when the buyer provides it. Buyer passwords are protected by Supabase Auth and are never displayed here in plain text or as a reusable password hash. If a buyer forgets a password, use the password-reset link on the buyer login page.</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Facebook</th><th>Password</th><th>Orders</th><th>Total spent</th></tr></thead><tbody id="buyersRows"></tbody></table></div>
-  </section>
-</main>
-<footer class="site-footer">BookNest © 2026</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
-<script src="supabase-data.js"></script>
-<script>
-const peso=n=>'PHP '+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
-function read(key,fallback=[]){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch(e){return fallback}}
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(){
-  const rows=document.getElementById('buyersRows');
-  const orders=read('.shop_orders',[]);
-  const map=new Map();
-  orders.forEach(o=>{
-    const key=String(o.buyerId||o.buyerEmail||o.contact||o.buyerName||'Unknown').toLowerCase();
-    if(!map.has(key)) map.set(key,{name:o.buyerName||'—',contact:o.contact||'—',email:o.buyerEmail||'—',facebook:o.buyerFacebook||'—',count:0,total:0});
-    const b=map.get(key);
-    b.count++;
-    b.total+=Number(o.total||o.grandTotal||0);
-    if((!b.facebook||b.facebook==='—') && o.buyerFacebook) b.facebook=o.buyerFacebook;
-    if((!b.email||b.email==='—') && o.buyerEmail) b.email=o.buyerEmail;
-  });
-  const buyers=[...map.values()].sort((a,b)=>b.total-a.total);
-  if(!buyers.length){rows.innerHTML='<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">No shop orders yet.</td></tr>';return}
-  rows.innerHTML=buyers.map(b=>`<tr class="buyer-row"><td><strong>${esc(b.name)}</strong></td><td>${esc(b.contact)}</td><td>${esc(b.email)}</td><td>${b.facebook && b.facebook!=='—' ? (String(b.facebook).startsWith('http') ? `<a href="${esc(b.facebook)}" target="_blank" rel="noopener noreferrer">Open Facebook</a>` : esc(b.facebook)) : '—'}</td><td><span title="Password is protected by Supabase Auth">🔒 Protected</span></td><td>${b.count}</td><td><strong>${peso(b.total)}</strong></td></tr>`).join('')
-}
-document.addEventListener('DOMContentLoaded',()=>{render();window.addEventListener('booknest-cloud-ready',render);});
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Buyers — BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="admin-gate.js"></script>
+    <script src="seller-nav.js"></script>
+    <style>
+      .buyer-row td{ vertical-align:top; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a href="admin.html">Home</a>
+        <a href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+        <a href="orders.html">🛒 Shop Orders</a>
+        <a href="debug.html">🔧 Debug</a>
+        <a class="active" href="buyers.html">👤 Buyers</a>
+        <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
+        <a href="#" id="logoutLink">Log out</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="panel">
+        <div class="panel-header"><h2>👤 Buyers</h2></div>
+        <p class="muted" style="margin-bottom:1rem">
+          Everyone who has created a buyer account. Their saved password is shown here so you can
+          verify the buyer and help them if they forget it. Each buyer's Facebook profile is also
+          shown so you can reach them about orders.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Password</th><th>Facebook</th><th>Joined</th></tr>
+            </thead>
+            <tbody id="buyersRows"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-buyers.js"></script>
+    <script>
+      async function loadBuyers(){
+        const tbody = document.getElementById('buyersRows');
+        const buyers = await getAllBuyers();
+        if(buyers.length===0){
+          tbody.innerHTML = '<tr><td colspan="4" class="muted">No buyer accounts yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = '';
+        buyers.forEach(b=>{
+          const joined = b.created_at ? new Date(b.created_at).toLocaleDateString('en-PH') : '—';
+          const tr = document.createElement('tr');
+          tr.className = 'buyer-row';
+          tr.innerHTML = `
+            <td>${escapeHtml(b.name||'—')}</td>
+            <td>
+              <strong>${b.password_text ? escapeHtml(b.password_text) : 'Not available for older account'}</strong>
+            </td>
+            <td>
+              ${escapeHtml(b.fb_name||'—')}<br>
+              ${b.fb_link ? `<a href="${escapeHtml(b.fb_link)}" target="_blank" rel="noopener" style="font-size:12px">${escapeHtml(b.fb_link)}</a>` : ''}
+            </td>
+            <td>${joined}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function escapeHtml(s){
+        return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      loadBuyers();
+
+      document.getElementById('logoutLink').addEventListener('click', (e)=>{
+        e.preventDefault();
+        if(window.BN_Security) window.BN_Security.logout();
+      });
+    </script>
+  </body>
 </html>

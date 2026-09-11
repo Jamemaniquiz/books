@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Orders — BookNest</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .buyer-orders-wrap{max-width:1000px;margin:0 auto;}
+  .order-card{border:1px solid var(--line,#d9cdb2);border-radius:10px;margin-bottom:16px;background:#fff;overflow:hidden;}
+  .order-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:rgba(53,73,60,.06);border-bottom:1px solid var(--line,#d9cdb2);}
+  .order-id{font-weight:800;font-size:15px;}
+  .order-date{font-size:11.5px;color:#6b7280;margin-top:3px;}
+  .status-pill{font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;}
+  .status-Pending{background:#f1dcc4;color:#8a5a1f}.status-Paid{background:#d8e6d9;color:#2e5a34}.status-Shipped{background:#d6e1ec;color:#2a4a6b}.status-Cancelled{background:#e9d6d6;color:#8a2e2e}
+  .timeline{display:flex;align-items:flex-start;gap:0;margin:4px 0 16px;}
+  .step{flex:1;text-align:center;position:relative;font-size:10.5px;color:#9ca3af;}
+  .step:before{content:"";display:block;width:18px;height:18px;border-radius:50%;border:2px solid #d1d5db;background:#fff;margin:0 auto 5px;position:relative;z-index:2;}
+  .step:not(:last-child):after{content:"";position:absolute;top:9px;left:50%;width:100%;height:2px;background:#d1d5db;}
+  .step.done{color:#0f5c52;font-weight:700}.step.done:before{border-color:#0f5c52;background:#0f5c52;box-shadow:inset 0 0 0 4px #fff}.step.done:not(:last-child):after{background:#0f5c52}
+  .order-body{padding:16px 18px;font-size:13px;}
+  .item-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #eef0ed;}
+  .order-total{display:flex;justify-content:space-between;font-weight:800;padding-top:10px;font-size:14px;}
+  .contact{margin-top:14px;padding:11px;border:1px solid #bfe3d6;background:#f0fdf9;border-radius:8px;text-align:center;}
+  .contact a{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;color:#fff;text-decoration:none;font-size:11.5px;font-weight:800;margin:5px 3px 0;}
+  .fb{background:#1877f2}.tt{background:#111}
+  .empty{padding:40px 20px;text-align:center;color:#6b7280;}
+  @media(max-width:700px){.item-line{align-items:flex-start}.order-body{padding:13px}.timeline .step{font-size:9px}.buyer-orders-wrap{width:100%;}}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="logo"><img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo"><span>BookNest</span></div>
+  <nav class="nav">
+    <a href="shop.html">🛒 Shop</a>
+    <a class="active" href="buyer-orders.html">📦 My Orders</a>
+    <a href="buyer-login.html" id="buyerAccountLink">👤 Buyer account</a>
+  </nav>
+</header>
+<main class="container"><div class="buyer-orders-wrap">
+<section class="panel">
+  <div class="panel-header"><h2>📦 My Orders</h2></div>
+  <p class="muted">View the status of your BookNest orders here. Keep your Order ID when contacting the seller.</p>
+  <div id="ordersList"><div class="empty">Loading your orders…</div></div>
+</section>
+</div></main>
+<footer class="site-footer">BookNest © 2026</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="supabase-data.js"></script>
+<script src="supabase-buyers.js"></script>
+<script>
+(function(){
+  const ORDERS_KEY='.shop_orders';
+  const session=getBuyerSession();
+  if(!session){ window.location.href='buyer-login.html'; return; }
+  document.getElementById('buyerAccountLink').textContent='👤 '+session.name;
+  function read(key,fallback){try{const r=localStorage.getItem(key);return r?JSON.parse(r):fallback}catch(e){return fallback}}
+  function peso(n){return 'PHP '+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function keyForName(n){return String(n||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'')}
+  function myOrders(){
+    const all=read(ORDERS_KEY,[]);
+    const sid=String(session.id||'');
+    const skey=keyForName(session.name);
+    return all.filter(o=>{
+      if(o.buyerId && sid) return String(o.buyerId)===sid;
+      if(o.buyerUsernameKey && skey) return String(o.buyerUsernameKey)===skey;
+      return keyForName(o.buyerName)===skey;
+    }).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  }
+  function render(){
+    const list=document.getElementById('ordersList');
+    const orders=myOrders();
+    if(!orders.length){list.innerHTML='<div class="empty"><h3>No orders yet</h3><p>Your orders will appear here after you check out from the shop.</p><a class="btn btn-primary" href="shop.html" style="display:inline-block;margin-top:10px;text-decoration:none;">Browse books</a></div>';return;}
+    list.innerHTML=orders.map(o=>{
+      const status=o.status||'Pending';
+      const steps=['Pending','Paid','Shipped'];
+      const current=status==='Cancelled'?-1:steps.indexOf(status);
+      const timeline=steps.map((st,i)=>`<div class="step ${i<=current?'done':''}">${st}</div>`).join('');
+      const items=(o.items||[]).map(i=>`<div class="item-line"><span>${esc(i.title)} × ${Number(i.qty)||0}</span><strong>${peso((Number(i.price)||0)*(Number(i.qty)||0))}</strong></div>`).join('');
+      const cancelled=status==='Cancelled'?'<div style="margin-bottom:12px;padding:9px;background:#fdf0f0;border:1px solid #e7c2c2;border-radius:7px;color:#8a2e2e;font-size:12px;font-weight:700;">This order was cancelled. The reserved stock was released back to inventory.</div>':'';
+      return `<div class="order-card"><div class="order-head"><div><div class="order-id">${esc(o.id)}</div><div class="order-date">${o.createdAt?new Date(o.createdAt).toLocaleString('en-PH'):'—'}</div></div><span class="status-pill status-${esc(status)}">${esc(status)}</span></div><div class="order-body">${cancelled}<div class="timeline">${timeline}</div>${items}<div class="order-total"><span>Total via ${esc(o.paymentMode||'GCash')}</span><span>${peso(o.total)}</span></div><div class="contact"><strong>Need help with this order?</strong><div class="muted" style="font-size:11px;margin-top:3px;">Send the seller your Order ID.</div><a class="fb" href="https://www.facebook.com/profile.php?id=61573580501585" target="_blank" rel="noopener noreferrer">f Facebook</a><a class="tt" href="https://www.tiktok.com/@booknest123" target="_blank" rel="noopener noreferrer">♪ TikTok</a></div></div></div>`;
+    }).join('');
+  }
+  document.getElementById('buyerAccountLink').addEventListener('click',e=>{e.preventDefault();if(confirm('Are you sure you want to log out?')){buyerLogout();window.location.href='buyer-login.html';}});
+  if(window.BookNestCloud?.ready) window.BookNestCloud.ready.then(render);
+  render();
+})();
+</script>
+</body>
+</html>

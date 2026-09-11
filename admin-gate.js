@@ -67,17 +67,23 @@
     overlay.id = "bn-admin-gate";
     overlay.innerHTML = `
       <div class="bn-gate-card">
-        <div class="bn-gate-logo">📚 BookNest</div>
-        <h2>Seller Access</h2>
-        
-        <div class="bn-gate-content active" id="login-tab">
-          <div class="bn-gate-shield">🔐</div>
-          <p>Enter your seller access password to continue to the BookNest workspace.</p>
-          <input type="password" id="bn-gate-password" placeholder="Seller access password" autocomplete="off" />
-          <button id="bn-gate-login-btn" class="bn-gate-primary">Open Seller Workspace →</button>
-          <div id="bn-gate-error" class="bn-gate-error"></div>
-          <a href="index.html" class="bn-gate-link">← Back to customer shop</a>
+        <div class="bn-gate-brand">
+          <div class="bn-gate-logo-wrap"><img src="Assets/Booknest.png" alt="BookNest"></div>
+          <div>
+            <div class="bn-gate-brand-name">BOOKNEST</div>
+            <div class="bn-gate-brand-sub">Seller workspace</div>
+          </div>
         </div>
+        <div class="bn-gate-lock">🔐</div>
+        <h2>Welcome back, Seller</h2>
+        <p>Sign in to manage your books, orders, sales, and receipts.</p>
+        <div class="bn-gate-field">
+          <span>Seller password</span>
+          <input type="password" id="bn-gate-password" placeholder="Enter your password" autocomplete="off" />
+        </div>
+        <button id="bn-gate-login-btn" class="bn-gate-primary">Unlock Seller Dashboard →</button>
+        <div id="bn-gate-error" class="bn-gate-error"></div>
+        <a href="shop.html" class="bn-gate-link">← Back to customer shop</a>
       </div>
     `;
     
@@ -104,7 +110,7 @@
       }
 
       .bn-gate-card {
-        background: linear-gradient(180deg,#fffefb,#f7f1e3);
+        background: #fff;
         border-radius: 12px;
         padding: 40px 32px;
         max-width: 380px;
@@ -120,16 +126,11 @@
       }
 
       .bn-gate-logo {
-        font-weight: 800;
+        font-weight: 700;
         font-size: 18px;
         margin-bottom: 8px;
         color: #0f766e;
         letter-spacing: 0.5px;
-      }
-
-      .bn-gate-shield {
-        width: 58px; height: 58px; margin: 4px auto 16px; display: grid; place-items: center;
-        border-radius: 18px; background: rgba(15,118,110,.10); font-size: 24px;
       }
 
       .bn-gate-card h2 {
@@ -271,6 +272,30 @@
         text-decoration: underline;
       }
 
+      .bn-gate-card {
+        max-width: 430px;
+        border-radius: 24px;
+        padding: 34px;
+        position: relative;
+        overflow: hidden;
+      }
+      .bn-gate-card::before {
+        content: "";
+        position: absolute; inset: 0 0 auto 0; height: 7px;
+        background: linear-gradient(90deg,#f59e0b,#0f766e,#f59e0b);
+      }
+      .bn-gate-brand { display:flex; align-items:center; gap:12px; text-align:left; margin-bottom:18px; }
+      .bn-gate-logo-wrap { width:48px; height:48px; border-radius:14px; overflow:hidden; background:#fff7e6; display:grid; place-items:center; box-shadow:0 5px 18px rgba(15,118,110,.12); }
+      .bn-gate-logo-wrap img { width:100%; height:100%; object-fit:cover; }
+      .bn-gate-brand-name { font-weight:900; letter-spacing:1.4px; color:#0f5c52; font-size:14px; }
+      .bn-gate-brand-sub { color:#7a8790; font-size:11px; margin-top:2px; }
+      .bn-gate-lock { width:54px; height:54px; margin:4px auto 10px; border-radius:50%; display:grid; place-items:center; background:#fff6df; font-size:25px; }
+      .bn-gate-card h2 { margin-bottom:8px; font-size:24px; }
+      .bn-gate-card p { margin-bottom:20px; }
+      .bn-gate-field { text-align:left; }
+      .bn-gate-field span { display:block; font-size:11px; font-weight:800; color:#53616b; margin:0 0 7px 2px; text-transform:uppercase; letter-spacing:.08em; }
+      .bn-gate-primary { border-radius:12px; padding:13px 16px; box-shadow:0 8px 20px rgba(15,118,110,.2); }
+      .bn-gate-link { color:#0f766e; }
       @media (max-width: 480px) {
         .bn-gate-card {
           padding: 28px 20px;
@@ -280,12 +305,7 @@
           font-size: 16px;
         }
 
-        .bn-gate-shield {
-        width: 58px; height: 58px; margin: 4px auto 16px; display: grid; place-items: center;
-        border-radius: 18px; background: rgba(15,118,110,.10); font-size: 24px;
-      }
-
-      .bn-gate-card h2 {
+        .bn-gate-card h2 {
           font-size: 18px;
         }
 
@@ -312,7 +332,6 @@
 
   // Attach handlers
   function attachGateHandlers() {
-    // Login
     const passwordInput = document.getElementById("bn-gate-password");
     const loginBtn = document.getElementById("bn-gate-login-btn");
     const errorDiv = document.getElementById("bn-gate-error");
@@ -320,7 +339,7 @@
     function attemptLogin() {
       const password = passwordInput.value;
       if (!password) {
-        showError(errorDiv, "Enter your password");
+        showError(errorDiv, "Please enter your seller password.");
         return;
       }
       if (validatePassword(password)) {
@@ -330,7 +349,7 @@
         if (hideStyle) hideStyle.remove();
         setTimeout(() => location.reload(), 100);
       } else {
-        showError(errorDiv, "Incorrect password");
+        showError(errorDiv, "Incorrect password. Please try again.");
         passwordInput.value = "";
         passwordInput.focus();
       }

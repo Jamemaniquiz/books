@@ -1,70 +1,46 @@
-(function () {
-  const file = (location.pathname.split('/').pop() || 'admin.html').toLowerCase();
-  const activeMap = {
-    'admin.html': 'admin.html',
-    'inventory.html': 'inventory.html',
-    'new-sale.html': 'inventory.html',
-    'bundle-sale.html': 'inventory.html',
-    'add-books.html': 'add-books.html',
-    'shop-manager.html': 'shop-manager.html',
-    'receipt-history.html': 'receipt-history.html',
-    'orders.html': 'orders.html',
-    'buyers.html': 'buyers.html'
-  };
-  const active = activeMap[file] || '';
-  function init() {
-    document.querySelectorAll('.site-header .nav').forEach(nav => {
-      const sellerAccount = document.getElementById('sellerAccountBtn');
-      const sellerLogout = document.getElementById('sellerLogoutBtn');
-      [...nav.children].forEach(child => {
-        if (child !== sellerAccount && child !== sellerLogout) child.remove();
-      });
-      const items = [
-        ['Home', 'admin.html'],
-        ['Inventory & Sales', 'inventory.html'],
-        ['Add Books', 'add-books.html'],
-        ['Add to Shop', 'shop-manager.html'],
-        ['Receipts', 'receipt-history.html'],
-        ['🛒 Shop Orders', 'orders.html'],
-        ['👤 Buyers', 'buyers.html']
-      ];
-      const fragment = document.createDocumentFragment();
-      items.forEach(([label, href]) => {
-        const a = document.createElement('a');
-        a.href = href;
-        a.textContent = label;
-        a.dataset.sellerNav = '1';
-        if (href === active) a.classList.add('active');
-        fragment.appendChild(a);
-      });
-      const view = document.createElement('a');
-      view.href = 'shop.html';
-      view.textContent = '🛒 View Shop';
-      view.dataset.sellerNav = '1';
-      view.classList.add('nav-view-shop');
-      fragment.appendChild(view);
-      if (sellerAccount) fragment.appendChild(sellerAccount);
-      if (sellerLogout) fragment.appendChild(sellerLogout);
-      nav.appendChild(fragment);
-    });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-})();
-
-// Tiny seller-side interaction layer: fast reveal + button ripple without
-// changing any BookNest data behavior.
+/* BookNest seller navigation — one toolbar shared by every seller page. */
 (function(){
-  function polish(){
-    document.body.classList.add('bn-seller-ready');
-    const nodes=[...document.querySelectorAll('.panel,.seller-hero,.shop-hero,.listing-row,.variant-card,.table-wrap')];
-    nodes.forEach((el,i)=>{el.classList.add('bn-seller-reveal');el.style.transitionDelay=Math.min(i*28,280)+'ms';requestAnimationFrame(()=>el.classList.add('bn-visible'));});
-    document.querySelectorAll('.btn').forEach(btn=>{
-      if(btn.dataset.bnRipple) return;
-      btn.dataset.bnRipple='1';
-      btn.addEventListener('click',function(){this.classList.remove('bn-click-pop');void this.offsetWidth;this.classList.add('bn-click-pop');});
-    });
+  const items = [
+    ['admin.html','⌂','Home'],
+    ['add-books.html','＋','Add Books'],
+    ['inventory.html','▣','Inventory'],
+    ['orders.html','🛒','Shop Orders'],
+    ['receipt-history.html','▤','Receipts'],
+    ['buyers.html','♙','Buyers'],
+    ['debug.html','⚙','Debug'],
+    ['shop.html','↗','View Shop']
+  ];
+  function current(){
+    const p = location.pathname.split('/').pop().toLowerCase() || 'admin.html';
+    return p;
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(polish,30));
-  else setTimeout(polish,30);
+  function build(){
+    const nav=document.querySelector('.nav');
+    if(!nav) return;
+    const page=current();
+    nav.innerHTML='';
+    items.forEach(([href,icon,label])=>{
+      const a=document.createElement('a');
+      a.href=href;
+      a.className='seller-nav-link'+(page===href?' active':'');
+      a.innerHTML='<span class="seller-nav-icon">'+icon+'</span><span>'+label+'</span>';
+      a.setAttribute('aria-current',page===href?'page':'false');
+      a.addEventListener('click',function(){
+        nav.querySelectorAll('a').forEach(x=>x.classList.remove('active'));
+        a.classList.add('active');
+      });
+      nav.appendChild(a);
+    });
+    const out=document.createElement('button');
+    out.type='button';
+    out.className='seller-nav-logout';
+    out.innerHTML='<span>↪</span><span>Log out</span>';
+    out.addEventListener('click',function(){
+      if(confirm('Log out of the BookNest seller workspace?')){
+        if(window.BN_Security) window.BN_Security.logout();
+      }
+    });
+    nav.appendChild(out);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',build); else build();
 })();
