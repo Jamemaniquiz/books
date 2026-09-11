@@ -3,74 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seller login — BookNest</title>
+<title>Seller Center — BookNest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --paper-light:#F8F3E7; --ink:#26211A; --ink-soft:#5B5344;
-    --spine:#35493C; --spine-dark:#263329; --spine-light:#4A6151;
-    --brick:#A8402A; --brick-dark:#8A3220; --line:#D9CDB2; --white:#FFFDF8;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:linear-gradient(155deg, var(--spine) 0%, var(--spine-dark) 100%);
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    font-family:'Inter',sans-serif; padding:24px;
-  }
-  .box{ background:var(--paper-light); border-radius:6px; width:100%; max-width:380px; padding:36px 32px; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
-  .brand{ text-align:center; margin-bottom:6px; }
-  .brand-mark{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:26px; color:var(--spine-dark); }
-  .lock{ text-align:center; font-size:22px; margin-bottom:14px; }
-  h2{ font-family:'Fraunces',serif; font-size:18px; margin:0 0 4px 0; text-align:center; color:var(--ink); }
-  .sub{ font-size:12.5px; color:var(--ink-soft); text-align:center; margin-bottom:20px; }
-  .field{ margin-bottom:14px; }
-  .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
-  .field input{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:4px; font-size:14px; font-family:inherit; background:var(--white); color:var(--ink); }
-  .field input:focus{ outline:2px solid var(--spine-light); outline-offset:1px; }
-  .btn{ width:100%; padding:12px; border-radius:4px; border:none; font-weight:700; font-size:14.5px; cursor:pointer; font-family:inherit; }
-  .btn-primary{ background:var(--brick); color:var(--white); }
-  .btn-primary:hover{ background:var(--brick-dark); }
-  .err{ background:#F4E4DD; border:1px solid #E2B7A6; color:var(--brick-dark); padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px; display:none; }
+  :root{--paper:#fffdf8;--ink:#17302c;--muted:#68716a;--teal:#0f766e;--deep:#0b3f3b;--gold:#b1843c}
+  *{box-sizing:border-box} html,body{margin:0;min-height:100%}
+  body{min-height:100vh;padding:22px;display:grid;place-items:center;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 15% 10%,rgba(169,120,47,.16),transparent 32%),linear-gradient(135deg,#173d3a,#0b2725 60%,#142f2c)}
+  .shell{width:min(980px,100%);display:grid;grid-template-columns:1.08fr .92fr;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:28px;background:var(--paper);box-shadow:0 30px 90px rgba(0,0,0,.35)}
+  .visual{position:relative;min-height:600px;padding:38px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#284456}
+  .visual:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,33,31,.08),rgba(7,33,31,.82));z-index:1}
+  .visual-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.92}
+  .content{position:relative;z-index:2;color:#fff}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.logo{width:44px;height:44px;border-radius:13px;object-fit:cover;border:1px solid rgba(255,255,255,.35);background:#fff}
+  .pill{display:inline-flex;margin-top:30px;padding:8px 12px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.1);font-size:12px;font-weight:700;backdrop-filter:blur(8px)}
+  h1{font-family:Fraunces,Georgia,serif;font-size:clamp(2.3rem,4vw,4rem);line-height:1.02;margin:16px 0 12px;max-width:470px}.visual p{max-width:450px;margin:0;color:rgba(255,255,255,.84);line-height:1.7;font-size:14px}
+  .note{position:relative;z-index:2;padding:14px 16px;border:1px solid rgba(255,255,255,.18);border-radius:16px;background:rgba(4,24,23,.4);backdrop-filter:blur(10px);color:rgba(255,255,255,.9);font-size:12px;line-height:1.55}
+  .side{padding:54px 48px;display:flex;flex-direction:column;justify-content:center}.icon{width:58px;height:58px;display:grid;place-items:center;border-radius:17px;background:rgba(15,118,110,.1);font-size:25px;margin-bottom:20px}h2{font-family:Fraunces,Georgia,serif;font-size:34px;line-height:1.05;margin:0 0 10px}.sub{font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 24px}.feature{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;border:1px solid rgba(23,48,44,.1);border-radius:14px;background:#f7f0e2;margin-bottom:10px}.feature b{display:block;font-size:13px;margin-bottom:2px}.feature span{font-size:12px;color:var(--muted);line-height:1.5}.btn{display:block;width:100%;padding:14px 16px;border:0;border-radius:13px;text-align:center;text-decoration:none;font:800 14px Inter,system-ui;cursor:pointer}.primary{background:linear-gradient(135deg,var(--teal),var(--deep));color:#fff;box-shadow:0 12px 25px rgba(15,118,110,.2)}.back{display:block;text-align:center;margin-top:17px;color:var(--muted);font-size:12px;text-decoration:none}.back:hover{color:var(--teal)}
+  @media(max-width:760px){body{padding:12px}.shell{grid-template-columns:1fr;border-radius:22px}.visual{min-height:300px;padding:25px}.visual h1{font-size:2.5rem}.note{display:none}.side{padding:34px 24px}}
 </style>
 </head>
 <body>
-  <div class="box">
-    <div class="brand"><div class="brand-mark">BookNest</div></div>
-    <div class="lock">🔒</div>
-    <h2>Seller login</h2>
-    <div class="sub">This account manages inventory, sales, and orders.</div>
-    <div class="err" id="err"></div>
-    <div class="field"><label>Email</label><input type="email" id="email" placeholder="you@email.com"></div>
-    <div class="field"><label>Password</label><input type="password" id="pass" placeholder="••••••••"></div>
-    <button class="btn btn-primary" id="loginBtn">Log in</button>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="firebase-data.js"></script>
-  <script>
-    whenAuthReady((user, role)=>{
-      if(user && role==='seller') window.location.href = 'admin.html';
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', async ()=>{
-      const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('pass').value;
-      const err = document.getElementById('err');
-      err.style.display = 'none';
-      if(!email || !pass){ err.textContent='Please enter your email and password.'; err.style.display='block'; return; }
-      try{
-        await sellerLogin(email, pass);
-        window.location.href = 'admin.html';
-      }catch(e){
-        err.textContent = e && e.message ? e.message : 'Incorrect email or password.';
-        err.style.display = 'block';
-      }
-    });
-  </script>
+  <main class="shell">
+    <section class="visual">
+      <img class="visual-bg" src="asset/1.png" alt="BookNest books illustration">
+      <div class="content">
+        <div class="brand"><img class="logo" src="asset/1.png" alt="BookNest"><span>BookNest Seller Center</span></div>
+        <div class="pill">🔐 Private seller workspace</div>
+        <h1>Everything you need to keep the nest running.</h1>
+        <p>Manage your books, inventory, sales, receipts, orders, payments, and store settings from one workspace.</p>
+      </div>
+      <div class="note">Your seller workspace is protected separately from the customer shop. Your password can be changed from inside Seller Center.</div>
+    </section>
+    <section class="side">
+      <div class="icon">🔒</div>
+      <h2>Seller access</h2>
+      <p class="sub">Open the secure Seller Center. BookNest will ask for your seller access password there.</p>
+      <div class="feature"><div>📚</div><div><b>One seller workspace</b><span>Inventory, sales, receipts and orders stay together.</span></div></div>
+      <div class="feature"><div>☁️</div><div><b>Supabase-powered store data</b><span>Your BookNest business data is synced through Supabase.</span></div></div>
+      <a class="btn primary" href="admin.html">Open Seller Center →</a>
+      <a class="back" href="index.html">← Back to BookNest shop</a>
+    </section>
+  </main>
 </body>
 </html>

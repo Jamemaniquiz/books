@@ -19,8 +19,9 @@
       .order-body .line{ display:flex; justify-content:space-between; padding:3px 0; color:#666; }
       .order-buyer{ margin-bottom:8px; }
       .order-actions{ padding:12px 18px; border-top:1px solid var(--line, #e2ddd0); display:flex; gap:8px; flex-wrap:wrap; }
+      .delete-order{background:#fff0ef!important;color:#a32b22!important;border-color:#e1aaa5!important}
     </style>
-  </head>
+  <script src="seller-nav.js"></script></head>
   <body>
     <header class="site-header">
       <div class="logo">
@@ -113,6 +114,22 @@
         writeLocal(RECEIPTS_KEY, receipts);
       }
 
+      function deleteOrder(id){
+        const orders = getOrders();
+        const order = orders.find(o => o.id === id);
+        if(!order) return;
+        if(!confirm('Delete order '+id+'? This removes it from Shop Orders and the matching receipt.')) return;
+        // If the order was not already cancelled, its stock is still counted as sold/reserved.
+        // Give it back before removing the order so deleting an active order does not silently lose stock.
+        if(order.status !== 'Cancelled') adjustStockForOrder(order, +1);
+        const updated = orders.filter(o => o.id !== id);
+        saveOrders(updated);
+        const receipts = readLocal(RECEIPTS_KEY, []);
+        const nextReceipts = receipts.filter(r => r.id !== id);
+        if(nextReceipts.length !== receipts.length) writeLocal(RECEIPTS_KEY, nextReceipts);
+        render();
+      }
+
       function setOrderStatus(id, status){
         const orders = getOrders();
         const order = orders.find(o => o.id === id);
@@ -164,7 +181,7 @@
                   <span>Total via ${escapeHtml(o.paymentMode)}</span><span>${peso(o.total)}</span>
                 </div>
               </div>
-              <div class="order-actions">${actionBtns}</div>
+              <div class="order-actions">${actionBtns}<button class="btn ghost delete-order" data-action="delete-order" data-id="${escapeHtml(o.id)}">🗑 Delete Order</button></div>
             </div>`;
         }).join('');
       }
@@ -174,14 +191,14 @@
       }
 
       document.getElementById('ordersList').addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('[data-action="delete-order"]');
+        if(deleteBtn){ deleteOrder(deleteBtn.dataset.id); return; }
         const btn = e.target.closest('[data-action="set-status"]');
         if(!btn) return;
         setOrderStatus(btn.dataset.id, btn.dataset.status);
       });
 
-      if (window.BookNestCloud?.ready) {
-        window.BookNestCloud.ready.then(() => render());
-      }
+      window.addEventListener('booknest-cloud-ready', () => render(), { once: true });
       render();
     </script>
   </body>

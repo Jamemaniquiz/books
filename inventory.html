@@ -7,19 +7,19 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  </head>
+  <script src="seller-nav.js"></script></head>
   <body class="inventory-page">
     <header class="site-header">
       <div class="logo">
-        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <img class="logo-image" src="asset/1.png" alt="BookNest logo" />
         <span>BookNest</span>
       </div>
       <nav class="nav">
         <a href="admin.html">Home</a>
+        <a href="add-books.html">➕ Add Books</a>
         <a class="active" href="inventory.html">Inventory &amp; Sales</a>
         <a href="receipt-history.html">Receipts</a>
         <a href="orders.html">🛒 Shop Orders</a>
-        <a href="debug.html">🔧 Debug</a>
         <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
       </nav>
     </header>
@@ -48,7 +48,7 @@
             <div class="bn-header">
               <div class="bn-header-left">
                 <div class="bn-logo-circle">
-                    <img class="bn-logo-img" src="Assets/Booknest.png" alt="BookNest logo" />
+                    <img class="bn-logo-img" src="asset/1.png" alt="BookNest logo" />
                 </div>
                 <h1 class="bn-title">BOOKNEST</h1>
               </div>
@@ -176,64 +176,13 @@
           </div>
         </div>
 
-        <div class="inv-add-card">
-          <div class="inv-add-card-title">
-            <span>➕ Add a Book</span>
-            <button class="btn ghost pc-trigger" id="priceCalcBtn" type="button">🧮 TikTok Price Calculator</button>
+        <!-- Book creation moved to Add Books page. Inventory is for managing existing books. -->
+        <div class="inv-banner" style="margin-bottom:18px;">
+          <div>
+            <div class="inv-banner-title">➕ Add / Create Book Variants</div>
+            <div class="inv-banner-sub">Manage your existing physical book copies, stock, prices, conditions, and variants.</div>
           </div>
-          <div class="sheet-add">
-            <div class="sheet-row">
-              <input id="addTitle"     type="text"   placeholder="Title" />
-              <input id="addAuthor"    type="text"   placeholder="Author" />
-              <select id="addGenre">
-                <option value="">-- Genre --</option>
-                <option value="Fiction">Fiction</option>
-                <option value="Non-Fiction">Non-Fiction</option>
-                <option value="Fantasy">Fantasy</option>
-                <option value="Mystery">Mystery</option>
-                <option value="Romance">Romance</option>
-                <option value="Self-Help">Self-Help</option>
-                <option value="Biography">Biography</option>
-                <option value="Science">Science</option>
-                <option value="Technology">Technology</option>
-                <option value="Children's">Children's</option>
-                <option value="General">General</option>
-                <option value="Other">Other</option>
-              </select>
-              <div id="genreAiHint" class="muted" style="grid-column:1 / -1;justify-self:start;font-size:12px;line-height:1.3;padding-left:2px;">
-                Auto genre: General
-              </div>
-              <input id="addPrice"     type="number" step="0.01" min="0" placeholder="Price" />
-              <input id="addStock"     type="number" step="1"    min="0" placeholder="Stock" />
-              <select id="addType">
-                <option value="Paperback">Paperback</option>
-                <option value="Hardbound">Hardbound</option>
-                <option value="MMPB">MMPB</option>
-                <option value="Sprayed">Sprayed</option>
-                <option value="Leatherbound">Leatherbound</option>
-                <option value="Slipcase">Slipcase</option>
-                <option value="Special Edition">Special Edition</option>
-                <option value="Box Set">Box Set</option>
-                <option value="Signed">Signed</option>
-                <option value="Other">Other</option>
-              </select>
-              <select id="addCondition">
-                <option value="New">New</option>
-                <option value="Pre Loved">Pre Loved</option>
-                <option value="Remaindered">Remaindered</option>
-              </select>
-              <input id="addBox" type="text" placeholder="Box (e.g. Box 1)" title="Which box/batch this book came from" list="boxSuggestions" />
-              <datalist id="boxSuggestions"></datalist>
-              <button class="btn primary" id="addBookBtn" type="button">+ Add Book</button>
-            </div>
-            <details class="bulk-box">
-              <summary>📋 Bulk paste (Title, Author, Genre, Price, Stock, Type, Condition, Box)</summary>
-              <textarea id="bulkInput" rows="6" placeholder="Paste from Excel/Sheets or type — flexible formats accepted:&#10;&#10;Minimum (2 columns):  Title, Author&#10;e.g.  The Alchemist, Paulo Coelho&#10;&#10;With price:  Title, Author, Genre, Price&#10;e.g.  The Alchemist, Paulo Coelho, Fiction, 150&#10;&#10;Full (7 columns):  Title, Author, Genre, Price, Stock, Type, Condition&#10;e.g.  The Alchemist, Paulo Coelho, Fiction, 150, 3, Paperback, Pre Loved&#10;&#10;With a box (add a field starting with Box:):&#10;e.g.  The Alchemist, Paulo Coelho, Fiction, 150, 3, Paperback, Pre Loved, Box: Box 1&#10;&#10;Type: Paperback | Hardbound | MMPB | Sprayed | Leatherbound | Box Set | Signed&#10;Condition: New | Pre Loved | Remaindered&#10;&#10;Tab-separated (copied from Excel/Google Sheets) also works!"></textarea>
-              <div class="bulk-actions">
-                <button class="btn" id="bulkAddBtn" type="button">Add Rows</button>
-              </div>
-            </details>
-          </div>
+          <a href="add-books.html" class="btn primary inv-banner-btn">Open Add Books →</a>
         </div>
 
         <div class="filters inv-filters">
@@ -245,12 +194,6 @@
             <option value="low">Low stock (&lt; 5)</option>
             <option value="out">Out of stock</option>
             <option value="reserved">🗓️ Layaway</option>
-          </select>
-          <select id="conditionFilter">
-            <option value="">All conditions</option>
-            <option value="New">New</option>
-            <option value="Pre Loved">Pre Loved</option>
-            <option value="Remaindered">Remaindered</option>
           </select>
         </div>
 
@@ -269,8 +212,8 @@
             </colgroup>
             <thead>
               <tr>
-                <th>Title</th><th>Author</th><th>Genre</th>
-                <th>Price</th><th>Stock</th><th>Box</th><th>Type</th><th>Condition</th><th>Actions</th>
+                <th>Title</th><th>Variant / Copy</th><th>Author</th><th>Genre</th>
+                <th>Price</th><th>Stock</th><th>Box</th><th>Type</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="inventoryRows"></tbody>

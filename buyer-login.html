@@ -1,153 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign in — BookNest</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --paper:#EFE7D8; --paper-light:#F8F3E7; --ink:#26211A; --ink-soft:#5B5344;
-    --spine:#35493C; --spine-dark:#263329; --spine-light:#4A6151;
-    --brick:#A8402A; --brick-dark:#8A3220; --line:#D9CDB2; --white:#FFFDF8;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:linear-gradient(155deg, var(--spine) 0%, var(--spine-dark) 100%);
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    font-family:'Inter',sans-serif; padding:24px;
-  }
-  .box{ background:var(--paper-light); border-radius:6px; width:100%; max-width:400px; padding:36px 32px; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
-  .brand{ text-align:center; margin-bottom:22px; }
-  .brand-mark{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:28px; color:var(--spine-dark); }
-  .brand-sub{ font-size:11px; letter-spacing:0.06em; color:var(--ink-soft); margin-top:4px; }
-  h2{ font-family:'Fraunces',serif; font-size:20px; margin:0 0 4px 0; color:var(--ink); }
-  .sub{ font-size:13px; color:var(--ink-soft); margin-bottom:20px; }
-  .field{ margin-bottom:14px; }
-  .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
-  .field input{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:4px; font-size:14px; font-family:inherit; background:var(--white); color:var(--ink); }
-  .field input:focus{ outline:2px solid var(--spine-light); outline-offset:1px; }
-  .btn{ width:100%; padding:12px; border-radius:4px; border:none; font-weight:700; font-size:14.5px; cursor:pointer; font-family:inherit; }
-  .btn-primary{ background:var(--brick); color:var(--white); }
-  .btn-primary:hover{ background:var(--brick-dark); }
-  .btn-primary:disabled{ background:#C7BBA5; cursor:not-allowed; }
-  .switch{ text-align:center; margin-top:16px; font-size:13px; color:var(--ink-soft); }
-  .switch a{ color:var(--brick); font-weight:600; cursor:pointer; text-decoration:none; }
-  .err{ background:#F4E4DD; border:1px solid #E2B7A6; color:var(--brick-dark); padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px; display:none; }
-  .ok{ background:rgba(53,73,60,0.1); border:1px solid rgba(53,73,60,0.25); color:var(--spine-dark); padding:10px 12px; border-radius:4px; font-size:13px; margin-bottom:14px; display:none; }
-  .view{ display:none; }
-  .view.active{ display:block; }
-  .back-link{ display:block; text-align:center; margin-top:18px; font-size:12.5px; color:var(--ink-soft); text-decoration:none; }
-</style>
-</head>
-<body>
-  <div class="box">
-    <div class="brand">
-      <div class="brand-mark">BookNest</div>
-      <div class="brand-sub">PRE-LOVED BOOKS</div>
-    </div>
-
-    <!-- LOGIN -->
-    <div class="view active" id="view-login">
-      <h2>Welcome back</h2>
-      <div class="sub">Log in to shop and check your order history.</div>
-      <div class="err" id="login-err"></div>
-      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@email.com"></div>
-      <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-      <button class="btn btn-primary" id="login-btn">Log in</button>
-      <div class="switch">New here? <a onclick="showView('signup')">Create an account</a></div>
-      <div class="switch"><a onclick="showView('forgot')">Forgot password?</a></div>
-    </div>
-
-    <!-- SIGN UP -->
-    <div class="view" id="view-signup">
-      <h2>Create your account</h2>
-      <div class="sub">Takes a minute — you'll use this to shop and track your orders.</div>
-      <div class="err" id="signup-err"></div>
-      <div class="field"><label>Full name</label><input type="text" id="signup-name" placeholder="Juan Dela Cruz"></div>
-      <div class="field"><label>Contact number</label><input type="tel" id="signup-contact" placeholder="09XX XXX XXXX"></div>
-      <div class="field"><label>Email</label><input type="email" id="signup-email" placeholder="you@email.com"></div>
-      <div class="field"><label>Password</label><input type="password" id="signup-pass" placeholder="At least 6 characters"></div>
-      <button class="btn btn-primary" id="signup-btn">Sign up</button>
-      <div class="switch">Already have an account? <a onclick="showView('login')">Log in</a></div>
-    </div>
-
-    <!-- FORGOT PASSWORD -->
-    <div class="view" id="view-forgot">
-      <h2>Forgot your password?</h2>
-      <div class="sub">Enter the email on your account and we'll send you a reset link. If it doesn't arrive, message the seller directly and they can send you one too.</div>
-      <div class="err" id="forgot-err"></div>
-      <div class="ok" id="forgot-ok"></div>
-      <div class="field"><label>Email</label><input type="email" id="forgot-email" placeholder="you@email.com"></div>
-      <button class="btn btn-primary" id="forgot-btn">Send reset link</button>
-      <div class="switch"><a onclick="showView('login')">Back to log in</a></div>
-    </div>
-
-    <a class="back-link" href="index.html">← Back to BookNest home</a>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="firebase-data.js"></script>
-  <script>
-    function showView(name){
-      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-      document.getElementById('view-'+name).classList.add('active');
-      document.querySelectorAll('.err,.ok').forEach(e=>e.style.display='none');
-    }
-    function showErr(id, msg){ const e=document.getElementById(id); e.textContent=msg; e.style.display='block'; }
-    function showOk(id, msg){ const e=document.getElementById(id); e.textContent=msg; e.style.display='block'; }
-
-    // If already logged in as a buyer, skip straight to the shop.
-    whenAuthReady((user, role)=>{
-      if(user && role==='buyer') window.location.href = 'shop.html';
-    });
-
-    document.getElementById('login-btn').addEventListener('click', async ()=>{
-      const email = document.getElementById('login-email').value.trim();
-      const pass  = document.getElementById('login-pass').value;
-      if(!email || !pass){ showErr('login-err','Please enter your email and password.'); return; }
-      try{
-        await buyerLogin(email, pass);
-        window.location.href = 'shop.html';
-      }catch(e){ showErr('login-err', friendlyAuthError(e)); }
-    });
-
-    document.getElementById('signup-btn').addEventListener('click', async ()=>{
-      const name = document.getElementById('signup-name').value.trim();
-      const contact = document.getElementById('signup-contact').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const pass = document.getElementById('signup-pass').value;
-      if(!name || !contact || !email || !pass){ showErr('signup-err','Please fill in every field.'); return; }
-      if(pass.length < 6){ showErr('signup-err','Password must be at least 6 characters.'); return; }
-      try{
-        await buyerSignUp({ name, contact, email, password: pass });
-        window.location.href = 'shop.html';
-      }catch(e){ showErr('signup-err', friendlyAuthError(e)); }
-    });
-
-    document.getElementById('forgot-btn').addEventListener('click', async ()=>{
-      const email = document.getElementById('forgot-email').value.trim();
-      if(!email){ showErr('forgot-err','Please enter your email.'); return; }
-      try{
-        await requestPasswordReset(email);
-        showOk('forgot-ok','If that email has an account, a reset link is on its way. Check your inbox (and spam folder).');
-      }catch(e){ showErr('forgot-err', friendlyAuthError(e)); }
-    });
-
-    function friendlyAuthError(e){
-      const code = e && e.code || '';
-      if(code.includes('email-already-in-use')) return 'That email already has an account — try logging in instead.';
-      if(code.includes('invalid-email')) return 'That email address doesn\'t look right.';
-      if(code.includes('wrong-password') || code.includes('invalid-credential')) return 'Incorrect email or password.';
-      if(code.includes('user-not-found')) return 'No account found with that email.';
-      if(code.includes('weak-password')) return 'Password must be at least 6 characters.';
-      return e && e.message ? e.message : 'Something went wrong. Please try again.';
-    }
-  </script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buyer Login & Sign Up — BookNest</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><style>:root{--paper:#f8f3e7;--ink:#26211a;--muted:#665f52;--green:#35493c;--brick:#a8402a;--line:#d9cdb2}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;font-family:Inter,sans-serif;background:linear-gradient(150deg,#35493c,#263329)}.box{width:min(480px,100%);background:var(--paper);border-radius:24px;padding:32px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.brand{text-align:center}.brand img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:18px;padding:6px}.brand h1{font:600 30px Fraunces,serif;color:#263329;margin:12px 0 3px}.sub{font-size:11px;letter-spacing:.12em;color:var(--muted)}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:25px 0 18px}.tabs button{padding:12px;border:1px solid var(--line);background:#fffaf0;border-radius:999px;font-weight:800;cursor:pointer}.tabs button.active{background:var(--green);color:#fff}.field{margin:11px 0}.field label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}.field input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font:inherit;background:#fff}.btn{width:100%;padding:13px;border:0;border-radius:999px;background:var(--brick);color:#fff;font-weight:800;cursor:pointer;margin-top:10px}.guest{background:transparent;color:var(--green);border:1px solid var(--line)}.msg{min-height:22px;font-size:12px;margin:12px 0;color:var(--muted);line-height:1.5}.links{text-align:center;margin-top:15px}.links a{color:var(--green);font-weight:700;font-size:12px;text-decoration:none}</style></head><body><div class="box"><div class="brand"><img src="asset/1.png" alt="BookNest logo"><h1>BookNest</h1><div class="sub">BUYER ACCOUNT</div></div><div class="tabs"><button id="loginTab" class="active">Log In</button><button id="signupTab">Sign Up</button></div><div id="loginForm"><div id="resetForm" style="display:none"><div class="field"><label>New password</label><input id="resetPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div><button class="btn" id="resetBtn">Set New Password</button></div><div id="normalLogin"><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password"></div><button class="btn" id="loginBtn">Log In</button><button class="btn guest" id="forgotBtn" type="button">Forgot Password</button></div><div id="signupForm" style="display:none"><div class="field"><label>Full name</label><input id="signupName" type="text" autocomplete="name" placeholder="Juan Dela Cruz"></div><div class="field"><label>Phone number</label><input id="signupPhone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX"></div><div class="field"><label>Complete shipping address</label><input id="signupAddress" type="text" autocomplete="street-address" placeholder="House / Street / Barangay / City / Province"></div><div class="field"><label>Facebook (optional)</label><input id="signupFacebook" type="text" autocomplete="url" placeholder="Facebook profile name or link"></div><div class="field"><label>Email</label><input id="signupEmail" type="email" autocomplete="email" placeholder="you@example.com"></div><div class="field"><label>Password</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div><button class="btn" id="signupBtn">Create Account</button></div><div class="msg" id="msg"></div><button class="btn guest" id="guestBtn">Continue as Guest</button><div class="links"><a href="index.html">← Back to BookNest</a></div></div><script>
+const client=window.supabase.createClient(window.BOOKNEST_SUPABASE_URL,window.BOOKNEST_SUPABASE_ANON_KEY,{auth:{persistSession:true}});
+const $=id=>document.getElementById(id);
+function msg(t){$('msg').textContent=t}
+function tab(sign){$('loginForm').style.display=sign?'none':'';$('signupForm').style.display=sign?'':'none';$('loginTab').classList.toggle('active',!sign);$('signupTab').classList.toggle('active',sign);if($('normalLogin'))$('normalLogin').style.display='';if($('resetForm'))$('resetForm').style.display='none';msg('')}
+$('loginTab').onclick=()=>tab(false);$('signupTab').onclick=()=>tab(true);
+if(location.hash==='#signup') tab(true); else tab(false);
+if(location.hash==='#reset' || location.hash.includes('type=recovery')){
+  tab(false);
+  $('normalLogin').style.display='none'; $('resetForm').style.display='';
+  msg('Enter a new password for your account.');
+}
+$('resetBtn').onclick=async()=>{const pw=$('resetPassword').value;if(pw.length<6){msg('Password must be at least 6 characters.');return}msg('Updating password…');const {error}=await client.auth.updateUser({password:pw});if(error){msg(error.message);return}msg('Password changed successfully. You can now log in.');$('resetPassword').value='';history.replaceState({},document.title,location.pathname);$('normalLogin').style.display='';$('resetForm').style.display='none';};
+$('loginBtn').onclick=async()=>{msg('Signing in…');const {data,error}=await client.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error){msg(error.message);return}try{sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'user',id:data.user.id,email:data.user.email||''}));sessionStorage.removeItem('booknest_guest_id');sessionStorage.removeItem('booknest_buyer_profile')}catch(e){}location.href='shop.html'};
+$('forgotBtn').onclick=async()=>{const email=$('loginEmail').value.trim();if(!email){msg('Enter your account email first, then click Forgot Password.');return}msg('Sending password reset email…');const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+'#reset'});if(error){msg(error.message);return}msg('Password reset email sent. Check your inbox and follow the Supabase reset link.');};
+$('signupBtn').onclick=async()=>{const name=$('signupName').value.trim(),phone=$('signupPhone').value.trim(),address=$('signupAddress').value.trim(),facebook=$('signupFacebook').value.trim(),email=$('signupEmail').value.trim(),password=$('signupPassword').value;if(!name||!phone||!address||!email){msg('Please complete your name, phone, address, and email.');return}if(password.length<6){msg('Password must be at least 6 characters.');return}msg('Creating account…');const {data,error}=await client.auth.signUp({email,password,options:{data:{full_name:name,phone,address,facebook}}});if(error){msg(error.message);return}if(data.session){try{sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'user',id:data.user.id,email:data.user.email||email}));sessionStorage.setItem('booknest_buyer_profile',JSON.stringify({name,contact:phone,address,facebook}));sessionStorage.removeItem('booknest_guest_id')}catch(e){}location.href='shop.html';}else msg('Account created. Check your email if Supabase requires email confirmation, then log in.');};
+$('guestBtn').onclick=()=>{try{const id='guest-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);sessionStorage.setItem('booknest_guest_id',id);sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'guest',id}));sessionStorage.removeItem('booknest_buyer_profile')}catch(e){}location.href='shop.html'};
+</script></body></html>

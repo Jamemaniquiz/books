@@ -22,6 +22,7 @@
     ".purchases",
     ".sellerPayment",
     ".shop_orders",
+    ".shop_listings",
   ];
 
   // ============================================================
@@ -150,16 +151,19 @@
 
       if (!cloudHasData) {
         console.log(
-          "[BookNest] Supabase is empty. Uploading existing local data..."
+          "[BookNest] Supabase is empty. Uploading existing local data in the background..."
         );
 
-        for (const key of KEYS) {
+        // Do not make the seller wait for every initial upload. The UI already
+        // has the local cache, so upload the snapshot in parallel and let the
+        // cloud-ready event fire immediately. This keeps first paint fast.
+        const uploads = KEYS.map((key) => {
           const local = readLocal(key);
-
-          if (local !== null) {
-            await save(key, local);
-          }
-        }
+          return local !== null ? save(key, local) : Promise.resolve(false);
+        });
+        Promise.allSettled(uploads).then(() =>
+          console.log("[BookNest] Background initial upload complete.")
+        );
       } else {
         // Supabase already contains data.
         // Load it into this browser.

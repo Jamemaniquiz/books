@@ -70,29 +70,13 @@
         <div class="bn-gate-logo">📚 BookNest</div>
         <h2>Seller Access</h2>
         
-        <div class="bn-gate-tabs">
-          <button class="bn-gate-tab active" data-tab="login">🔓 Login</button>
-          <button class="bn-gate-tab" data-tab="change">🔑 Change Password</button>
-        </div>
-
-        <!-- Login Tab -->
         <div class="bn-gate-content active" id="login-tab">
-          <p>Enter your password to manage inventory, sales, and receipts.</p>
-          <input type="password" id="bn-gate-password" placeholder="Enter password" autocomplete="off" />
-          <button id="bn-gate-login-btn" class="bn-gate-primary">Unlock</button>
+          <div class="bn-gate-shield">🔐</div>
+          <p>Enter your seller access password to continue to the BookNest workspace.</p>
+          <input type="password" id="bn-gate-password" placeholder="Seller access password" autocomplete="off" />
+          <button id="bn-gate-login-btn" class="bn-gate-primary">Open Seller Workspace →</button>
           <div id="bn-gate-error" class="bn-gate-error"></div>
-          <a href="shop.html" class="bn-gate-link">← I'm a buyer, go to shop</a>
-        </div>
-
-        <!-- Change Password Tab -->
-        <div class="bn-gate-content" id="change-tab">
-          <p class="bn-gate-small">Change your seller password (you'll need it next time you log in).</p>
-          <input type="password" id="bn-gate-current" placeholder="Current password" autocomplete="off" />
-          <input type="password" id="bn-gate-new-pass" placeholder="New password (min 6 chars)" autocomplete="off" />
-          <input type="password" id="bn-gate-confirm" placeholder="Confirm new password" autocomplete="off" />
-          <button id="bn-gate-change-btn" class="bn-gate-primary">Update Password</button>
-          <div id="bn-gate-change-error" class="bn-gate-error"></div>
-          <div id="bn-gate-change-success" class="bn-gate-success"></div>
+          <a href="index.html" class="bn-gate-link">← Back to customer shop</a>
         </div>
       </div>
     `;
@@ -120,7 +104,7 @@
       }
 
       .bn-gate-card {
-        background: #fff;
+        background: linear-gradient(180deg,#fffefb,#f7f1e3);
         border-radius: 12px;
         padding: 40px 32px;
         max-width: 380px;
@@ -136,11 +120,16 @@
       }
 
       .bn-gate-logo {
-        font-weight: 700;
+        font-weight: 800;
         font-size: 18px;
         margin-bottom: 8px;
         color: #0f766e;
         letter-spacing: 0.5px;
+      }
+
+      .bn-gate-shield {
+        width: 58px; height: 58px; margin: 4px auto 16px; display: grid; place-items: center;
+        border-radius: 18px; background: rgba(15,118,110,.10); font-size: 24px;
       }
 
       .bn-gate-card h2 {
@@ -291,7 +280,12 @@
           font-size: 16px;
         }
 
-        .bn-gate-card h2 {
+        .bn-gate-shield {
+        width: 58px; height: 58px; margin: 4px auto 16px; display: grid; place-items: center;
+        border-radius: 18px; background: rgba(15,118,110,.10); font-size: 24px;
+      }
+
+      .bn-gate-card h2 {
           font-size: 18px;
         }
 
@@ -318,20 +312,6 @@
 
   // Attach handlers
   function attachGateHandlers() {
-    // Tab switching
-    document.querySelectorAll(".bn-gate-tab").forEach(tab => {
-      tab.addEventListener("click", function() {
-        const tabName = this.dataset.tab;
-        document.querySelectorAll(".bn-gate-tab").forEach(t => t.classList.remove("active"));
-        this.classList.add("active");
-        document.querySelectorAll(".bn-gate-content").forEach(c => c.classList.remove("active"));
-        document.getElementById(tabName + "-tab").classList.add("active");
-        document.getElementById("bn-gate-error").classList.remove("show");
-        document.getElementById("bn-gate-change-error").classList.remove("show");
-        document.getElementById("bn-gate-change-success").classList.remove("show");
-      });
-    });
-
     // Login
     const passwordInput = document.getElementById("bn-gate-password");
     const loginBtn = document.getElementById("bn-gate-login-btn");
@@ -359,63 +339,6 @@
     loginBtn.addEventListener("click", attemptLogin);
     passwordInput.addEventListener("keydown", (e) => { if (e.key === "Enter") attemptLogin(); });
     passwordInput.focus();
-
-    // Change password
-    const currentInput = document.getElementById("bn-gate-current");
-    const newInput = document.getElementById("bn-gate-new-pass");
-    const confirmInput = document.getElementById("bn-gate-confirm");
-    const changeBtn = document.getElementById("bn-gate-change-btn");
-    const changeError = document.getElementById("bn-gate-change-error");
-    const changeSuccess = document.getElementById("bn-gate-change-success");
-
-    changeBtn.addEventListener("click", () => {
-      const current = currentInput.value;
-      const newPass = newInput.value;
-      const confirm = confirmInput.value;
-
-      changeError.classList.remove("show");
-      changeSuccess.classList.remove("show");
-
-      if (!current) {
-        showError(changeError, "Enter current password");
-        return;
-      }
-      if (!validatePassword(current)) {
-        showError(changeError, "Current password incorrect");
-        currentInput.value = "";
-        currentInput.focus();
-        return;
-      }
-      if (!newPass) {
-        showError(changeError, "Enter new password");
-        newInput.focus();
-        return;
-      }
-      if (newPass.length < 6) {
-        showError(changeError, "Password must be at least 6 characters");
-        newInput.focus();
-        return;
-      }
-      if (newPass !== confirm) {
-        showError(changeError, "Passwords don't match");
-        confirmInput.value = "";
-        confirmInput.focus();
-        return;
-      }
-
-      const newHash = simpleHash(newPass);
-      localStorage.setItem(STORAGE_KEY, newHash);
-
-      showSuccess(changeSuccess, "✅ Password changed! Log in again on next visit.");
-      currentInput.value = "";
-      newInput.value = "";
-      confirmInput.value = "";
-
-      setTimeout(() => {
-        sessionStorage.removeItem(SESSION_FLAG);
-        location.reload();
-      }, 2000);
-    });
   }
 
   function showError(element, message) {

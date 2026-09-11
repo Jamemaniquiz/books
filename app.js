@@ -103,6 +103,7 @@ const getBooks    = ()         => getData(STORAGE_KEYS.books,    []).map(b => ({
   author: (b.author === undefined || b.author === null) ? "" : String(b.author),
   genre:  (b.genre  === undefined || b.genre  === null) ? "General" : String(b.genre),
   box:    (b.box    === undefined || b.box    === null) ? "" : String(b.box),
+  variant:(b.variant === undefined || b.variant === null) ? "" : String(b.variant),
   price:  Number(b.price) || 0,
   stock:  Number.isFinite(Number(b.stock)) ? Number(b.stock) : 0,
   shopVisible: b.shopVisible === true, // Only show in shop if explicitly set to true
@@ -1641,7 +1642,6 @@ const initInventory = () => {
   const genreFilter     = document.getElementById("genreFilter");
   const boxFilter       = document.getElementById("boxFilter");
   const stockFilter     = document.getElementById("stockFilter");
-  const conditionFilter = document.getElementById("conditionFilter");
   const addTitle        = document.getElementById("addTitle");
   const addAuthor       = document.getElementById("addAuthor");
   const addGenre        = document.getElementById("addGenre");
@@ -1649,7 +1649,6 @@ const initInventory = () => {
   const addPrice        = document.getElementById("addPrice");
   const addStock        = document.getElementById("addStock");
   const addType         = document.getElementById("addType");
-  const addCondition    = document.getElementById("addCondition");
   const addBox          = document.getElementById("addBox");
   const addBookBtn      = document.getElementById("addBookBtn");
   const priceCalcBtn    = document.getElementById("priceCalcBtn");
@@ -1703,7 +1702,6 @@ const initInventory = () => {
     const genre     = genreFilter?.value ?? "";
     const box       = boxFilter?.value ?? "";
     const stock     = stockFilter?.value ?? "";
-    const condition = conditionFilter?.value ?? "";
 
     const filtered = books.filter(book => {
       const matchesSearch    = book.title.toLowerCase().includes(search) || book.author.toLowerCase().includes(search);
@@ -1714,16 +1712,15 @@ const initInventory = () => {
         (stock === "low"      && book.stock > 0 && book.stock < 5) ||
         (stock === "out"      && book.stock === 0) ||
         (stock === "reserved" && Array.isArray(book.layawayHolds) && book.layawayHolds.length > 0);
-      const matchesCondition = !condition || book.condition === condition;
-      return matchesSearch && matchesGenre && matchesBox && matchesStock && matchesCondition;
+      return matchesSearch && matchesGenre && matchesBox && matchesStock;
     });
 
     if (books.length > 0 && filtered.length === 0) {
-      rows.innerHTML = `<tr><td colspan="9" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="10" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
       return;
     }
     if (books.length === 0) {
-      rows.innerHTML = `<tr><td colspan="9" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="10" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
       return;
     }
 
@@ -1743,11 +1740,11 @@ const initInventory = () => {
         : book.stock;
       const genreOpts     = ["Fiction","Non-Fiction","Fantasy","Mystery","Romance","Thriller","Horror","Self-Help","Biography","History","Science","Technology","Poetry","Drama","Adventure","Dystopian","Science Fiction","Children's","Young Adult","Other"];
       const typeOpts      = ["Paperback","Hardbound","MMPB","Sprayed","Leatherbound","Slipcase","Special Edition","Box Set","Signed","Other"];
-      const conditionOpts = ["New","Pre Loved","Remaindered"];
       const currentType   = book.type || "Paperback";
       const genreClass    = `genre-${(book.genre || "other").toLowerCase().replace(/\s+/g, "").replace(/['-]/g, "")}`;
       return `<tr class="${genreClass}">
         <td contenteditable="true" data-field="title"  data-id="${book.id}">${book.title}</td>
+        <td contenteditable="true" data-field="variant" data-id="${book.id}" title="Use this to distinguish copies of the same title">${book.variant || ""}</td>
         <td contenteditable="true" data-field="author" data-id="${book.id}">${book.author}</td>
         <td>
           <select class="inv-select" data-field="genre" data-id="${book.id}">
@@ -1762,10 +1759,6 @@ const initInventory = () => {
             ${typeOpts.map(t => `<option value="${t}"${currentType === t ? " selected" : ""}>${t}</option>`).join("")}
           </select>
         </td>
-        <td>
-          <select class="inv-select" data-field="condition" data-id="${book.id}">
-            ${conditionOpts.map(c => `<option value="${c}"${(book.condition || "New") === c ? " selected" : ""}>${c}</option>`).join("")}
-          </select>
         </td>
         <td>
           ${reservedBadge}
@@ -1775,7 +1768,6 @@ const initInventory = () => {
               : ""}
             <button class="btn ghost action-btn inv-action-btn" data-action="manage-book-photos" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="Add, remove, or reorder this book's photos">🖼 Photos${book.images && book.images.length ? ` (${book.images.length})` : ""}</button>
             <button class="btn ghost action-btn inv-action-btn" data-action="edit-book-description" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="${book.description ? "Edit the description buyers see" : "Add a description — condition, edition, notes, etc."}">${book.description ? "📝 Desc ✓" : "📝 Add Desc"}</button>
-            <button class="btn primary action-btn inv-action-btn${book.shopVisible ? " active" : ""}" data-action="toggle-shop" data-id="${book.id}" title="${book.shopVisible ? "Remove from shop" : "Add to shop"}" style="font-size:11px;padding:3px 8px;min-width:0;">${book.shopVisible ? "🛒 In Shop" : "➕ Add Shop"}</button>
             <button class="btn primary action-btn inv-action-btn sold" data-action="sold"    data-id="${book.id}">Sold</button>
             <button class="btn ghost action-btn inv-action-btn reserve${holds.length ? " is-reserved" : ""}" data-action="layaway" data-id="${book.id}"${availableForLayaway <= 0 ? " disabled title=\"Every copy of this book is already on layaway — cancel a hold above to free one up\"" : ""}>${availableForLayaway > 0 ? "🗓️ Layaway" : "Fully Reserved"}</button>
             <button class="btn ghost action-btn inv-action-btn delete" data-action="delete"  data-id="${book.id}">Delete</button>
@@ -1947,7 +1939,7 @@ const initInventory = () => {
         price:     addPrice?.value || 0,
         stock:     addStock?.value || 1,
         type:      addType?.value || "Paperback",
-        condition: addCondition?.value || "Pre Loved",
+        condition: "Pre Loved",
         box:       addBox?.value.trim() || "",
       };
       console.log("Adding book:", bookData);
@@ -1963,7 +1955,6 @@ const initInventory = () => {
       genreManuallyEdited = false;
       updateGenreSuggestion();
       if (addType) addType.value = "Paperback";
-      if (addCondition) addCondition.value = "Pre Loved";
       alert("✓ Book added successfully!");
     } catch(error) {
       console.error("Error in addBookBtn click:", error);
@@ -2126,7 +2117,7 @@ const initInventory = () => {
             price:     document.getElementById("addPrice")?.value || 0,
             stock:     document.getElementById("addStock")?.value || 1,
             type:      document.getElementById("addType")?.value || "Paperback",
-            condition: document.getElementById("addCondition")?.value || "Pre Loved",
+            condition: "Pre Loved",
             box:       document.getElementById("addBox")?.value.trim() || "",
           }]);
           const btn = retryAddBtn;
@@ -2142,7 +2133,6 @@ const initInventory = () => {
           document.getElementById("addPrice").value = "";
           document.getElementById("addStock").value = "";
           document.getElementById("addType").value = "Paperback";
-          document.getElementById("addCondition").value = "Pre Loved";
           if (document.getElementById("addBox")) document.getElementById("addBox").value = "";
         });
         retryAddBtn._inventoryInitialized = true;
@@ -2636,7 +2626,7 @@ const initInventory = () => {
     if (event.key === "Enter") { event.preventDefault(); target.blur(); }
   });
 
-  [searchInput, genreFilter, boxFilter, stockFilter, conditionFilter].forEach(el => {
+  [searchInput, genreFilter, boxFilter, stockFilter].forEach(el => {
     if (el) el.addEventListener("input", refresh);
   });
 
@@ -4213,12 +4203,7 @@ const safeRun = (fn, name) => {
   try { fn(); } catch (err) { console.error(`[BookNest] ${name} failed:`, err); }
 };
 
-const init = async () => {
-  // Supabase hydrates localStorage first, so all of the existing BookNest
-  // pages can continue using their original synchronous data functions.
-  if (window.BookNestCloud?.ready) {
-    try { await window.BookNestCloud.ready; } catch (_) {}
-  }
+const renderSellerWorkspace = () => {
   migrateStorage();
   ensureSeedData();
   safeRun(initDashboard,     "initDashboard");
@@ -4227,6 +4212,16 @@ const init = async () => {
   safeRun(initReceiptModal,  "initReceiptModal");
   safeRun(initReports,       "initReports");
   safeRun(initReceiptHistory,"initReceiptHistory");
+};
+
+// Render from the local cache immediately. Supabase refreshes in the background
+// and the same workspace is refreshed when the cloud snapshot arrives. This
+// removes the old 5–10 second blank/loading wait on seller pages.
+const init = () => {
+  renderSellerWorkspace();
+  window.addEventListener("booknest-cloud-ready", () => {
+    requestAnimationFrame(() => renderSellerWorkspace());
+  }, { once: true });
 };
 
 document.addEventListener("DOMContentLoaded", init);

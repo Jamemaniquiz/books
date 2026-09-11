@@ -503,7 +503,7 @@
         .action-modal .btn.modal-primary { background: var(--teal); color: #fff; border-color: transparent; }
         .action-modal .btn.modal-ghost { background: transparent; color: var(--muted); }
     </style>
-</head>
+<script src="seller-nav.js"></script></head>
 <body>
     <header class="site-header">
       <div class="logo">
@@ -571,7 +571,7 @@
                 <table class="bn-table">
                     <colgroup>
                         <col class="col-title"><col class="col-author"><col class="col-genre">
-                        <col class="col-type"><col class="col-condition"><col class="col-qty">
+                        <col class="col-type"><col class="col-qty">
                         <col class="col-price"><col class="col-total"><col class="col-action">
                     </colgroup>
                     <thead>
@@ -580,8 +580,7 @@
                             <th>Author</th>
                             <th>Genre</th>
                             <th>Type</th>
-                            <th>Condition</th>
-                            <th>Qty</th>
+                                                        <th>Qty</th>
                             <th>Price</th>
                             <th>Total</th>
                             <th></th>
@@ -854,9 +853,6 @@
                     </select>
                 </td>
                 <td>
-                    <select class="book-condition" title="Editable — fix if this sale differs from the inventory record">
-                        ${BOOK_CONDITIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
-                    </select>
                 </td>
                 <td><input type="number" class="book-qty" value="1" min="1" max="1" oninput="calculateTotal()" onchange="calculateTotal()"></td>
                 <td><input type="number" class="book-price" value="0" min="0" step="0.01" oninput="calculateTotal()" onchange="calculateTotal()" title="Editable — fix the price here if there's a mistake"></td>
@@ -891,8 +887,7 @@
                 row.querySelector('.book-author').value = '';
                 row.querySelector('.book-genre').value = '';
                 setSelectValueSafe(row.querySelector('.book-type'), '');
-                setSelectValueSafe(row.querySelector('.book-condition'), '');
-                row.querySelector('.book-price').value = '0.00';
+                        row.querySelector('.book-price').value = '0.00';
                 row.querySelector('.book-total').value = '0.00';
                 calculateTotal();
                 return;
@@ -908,7 +903,6 @@
             row.querySelector('.book-author').value = author;
             row.querySelector('.book-genre').value = genre;
             setSelectValueSafe(row.querySelector('.book-type'), type);
-            setSelectValueSafe(row.querySelector('.book-condition'), condition);
             row.querySelector('.book-price').value = price.toFixed(2);
 
             const qtyInput = row.querySelector('.book-qty');
@@ -1029,7 +1023,7 @@
                     const rowAuthor    = row.querySelector('.book-author')?.value.trim()    || book.author;
                     const rowGenre     = row.querySelector('.book-genre')?.value.trim()     || book.genre;
                     const rowType      = row.querySelector('.book-type')?.value             || book.type || "Paperback";
-                    const rowCondition = row.querySelector('.book-condition')?.value        || book.condition;
+                    const rowCondition = book.condition || "Pre Loved";
                     const rowPrice     = Math.max(0, parseFloat(row.querySelector('.book-price')?.value) || 0);
 
                     const sale = {
