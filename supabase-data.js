@@ -22,6 +22,7 @@
     ".purchases",
     ".sellerPayment",
     ".shop_orders",
+    ".shop_listings",
   ];
 
   // ============================================================
@@ -45,7 +46,6 @@
       save: async () => false,
       pull: async () => false,
       pushLocalData: async () => false,
-      flush: async () => true,
     };
 
     return;
@@ -104,141 +104,101 @@
   // ============================================================
   // SAVE DATA TO SUPABASE
   // ============================================================
-  // Writes are queued so rapid actions (create/edit/delete/restore) cannot
-  // race each other. This also gives Restore a reliable way to wait until
-  // every restored key has reached Supabase before reloading the page.
-  let saveQueue = Promise.resolve(true);
-  let lastSaveOk = true;
-
-  async function upsertRows(rows) {
-    if (!Array.isArray(rows) || rows.length === 0) return true;
-    const payload = rows
-      .filter(row => row && KEYS.includes(row.key))
-      .map(row => ({
-        key: row.key,
-        value: row.value,
-        updated_at: new Date().toISOString(),
-      }));
-    if (!payload.length) return true;
-
-    try {
-      const { error } = await client.from(CLOUD_TABLE).upsert(payload);
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('[BookNest] Supabase batch save failed:', error);
+  async function save(key, value) {
+    if (!KEYS.includes(key)) {
       return false;
     }
-  }
 
-  function save(key, value) {
-    if (!KEYS.includes(key)) return Promise.resolve(false);
+    try {
+      const { error } = await client
+        .from(CLOUD_TABLE)
+        .upsert({
+          key: key,
+          value: value,
+          updated_at: new Date().toISOString(),
+        });
 
-    const write = () => upsertRows([{ key, value }]);
-    const result = saveQueue.then(write, write);
-    saveQueue = result.then(
-      ok => { lastSaveOk = ok !== false; return ok; },
-      () => { lastSaveOk = false; return false; }
-    );
-    return result;
-  }
+      if (error) {
+        throw error;
+      }
 
-  // Save several datasets in ONE Supabase request. Restore uses this so six
-  // datasets do not become six slow network round-trips.
-  function saveMany(entries) {
-    const write = () => upsertRows(entries);
-    const result = saveQueue.then(write, write);
-    saveQueue = result.then(
-      ok => { lastSaveOk = ok !== false; return ok; },
-      () => { lastSaveOk = false; return false; }
-    );
-    return result;
-  }
+      return true;
+    } catch (error) {
+      console.error(
+        "[BookNest] Supabase save failed for",
+        key,
+        error
+      );
 
-  async function flush() {
-    const ok = await saveQueue;
-    return ok !== false && lastSaveOk;
-  }
-
-  // Never let a broken/offline Supabase connection hold the whole app hostage.
-  // LocalStorage remains the immediate source for page rendering.
-  async function withTimeout(promise, ms = 5000) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase sync timed out')), ms))
-    ]);
+      return false;
+    }
   }
 
   // ============================================================
   // DOWNLOAD DATA FROM SUPABASE
   // ============================================================
-  async function getCloudRowsWithTimeout(ms = 5000) {
-    return withTimeout(getCloudRows(), ms);
-  }
-
-  function mergeRecords(local, cloud) {
-    if (!Array.isArray(local) || !Array.isArray(cloud)) return cloud;
-    const result = [];
-    const seen = new Set();
-    for (const item of [...local, ...cloud]) {
-      const id = item && item.id != null ? String(item.id) : null;
-      const key = id ? `id:${id}` : `raw:${JSON.stringify(item)}`;
-      if (seen.has(key)) {
-        // Cloud is authoritative for an existing record. Replace the local
-        // copy in-place rather than creating duplicates.
-        const index = result.findIndex(x => x && x.id != null && String(x.id) === id);
-        if (id && index >= 0) result[index] = item;
-        continue;
-      }
-      seen.add(key);
-      result.push(item);
-    }
-    return result;
-  }
-
   async function pull() {
     try {
-      const rows = await getCloudRowsWithTimeout();
-      const byKey = Object.fromEntries(rows.map((row) => [row.key, row]));
+      const rows = await getCloudRows();
 
-      // Hydrate locally first and collect any cloud writes into ONE request.
-      // Never replace useful local data with an empty cloud value.
-      const cloudWrites = [];
-      for (const key of KEYS) {
-        const cloudRow = byKey[key];
-        const local = readLocal(key);
+      const byKey = Object.fromEntries(
+        rows.map((row) => [row.key, row])
+      );
 
-        if (!cloudRow) {
-          if (local !== null) cloudWrites.push({ key, value: local });
-          continue;
-        }
+      // If Supabase is empty but this browser already has
+      // BookNest data, upload the existing data first.
+      const cloudHasData = rows.length > 0;
 
-        const cloudValue = cloudRow.value;
-        const localIsUseful = Array.isArray(local)
-          ? local.length > 0
-          : !!(local && typeof local === 'object' && Object.keys(local).length > 0);
-        const cloudIsEmpty = Array.isArray(cloudValue)
-          ? cloudValue.length === 0
-          : cloudValue == null || (typeof cloudValue === 'object' && Object.keys(cloudValue).length === 0);
+      if (!cloudHasData) {
+        console.log(
+          "[BookNest] Supabase is empty. Uploading existing local data in the background..."
+        );
 
-        if (localIsUseful && cloudIsEmpty) {
-          cloudWrites.push({ key, value: local });
-        } else if (Array.isArray(local) && Array.isArray(cloudValue)) {
-          const merged = mergeRecords(local, cloudValue);
-          writeLocal(key, merged);
-          cloudWrites.push({ key, value: merged });
-        } else {
-          writeLocal(key, cloudValue);
+        // Do not make the seller wait for every initial upload. The UI already
+        // has the local cache, so upload the snapshot in parallel and let the
+        // cloud-ready event fire immediately. This keeps first paint fast.
+        const uploads = KEYS.map((key) => {
+          const local = readLocal(key);
+          return local !== null ? save(key, local) : Promise.resolve(false);
+        });
+        Promise.allSettled(uploads).then(() =>
+          console.log("[BookNest] Background initial upload complete.")
+        );
+      } else {
+        // Supabase already contains data.
+        // Load it into this browser.
+        for (const key of KEYS) {
+          if (
+            Object.prototype.hasOwnProperty.call(byKey, key)
+          ) {
+            writeLocal(key, byKey[key].value);
+          }
         }
       }
 
-      if (cloudWrites.length) await withTimeout(saveMany(cloudWrites), 7000);
       console.log("[BookNest] Supabase sync complete.");
-      window.dispatchEvent(new CustomEvent("booknest-cloud-ready"));
+
+      window.dispatchEvent(
+        new CustomEvent("booknest-cloud-ready")
+      );
+
       return true;
     } catch (error) {
-      console.error("[BookNest] Supabase initial sync failed", error);
-      window.dispatchEvent(new CustomEvent("booknest-cloud-ready", { detail: { offline: true, error } }));
+      console.error(
+        "[BookNest] Supabase initial sync failed",
+        error
+      );
+
+      // Keep BookNest working with local storage if
+      // Supabase is temporarily unavailable.
+      window.dispatchEvent(
+        new CustomEvent("booknest-cloud-ready", {
+          detail: {
+            offline: true,
+          },
+        })
+      );
+
       return false;
     }
   }
@@ -247,10 +207,15 @@
   // UPLOAD ALL LOCAL DATA
   // ============================================================
   async function pushLocalData() {
-    const entries = KEYS
-      .map(key => ({ key, value: readLocal(key) }))
-      .filter(row => row.value !== null);
-    return withTimeout(saveMany(entries), 10000);
+    for (const key of KEYS) {
+      const local = readLocal(key);
+
+      if (local !== null) {
+        await save(key, local);
+      }
+    }
+
+    return true;
   }
 
   // ============================================================
@@ -261,9 +226,7 @@
     client: client,
     ready: pull(),
     save: save,
-    saveMany: saveMany,
     pull: pull,
     pushLocalData: pushLocalData,
-    flush: flush,
   };
 })();

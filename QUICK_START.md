@@ -203,8 +203,8 @@ Your data is:
 
 This copy of BookNest now syncs its existing store data to Supabase. You do not need Prisma.
 
-1. Open `DATABASE_SETUP.sql`.
-2. In Supabase → SQL Editor, run the entire file once. It creates both the main BookNest data store and the buyer-account functions.
+1. Open `SUPABASE_SETUP.md`.
+2. In Supabase → SQL Editor, run the table/policy SQL there.
 3. In Supabase → Project Settings → API, copy the **Project URL** and **anon/public key**.
 4. Paste them into `supabase-config.js`.
 5. Upload/deploy the whole folder to Vercel.

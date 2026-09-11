@@ -1,213 +1,231 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Inventory - BookNest</title>
-<link href="styles.css" rel="stylesheet"/>
-<script src="admin-gate.js"></script>
-    <script src="seller-nav.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-</head>
-<body class="inventory-page">
-<header class="site-header">
-<div class="logo">
-<img alt="BookNest logo" class="logo-image" src="Assets/Booknest.png"/>
-<span>BookNest</span>
-</div>
-<nav class="nav">
-<a href="admin.html">Home</a>
-<a class="active" href="inventory.html">Inventory &amp; Sales</a>
-<a href="receipt-history.html">Receipts</a>
-<a href="orders.html">🛒 Shop Orders</a>
-<a href="debug.html">🔧 Debug</a>
-<a href="buyers.html">👤 Buyers</a>
-<a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
-</nav>
-</header>
-<main class="container">
-<!-- ── BookNest Receipt Modal ──────────────────────────────── -->
-<dialog class="bn-modal" id="receiptModal">
-<div class="bn-modal-inner">
-<!-- modal action bar (hidden in screenshot) -->
-<div class="bn-modal-bar modal-no-print">
-<span style="font-weight:700;font-size:1rem;">📄 New Receipt</span>
-<div style="display:flex;gap:0.6rem;flex-wrap:wrap">
-<button class="bn-btn-blue modal-no-print" id="bn-download-receipt" type="button">📸 Save as Image</button>
-<button class="bn-btn-slate modal-no-print" id="bn-print-receipt" type="button">🖨 Print</button>
-<button class="bn-btn-green modal-no-print" id="bn-save-receipt" type="button">💾 Save Receipt</button>
-<button class="bn-btn-slate modal-no-print" id="bn-close-modal" type="button">✕ Close</button>
-</div>
-</div>
-<!-- ── Printable area ── -->
-<div class="bn-receipt" id="receiptPrintArea">
-<!-- Header -->
-<div class="bn-header">
-<div class="bn-header-left">
-<div class="bn-logo-circle">
-<img alt="BookNest logo" class="bn-logo-img" src="Assets/Booknest.png"/>
-</div>
-<h1 class="bn-title">BOOKNEST</h1>
-</div>
-<div class="bn-invoice-info">
-<h2 class="bn-invoice-label">ORDER INVOICE</h2>
-<div class="bn-invoice-date">DATE: <span id="bn-receipt-date">—</span></div>
-<div class="bn-invoice-date">Receipt #: <span id="bn-receipt-id" style="font-family:monospace;font-size:0.78rem">—</span></div>
-</div>
-</div>
-<!-- Warning -->
-<div class="bn-warning-box">
-<div class="bn-warning-title">Please be reminded that cancellations or changes to orders are not allowed once the invoice has been issued.</div>
-<div class="bn-warning-text">Kindly note that we sell pre-loved books unless stated otherwise. These may show signs of wear such as foxing, tanning, or minor water damage.</div>
-</div>
-<!-- Order table -->
-<div class="bn-order-section">
-<div class="bn-order-header">📚 ORDER DETAILS</div>
-<table class="bn-table">
-<thead>
-<tr>
-<th>TITLE</th>
-<th>AUTHOR</th>
-<th>GENRE</th>
-<th>TYPE</th>
-<th>PRICE</th>
-<th>CONDITION</th>
-<th>QTY</th>
-<th>TOTAL PRICE</th>
-</tr>
-</thead>
-<tbody id="bn-order-items"></tbody>
-</table>
-</div>
-<!-- Total -->
-<div class="bn-total-section">
-<div class="bn-total-header">💰 TOTAL AMOUNT TO PAY 💰</div>
-<div class="bn-books-total">Books Total: ₱<span id="bn-books-total">0.00</span></div>
-<div class="bn-shipping-note">Shipping Fee is <u>NOT INCLUDED</u> in this invoice.</div>
-<div class="bn-grand-total" id="bn-grand-total-display">₱ 0.00</div>
-<div class="bn-pay-notice">! PAY THIS EXACT AMOUNT !</div>
-</div>
-<!-- Payment + Shipment -->
-<div class="bn-info-grid">
-<!-- Payment -->
-<div class="bn-card bn-payment-card">
-<div class="bn-card-title" style="color:#1d4ed8;justify-content:center;">💳 PAYMENT METHOD</div>
-<div style="display:flex;justify-content:center;margin:12px 0">
-<div class="bn-gcash-badge">G</div>
-</div>
-<div class="bn-brand-name">BookNest</div>
-<div style="background:#f8fbff;border:2px solid #2563eb;border-radius:8px;padding:8px;text-align:center;font-weight:700;font-size:1.1rem;color:#1e3a8a;margin-top:12px;">09764097987</div>
-</div>
-<!-- Shipment / Customer Info -->
-<div class="bn-card bn-shipment-card">
-<div class="bn-card-title" style="color:#1d4ed8;">📦 NEEDED FOR SHIPMENT</div>
-<div class="bn-field-group">
-<label class="bn-field-label">NAME:</label>
-<input class="bn-editable modal-no-print" id="bn-customer-name" placeholder="Enter customer name" type="text"/>
-<div class="bn-readonly-val" id="bn-display-name" style="display:none"></div>
-</div>
-<div class="bn-field-group">
-<label class="bn-field-label">ADDRESS:</label>
-<textarea class="bn-editable modal-no-print" id="bn-customer-address" placeholder="Enter shipping address" rows="2"></textarea>
-<div class="bn-readonly-val" id="bn-display-address" style="display:none"></div>
-</div>
-<div class="bn-field-group">
-<label class="bn-field-label">PHONE:</label>
-<input class="bn-editable modal-no-print" id="bn-customer-phone" placeholder="Enter phone number" type="text"/>
-<div class="bn-readonly-val" id="bn-display-phone" style="display:none"></div>
-</div>
-<div class="bn-field-group">
-<label class="bn-field-label">PAYMENT:</label>
-<select class="bn-editable modal-no-print" id="bn-payment-method">
-<option value="Cash">Cash</option>
-<option value="GCash">GCash</option>
-<option value="Maya">Maya</option>
-<option value="Bank Transfer">Bank Transfer</option>
-<option value="Other">Other</option>
-</select>
-<div class="bn-readonly-val" id="bn-display-payment" style="display:none"></div>
-</div>
-</div>
-</div>
-<!-- Important Notes -->
-<div class="bn-note-wrap">
-<div class="bn-thanks-card">Thank you for your purchase! ★</div>
-</div>
-</div><!-- end #receiptPrintArea -->
-</div>
-</dialog>
-<!-- ── Inventory ──────────────────────────────────────────── -->
-<section class="panel inv-panel">
-<div class="panel-header">
-<div>
-<h2>📚 Inventory</h2>
-<span class="muted">Click any cell to edit. Use <strong>Sold</strong> to record a sale.</span>
-</div>
-<div class="panel-header-actions">
-<button class="btn danger" id="deleteAllBooksBtn" type="button">🗑 Delete All</button>
-</div>
-</div>
-<div class="inv-banner-row">
-<div class="inv-banner">
-<div>
-<div class="inv-banner-title">📚 Multiple Orders</div>
-<div class="inv-banner-sub">Use this to invoice 2 or more books in one receipt. It opens the New Sale page.</div>
-</div>
-<a class="btn primary inv-banner-btn" href="new-sale.html">Open Multiple Orders →</a>
-</div>
-<div class="inv-banner">
-<div>
-<div class="inv-banner-title">🎁 Bundle Order</div>
-<div class="inv-banner-sub">Set one fixed price for a set of books — individual book prices stay hidden. Opens the Bundle Order page.</div>
-</div>
-<a class="btn primary inv-banner-btn" href="bundle-sale.html">Open Bundle Order →</a>
-</div>
-</div>
-<div class="inv-add-card inv-add-new-card"><div class="inv-add-new-icon">＋</div><div class="inv-add-new-copy"><div class="inv-add-card-title"><span>Add books in the Book Builder</span></div><div class="muted" style="margin:0">Add one book or create 2+ variants with separate prices, stock, conditions, and photos. This keeps Inventory focused on managing your stock.</div></div><a class="btn primary inv-add-new-btn" href="add-books.html">Open Add Books →</a></div>
-<div class="filters inv-filters">
-<input id="searchInput" placeholder="🔍 Search by title or author" type="search"/>
-<select id="genreFilter"><option value="">All genres</option></select>
-<select id="boxFilter"><option value="">All boxes</option></select>
-<select id="stockFilter">
-<option value="">All stock</option>
-<option value="low">Low stock (&lt; 5)</option>
-<option value="out">Out of stock</option>
-<option value="reserved">🗓️ Layaway</option>
-</select>
-<select id="conditionFilter">
-<option value="">All conditions</option>
-<option value="New">New</option>
-<option value="Pre Loved">Pre Loved</option>
-<option value="Remaindered">Remaindered</option>
-</select>
-</div>
-<div class="table-wrap inventory-wrap">
-<table class="inventory-table">
-<colgroup>
-<col style="width:17%"/>
-<col style="width:12%"/>
-<col style="width:10%"/>
-<col style="width:7%"/>
-<col style="width:6%"/>
-<col style="width:9%"/>
-<col style="width:10%"/>
-<col style="width:9%"/>
-<col style="width:20%"/>
-</colgroup>
-<thead>
-<tr>
-<th>Title</th><th>Author</th><th>Genre</th>
-<th>Price</th><th>Stock</th><th>Box</th><th>Type</th><th>Condition</th><th>Actions</th>
-</tr>
-</thead>
-<tbody id="inventoryRows"></tbody>
-</table>
-</div>
-</section>
-</main>
-<footer class="site-footer">BookNest © 2026</footer>
-<style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inventory - BookNest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="admin-gate.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="seller-nav.js"></script></head>
+  <body class="inventory-page">
+    <header class="site-header">
+      <div class="logo">
+        <img class="logo-image" src="asset/1.png" alt="BookNest logo" />
+        <span>BookNest</span>
+      </div>
+      <nav class="nav">
+        <a href="admin.html">Home</a>
+        <a href="add-books.html">➕ Add Books</a>
+        <a class="active" href="inventory.html">Inventory &amp; Sales</a>
+        <a href="receipt-history.html">Receipts</a>
+        <a href="orders.html">🛒 Shop Orders</a>
+        <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
+      </nav>
+    </header>
+
+    <main class="container">
+
+      <!-- ── BookNest Receipt Modal ──────────────────────────────── -->
+      <dialog id="receiptModal" class="bn-modal">
+        <div class="bn-modal-inner">
+
+          <!-- modal action bar (hidden in screenshot) -->
+          <div class="bn-modal-bar modal-no-print">
+            <span style="font-weight:700;font-size:1rem;">📄 New Receipt</span>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
+              <button id="bn-download-receipt" class="bn-btn-blue modal-no-print" type="button">📸 Save as Image</button>
+              <button id="bn-print-receipt"    class="bn-btn-slate modal-no-print" type="button">🖨 Print</button>
+              <button id="bn-save-receipt"     class="bn-btn-green modal-no-print" type="button">💾 Save Receipt</button>
+              <button id="bn-close-modal"      class="bn-btn-slate modal-no-print" type="button">✕ Close</button>
+            </div>
+          </div>
+
+          <!-- ── Printable area ── -->
+          <div id="receiptPrintArea" class="bn-receipt">
+
+            <!-- Header -->
+            <div class="bn-header">
+              <div class="bn-header-left">
+                <div class="bn-logo-circle">
+                    <img class="bn-logo-img" src="asset/1.png" alt="BookNest logo" />
+                </div>
+                <h1 class="bn-title">BOOKNEST</h1>
+              </div>
+              <div class="bn-invoice-info">
+                <h2 class="bn-invoice-label">ORDER INVOICE</h2>
+                <div class="bn-invoice-date">DATE: <span id="bn-receipt-date">—</span></div>
+                <div class="bn-invoice-date">Receipt #: <span id="bn-receipt-id" style="font-family:monospace;font-size:0.78rem">—</span></div>
+              </div>
+            </div>
+
+            <!-- Warning -->
+            <div class="bn-warning-box">
+              <div class="bn-warning-title">Please be reminded that cancellations or changes to orders are not allowed once the invoice has been issued.</div>
+              <div class="bn-warning-text">Kindly note that we sell pre-loved books unless stated otherwise. These may show signs of wear such as foxing, tanning, or minor water damage.</div>
+            </div>
+
+            <!-- Order table -->
+            <div class="bn-order-section">
+              <div class="bn-order-header">📚 ORDER DETAILS</div>
+              <table class="bn-table">
+                <thead>
+                  <tr>
+                    <th>TITLE</th>
+                    <th>AUTHOR</th>
+                    <th>GENRE</th>
+                    <th>TYPE</th>
+                    <th>PRICE</th>
+                    <th>CONDITION</th>
+                    <th>QTY</th>
+                    <th>TOTAL PRICE</th>
+                  </tr>
+                </thead>
+                <tbody id="bn-order-items"></tbody>
+              </table>
+            </div>
+
+            <!-- Total -->
+            <div class="bn-total-section">
+              <div class="bn-total-header">💰 TOTAL AMOUNT TO PAY 💰</div>
+              <div class="bn-books-total">Books Total: ₱<span id="bn-books-total">0.00</span></div>
+              <div class="bn-shipping-note">Shipping Fee is <u>NOT INCLUDED</u> in this invoice.</div>
+              <div class="bn-grand-total" id="bn-grand-total-display">₱ 0.00</div>
+              <div class="bn-pay-notice">! PAY THIS EXACT AMOUNT !</div>
+            </div>
+
+            <!-- Payment + Shipment -->
+            <div class="bn-info-grid">
+              <!-- Payment -->
+              <div class="bn-card bn-payment-card">
+                <div class="bn-card-title" style="color:#1d4ed8;justify-content:center;">💳 PAYMENT METHOD</div>
+                <div style="display:flex;justify-content:center;margin:12px 0">
+                  <div class="bn-gcash-badge">G</div>
+                </div>
+                <div class="bn-brand-name">BookNest</div>
+                <div style="background:#f8fbff;border:2px solid #2563eb;border-radius:8px;padding:8px;text-align:center;font-weight:700;font-size:1.1rem;color:#1e3a8a;margin-top:12px;">09764097987</div>
+              </div>
+
+              <!-- Shipment / Customer Info -->
+              <div class="bn-card bn-shipment-card">
+                <div class="bn-card-title" style="color:#1d4ed8;">📦 NEEDED FOR SHIPMENT</div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">NAME:</label>
+                  <input type="text" id="bn-customer-name" class="bn-editable modal-no-print" placeholder="Enter customer name" />
+                  <div class="bn-readonly-val" id="bn-display-name" style="display:none"></div>
+                </div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">ADDRESS:</label>
+                  <textarea id="bn-customer-address" class="bn-editable modal-no-print" placeholder="Enter shipping address" rows="2"></textarea>
+                  <div class="bn-readonly-val" id="bn-display-address" style="display:none"></div>
+                </div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">PHONE:</label>
+                  <input type="text" id="bn-customer-phone" class="bn-editable modal-no-print" placeholder="Enter phone number" />
+                  <div class="bn-readonly-val" id="bn-display-phone" style="display:none"></div>
+                </div>
+                <div class="bn-field-group">
+                  <label class="bn-field-label">PAYMENT:</label>
+                  <select id="bn-payment-method" class="bn-editable modal-no-print">
+                    <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Maya">Maya</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <div class="bn-readonly-val" id="bn-display-payment" style="display:none"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Important Notes -->
+            <div class="bn-note-wrap">
+              <div class="bn-thanks-card">Thank you for your purchase! ★</div>
+            </div>
+
+          </div><!-- end #receiptPrintArea -->
+        </div>
+      </dialog>
+
+      <!-- ── Inventory ──────────────────────────────────────────── -->
+      <section class="panel inv-panel">
+        <div class="panel-header">
+          <div>
+            <h2>📚 Inventory</h2>
+            <span class="muted">Click any cell to edit. Use <strong>Sold</strong> to record a sale.</span>
+          </div>
+          <div class="panel-header-actions">
+            <button class="btn danger" id="deleteAllBooksBtn" type="button">🗑 Delete All</button>
+          </div>
+        </div>
+
+        <div class="inv-banner-row">
+          <div class="inv-banner">
+            <div>
+              <div class="inv-banner-title">📚 Multiple Orders</div>
+              <div class="inv-banner-sub">Use this to invoice 2 or more books in one receipt. It opens the New Sale page.</div>
+            </div>
+            <a href="new-sale.html" class="btn primary inv-banner-btn">Open Multiple Orders →</a>
+          </div>
+          <div class="inv-banner">
+            <div>
+              <div class="inv-banner-title">🎁 Bundle Order</div>
+              <div class="inv-banner-sub">Set one fixed price for a set of books — individual book prices stay hidden. Opens the Bundle Order page.</div>
+            </div>
+            <a href="bundle-sale.html" class="btn primary inv-banner-btn">Open Bundle Order →</a>
+          </div>
+        </div>
+
+        <!-- Book creation moved to Add Books page. Inventory is for managing existing books. -->
+        <div class="inv-banner" style="margin-bottom:18px;">
+          <div>
+            <div class="inv-banner-title">➕ Add / Create Book Variants</div>
+            <div class="inv-banner-sub">Manage your existing physical book copies, stock, prices, conditions, and variants.</div>
+          </div>
+          <a href="add-books.html" class="btn primary inv-banner-btn">Open Add Books →</a>
+        </div>
+
+        <div class="filters inv-filters">
+          <input id="searchInput" type="search" placeholder="🔍 Search by title or author" />
+          <select id="genreFilter"><option value="">All genres</option></select>
+          <select id="boxFilter"><option value="">All boxes</option></select>
+          <select id="stockFilter">
+            <option value="">All stock</option>
+            <option value="low">Low stock (&lt; 5)</option>
+            <option value="out">Out of stock</option>
+            <option value="reserved">🗓️ Layaway</option>
+          </select>
+        </div>
+
+        <div class="table-wrap inventory-wrap">
+          <table class="inventory-table">
+            <colgroup>
+              <col style="width:17%">
+              <col style="width:12%">
+              <col style="width:10%">
+              <col style="width:7%">
+              <col style="width:6%">
+              <col style="width:9%">
+              <col style="width:10%">
+              <col style="width:9%">
+              <col style="width:20%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Title</th><th>Variant / Copy</th><th>Author</th><th>Genre</th>
+                <th>Price</th><th>Stock</th><th>Box</th><th>Type</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">BookNest © 2026</footer>
+
+    <style>
       /* ── BookNest Modal Wrapper ── */
       .bn-modal {
         border: none; border-radius: 20px; padding: 0;
@@ -523,9 +541,10 @@
         .inventory-wrap { margin: 0 -0.25rem; }
       }
     </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
-<script src="supabase-data.js"></script>
-<script src="app.js"></script>
-</body>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-data.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>

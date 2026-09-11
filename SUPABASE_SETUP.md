@@ -1,8 +1,5 @@
 # BookNest — Supabase setup
 
-**Recommended:** run the included `DATABASE_SETUP.sql` once in Supabase SQL Editor. It creates the main BookNest data table plus buyer accounts.
-
-
 This version keeps your existing HTML/CSS/JavaScript website. It does NOT require React, Angular, Next.js, or Prisma.
 
 ## 1. Create the database table

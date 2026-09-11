@@ -6,51 +6,11 @@
     <title>BookNest</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
-    <script src="seller-nav.js"></script>
-  <style>
-:root{--bn-teal:#0f766e;--bn-deep:#0b463e;--bn-gold:#f59e0b;--bn-cream:#fffaf0}
-.seller-dashboard{display:grid;grid-template-columns:1.35fr .65fr;gap:18px;margin-bottom:20px}
-.seller-welcome{position:relative;overflow:hidden;border-radius:22px;padding:28px;background:linear-gradient(135deg,#0b463e 0%,#0f766e 58%,#17877d 100%);color:#fff;min-height:185px;box-shadow:0 14px 35px rgba(15,118,110,.18)}
-.seller-welcome:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-70px;top:-80px;background:rgba(255,255,255,.09)}
-.seller-welcome h1{font-size:30px;margin:0 0 8px;font-weight:900;letter-spacing:-.5px}
-.seller-welcome p{max-width:560px;color:rgba(255,255,255,.82);margin:0 0 18px}
-.seller-welcome-actions{display:flex;gap:9px;flex-wrap:wrap;position:relative;z-index:2}
-.seller-welcome .btn{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;backdrop-filter:blur(5px)}
-.seller-welcome .btn.primary{background:#fff;color:#0b5c53;border-color:#fff}
-.seller-art{position:absolute;right:24px;bottom:18px;width:120px;height:120px;border-radius:50%;background:#fff;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.18);z-index:1}
-.seller-art img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.seller-profile{border-radius:22px;padding:22px;background:linear-gradient(145deg,#fff,#fff8e9);border:1px solid #eee0c6;box-shadow:0 10px 25px rgba(120,85,20,.07)}
-.seller-profile-top{display:flex;align-items:center;gap:13px}
-.seller-avatar{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:#0f766e;color:#fff;font-size:23px;font-weight:900}
-.seller-profile h3{margin:0;color:#173f39}.seller-profile small{color:#7b7467}
-.seller-status{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:7px 10px;border-radius:999px;background:#e9f7ef;color:#25704a;font-size:11px;font-weight:800}
-.seller-status i{width:7px;height:7px;border-radius:50%;background:#35a66a}
-.seller-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 22px}
-.seller-tool{display:flex;align-items:center;gap:12px;text-decoration:none;padding:15px;border:1px solid var(--line,#e2ddd0);border-radius:15px;background:#fff;transition:.18s;box-shadow:0 5px 15px rgba(0,0,0,.03)}
-.seller-tool:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.07);border-color:#b7d9d3}
-.seller-tool-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#eef9f6;font-size:19px}
-.seller-tool strong{display:block;color:#26343a;font-size:13px}.seller-tool span{display:block;color:#7b8790;font-size:10px;margin-top:2px}
-.seller-settings{border-radius:20px;border:1px solid #e5dfd1;background:#fff;margin-top:20px;overflow:hidden}
-.seller-settings-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:19px 21px;background:linear-gradient(90deg,#f8fbfa,#fffaf0);border-bottom:1px solid #ece7db}
-.seller-settings-head h2{margin:0;font-size:18px;color:#24413c}.seller-settings-head p{margin:3px 0 0;font-size:11px;color:#77817d}
-.password-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:18px 21px 8px}
-.password-grid label{font-size:11px;font-weight:800;color:#5e6b68;display:block;margin:0 0 6px}.password-grid input{width:100%;box-sizing:border-box}
-.password-actions{padding:8px 21px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.password-note{font-size:11px;color:#7b8581}
-.seller-danger{margin-left:auto}
-.seller-logout-btn{border:1px solid #e3caca;background:#fff7f7;color:#a33a3a;border-radius:9px;padding:8px 11px;font-weight:800;cursor:pointer;font-size:12px}
-.seller-logout-btn:hover{background:#ffeaea}
-.site-footer.seller-footer{margin-top:32px;padding:0;background:#0b463e;color:#d8eeea}
-.seller-footer-inner{max-width:1100px;margin:auto;padding:28px 20px;display:flex;justify-content:space-between;gap:25px;align-items:center}
-.seller-footer-brand{display:flex;align-items:center;gap:10px}.seller-footer-brand img{width:42px;height:42px;border-radius:12px;background:#fff;padding:3px}.seller-footer-brand strong{display:block;color:#fff}.seller-footer-brand span{font-size:10px;color:#a8c9c3}
-.seller-social{text-align:right}.seller-social-title{font-weight:900;color:#fff;font-size:12px;margin-bottom:8px}.seller-social a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);padding:8px 11px;border-radius:10px;font-size:11px;margin-left:5px}.seller-social a:hover{background:rgba(255,255,255,.18)}
-@media(max-width:800px){.seller-dashboard{grid-template-columns:1fr}.seller-tools{grid-template-columns:1fr 1fr}.password-grid{grid-template-columns:1fr}.seller-art{width:88px;height:88px}.seller-footer-inner{flex-direction:column;align-items:flex-start}.seller-social{text-align:left}.seller-social a{margin:0 5px 0 0}}
-@media(max-width:520px){.seller-tools{grid-template-columns:1fr}.seller-welcome{padding:23px}.seller-welcome h1{font-size:25px}.seller-art{display:none}}
-</style></head>
+  <script src="seller-nav.js"></script></head>
   <body>
     <header class="site-header">
       <div class="logo">
-        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
+        <img class="logo-image" src="asset/1.png" alt="BookNest logo" />
         <span>BookNest</span>
       </div>
       <nav class="nav">
@@ -58,41 +18,13 @@
         <a href="inventory.html">Inventory &amp; Sales</a>
         <a href="receipt-history.html">Receipts</a>
         <a href="orders.html">🛒 Shop Orders</a>
-        <a href="debug.html">🔧 Debug</a>
-        <a href="buyers.html">👤 Buyers</a>
         <a href="shop.html" style="margin-left:auto">🛒 View Shop</a>
-        <button type="button" class="seller-logout-btn" onclick="sellerLogout()">↪ Log out</button>
+        <button class="seller-account-btn" id="sellerAccountBtn" type="button">👤 Seller account</button>
+        <button class="seller-logout-btn" id="sellerLogoutBtn" type="button">↪ Log out</button>
       </nav>
     </header>
 
     <main class="container">
-      <section class="seller-dashboard">
-        <div class="seller-welcome">
-          <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#bde2dc;margin-bottom:7px">Seller dashboard</div>
-          <h1>Welcome to BookNest 📚</h1>
-          <p>Your cozy control room for books, buyers, orders, sales, and receipts — everything in one place.</p>
-          <div class="seller-welcome-actions">
-            <a class="btn primary" href="inventory.html">＋ Manage Books</a>
-            <a class="btn" href="orders.html">🛒 Check Orders</a>
-          </div>
-          <div class="seller-art"><img src="Assets/Booknest.png" alt="BookNest"></div>
-        </div>
-        <div class="seller-profile">
-          <div class="seller-profile-top">
-            <div class="seller-avatar">BN</div>
-            <div><h3>BookNest Seller</h3><small>Private seller workspace</small></div>
-          </div>
-          <div class="seller-status"><i></i> Seller session active</div>
-          <p style="font-size:11px;line-height:1.6;color:#6d756f;margin:14px 0 0">Keep your password private. You can update it anytime from the Security section below.</p>
-        </div>
-      </section>
-
-      <section class="seller-tools">
-        <a class="seller-tool" href="inventory.html"><div class="seller-tool-icon">📚</div><div><strong>Inventory</strong><span>Add, edit & manage books</span></div></a>
-        <a class="seller-tool" href="orders.html"><div class="seller-tool-icon">🛒</div><div><strong>Shop Orders</strong><span>Review buyer orders</span></div></a>
-        <a class="seller-tool" href="receipt-history.html"><div class="seller-tool-icon">🧾</div><div><strong>Receipts</strong><span>View your sales records</span></div></a>
-      </section>
-
       <section class="panel">
         <div class="panel-header">
           <h2>💰 Quick Price Calculator</h2>
@@ -116,41 +48,21 @@
         </div>
       </section>
 
-      <section class="hero">
-        <div>
-          <h1>Inventory, Sales & Receipts</h1>
-          <p class="muted">A clean workspace to manage stock, record sales, and keep every receipt organized.</p>
+      <section class="seller-hero">
+        <div class="seller-hero-copy">
+          <div class="seller-kicker">📚 BOOKNEST SELLER CENTER</div>
+          <h1>Your store, beautifully organized.</h1>
+          <p class="muted">Manage inventory, record sales, review receipts, process shop orders, and keep your bookstore moving from one dashboard.</p>
           <div class="hero-actions">
-            <a class="btn primary" href="inventory.html">Manage Inventory</a>
-            <a class="btn" href="receipt-history.html">Past Receipts</a>
+            <a class="btn primary" href="inventory.html">📚 Manage Inventory</a><a class="btn primary" href="shop-manager.html">🛍 Add to Shop</a>
+            <a class="btn" href="receipt-history.html">🧾 View Receipts</a>
+            <a class="btn ghost" href="orders.html">🛒 Shop Orders</a>
           </div>
+          <div class="seller-quick-note"><span>●</span> Seller workspace is active <span class="divider">•</span> Your BookNest data is synced for the connected devices.</div>
         </div>
-        <div class="hero-card">
-          <h3>Quick Stats</h3>
-          <div class="stat-grid">
-            <div>
-              <span class="stat-number" id="statTitles">0</span>
-              <span class="stat-label">Titles</span>
-            </div>
-            <div>
-              <span class="stat-number" id="statInStock">0</span>
-              <span class="stat-label">In Stock</span>
-            </div>
-            <div>
-              <span class="stat-number" id="statTotal">₱0</span>
-              <span class="stat-label">Total Sales</span>
-            </div>
-            <div>
-              <span class="stat-number" id="statInventoryValue">₱0</span>
-              <span class="stat-label">Inventory Value</span>
-            </div>
-          </div>
-          <div style="margin-top:12px;color:var(--muted);font-weight:600">
-            Net Revenue: <span id="statNetTotal">₱0</span>
-          </div>
-          <div style="margin-top:6px;color:var(--muted);font-weight:600" title="Money spent on boxes that haven't sold enough yet to earn that cost back — already subtracted from Net Revenue above, shown here on its own so you can see it clearly.">
-            Still Tied Up in Boxes (not profitable yet): <span id="statPendingBoxCost">₱0</span>
-          </div>
+        <div class="seller-hero-art">
+          <img src="asset/1.png" alt="BookNest books artwork" />
+          <div class="art-badge"><strong>BookNest</strong><span>Hatch a new world, one page at a time.</span></div>
         </div>
       </section>
 
@@ -181,7 +93,7 @@
       <section class="panel">
         <div class="panel-header">
           <h2>Recent Activity</h2>
-          <a class="btn ghost" href="inventory.html">Manage Inventory</a>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn primary" href="add-books.html">➕ Add Books / Variants</a><a class="btn ghost" href="inventory.html">Manage Inventory</a></div>
         </div>
         <div class="table-wrap">
           <table>
@@ -248,39 +160,41 @@
       </section>
     </main>
 
-      <section class="seller-settings" id="security">
-        <div class="seller-settings-head">
+      <section class="panel seller-account-panel" id="sellerAccount">
+        <div class="account-heading">
           <div>
-            <h2>🔐 Security & Password</h2>
-            <p>Change the seller password without leaving the dashboard.</p>
+            <div class="section-kicker">SELLER SETTINGS</div>
+            <h2>Account &amp; Security</h2>
+            <p class="muted">Change your seller access password here. This section is only available after you enter the seller workspace.</p>
           </div>
-          <span style="font-size:24px">🛡️</span>
+          <div class="account-avatar">👤</div>
         </div>
-        <div class="password-grid">
-          <div><label for="sellerCurrentPassword">CURRENT PASSWORD</label><input type="password" id="sellerCurrentPassword" placeholder="Current password" autocomplete="current-password"></div>
-          <div><label for="sellerNewPassword">NEW PASSWORD</label><input type="password" id="sellerNewPassword" placeholder="At least 6 characters" autocomplete="new-password"></div>
-          <div><label for="sellerConfirmPassword">CONFIRM NEW PASSWORD</label><input type="password" id="sellerConfirmPassword" placeholder="Repeat new password" autocomplete="new-password"></div>
-        </div>
-        <div class="password-actions">
-          <button class="btn primary" type="button" onclick="changeSellerPassword()">🔑 Update Password</button>
-          <span class="password-note" id="passwordMessage">Use a password only you know.</span>
+        <div class="security-grid">
+          <div class="security-form">
+            <div class="field-row">
+              <div><label for="currentSellerPassword">Current password</label><input type="password" id="currentSellerPassword" placeholder="Current password" autocomplete="current-password"></div>
+              <div><label for="newSellerPassword">New password</label><input type="password" id="newSellerPassword" placeholder="At least 6 characters" autocomplete="new-password"></div>
+            </div>
+            <div class="field-row">
+              <div><label for="confirmSellerPassword">Confirm new password</label><input type="password" id="confirmSellerPassword" placeholder="Repeat new password" autocomplete="new-password"></div>
+              <div class="account-actions"><button class="btn primary" id="changeSellerPasswordBtn" type="button">🔑 Change Password</button><button class="btn logout-outline" id="sellerLogoutBtn2" type="button">↪ Log out safely</button></div>
+            </div>
+            <div class="account-message" id="accountMessage" role="status"></div>
+          </div>
+          <div class="security-card">
+            <div class="security-icon">🛡️</div>
+            <strong>Keep your seller access private</strong>
+            <p>Use a password you don't share with customers. After changing it, keep the new password somewhere secure.</p>
+          </div>
         </div>
       </section>
-    </main>
 
     <footer class="site-footer seller-footer">
-      <div class="seller-footer-inner">
-        <div class="seller-footer-brand">
-          <img src="Assets/Booknest.png" alt="BookNest logo">
-          <div><strong>BookNest</strong><span>Pre-loved books • Carefully packed • Seller workspace</span></div>
-        </div>
-        <div class="seller-social">
-          <div class="seller-social-title">Follow us / Contact us</div>
-          <a href="https://www.facebook.com/profile.php?id=61573580501585" target="_blank" rel="noopener noreferrer">f Facebook</a>
-          <a href="https://www.tiktok.com/@booknest123" target="_blank" rel="noopener noreferrer">♪ TikTok</a>
-        </div>
+      <div class="footer-inner">
+        <div class="footer-brand"><img src="asset/1.png" alt="BookNest"><div><strong>BookNest</strong><span>Hatch a new world, one page at a time.</span></div></div>
+        <div class="footer-social"><span>Follow us</span><div><a href="#" aria-label="Facebook">f&nbsp; Facebook</a><a href="#" aria-label="TikTok">♪&nbsp; TikTok</a></div></div>
       </div>
-      <div style="text-align:center;font-size:10px;padding:0 20px 15px;color:#8eb5ae">BookNest © 2026 • Seller dashboard</div>
+      <div class="footer-bottom"><span>BookNest © 2026</span><span>Seller Center</span><span>Books • Sales • Stories</span></div>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -422,37 +336,55 @@
         console.log("GCash setup complete!");
       }
       
+      function showAccountMessage(message, type = "success") {
+        const box = document.getElementById("accountMessage");
+        if (!box) return;
+        box.textContent = message;
+        box.className = "account-message " + type;
+        box.style.display = "block";
+      }
+
+      function logoutSeller() {
+        if (!confirm("Log out of the BookNest Seller Center?")) return;
+        if (window.BN_Security && typeof BN_Security.logout === "function") {
+          BN_Security.logout();
+        } else {
+          sessionStorage.removeItem("bn_admin_ok");
+          location.href = "seller-login.html";
+        }
+      }
+
+      function setupSellerAccount() {
+        const accountBtn = document.getElementById("sellerAccountBtn");
+        if (accountBtn) accountBtn.addEventListener("click", () => document.getElementById("sellerAccount")?.scrollIntoView({behavior:"smooth", block:"center"}));
+        document.getElementById("sellerLogoutBtn")?.addEventListener("click", logoutSeller);
+        document.getElementById("sellerLogoutBtn2")?.addEventListener("click", logoutSeller);
+        document.getElementById("changeSellerPasswordBtn")?.addEventListener("click", () => {
+          const current = document.getElementById("currentSellerPassword").value;
+          const next = document.getElementById("newSellerPassword").value;
+          const confirm = document.getElementById("confirmSellerPassword").value;
+          if (!current || !next || !confirm) return showAccountMessage("Please complete all password fields.", "error");
+          if (next.length < 6) return showAccountMessage("New password must be at least 6 characters.", "error");
+          if (next !== confirm) return showAccountMessage("The new passwords do not match.", "error");
+          if (!window.BN_Security || typeof BN_Security.changePassword !== "function") return showAccountMessage("Seller security is not ready. Please refresh the page.", "error");
+          const result = BN_Security.changePassword(current, next, confirm);
+          if (result !== "Password changed") return showAccountMessage(result, "error");
+          document.getElementById("currentSellerPassword").value = "";
+          document.getElementById("newSellerPassword").value = "";
+          document.getElementById("confirmSellerPassword").value = "";
+          showAccountMessage("✓ Password changed successfully. Your new password will be required next time you enter Seller Center.");
+        });
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
         console.log("DOM Content Loaded - initializing...");
         calcQuickPercents();
+        setupSellerAccount();
         // Wait a bit for app.js to load
         setTimeout(() => {
           setupGcashPayment();
         }, 100);
       });
     </script>
-<script>
-function sellerLogout(){
-  if(!confirm("Log out of the BookNest seller dashboard?")) return;
-  if(window.BN_Security) window.BN_Security.logout();
-}
-function changeSellerPassword(){
-  const current=document.getElementById("sellerCurrentPassword").value;
-  const next=document.getElementById("sellerNewPassword").value;
-  const confirmPass=document.getElementById("sellerConfirmPassword").value;
-  const msg=document.getElementById("passwordMessage");
-  msg.style.color="#7b8581";
-  if(!current){msg.textContent="Please enter your current password.";msg.style.color="#a33a3a";return;}
-  if(next.length<6){msg.textContent="New password must be at least 6 characters.";msg.style.color="#a33a3a";return;}
-  if(next!==confirmPass){msg.textContent="The new passwords do not match.";msg.style.color="#a33a3a";return;}
-  const result=window.BN_Security ? window.BN_Security.changePassword(current,next,confirmPass) : "Security system unavailable";
-  if(result!=="Password changed"){msg.textContent=result;msg.style.color="#a33a3a";return;}
-  document.getElementById("sellerCurrentPassword").value="";
-  document.getElementById("sellerNewPassword").value="";
-  document.getElementById("sellerConfirmPassword").value="";
-  msg.textContent="✓ Password changed successfully. Your new password is ready to use.";
-  msg.style.color="#24734d";
-}
-</script>
   </body>
 </html>

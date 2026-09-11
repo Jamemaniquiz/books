@@ -5,7 +5,6 @@ const STORAGE_KEYS = {
   receipts: ".receipts",
   purchases: ".purchases",
   sellerPayment: ".sellerPayment",
-  shopOrders: ".shop_orders",
 };
 
 const LEGACY_KEYS = {
@@ -104,6 +103,7 @@ const getBooks    = ()         => getData(STORAGE_KEYS.books,    []).map(b => ({
   author: (b.author === undefined || b.author === null) ? "" : String(b.author),
   genre:  (b.genre  === undefined || b.genre  === null) ? "General" : String(b.genre),
   box:    (b.box    === undefined || b.box    === null) ? "" : String(b.box),
+  variant:(b.variant === undefined || b.variant === null) ? "" : String(b.variant),
   price:  Number(b.price) || 0,
   stock:  Number.isFinite(Number(b.stock)) ? Number(b.stock) : 0,
   shopVisible: b.shopVisible === true, // Only show in shop if explicitly set to true
@@ -975,13 +975,7 @@ const initDashboard = () => {
       "Move BookNest to New Computer"
     );
   });
-  restoreInput?.addEventListener("change", e => {
-    const file = e.target.files?.[0];
-    if (file) restoreData(file);
-    // Allow the same backup file to be selected again after a failed/cancelled
-    // restore. Browsers otherwise may not fire `change` for the same file.
-    e.target.value = "";
-  });
+  restoreInput?.addEventListener("change", e => { if (e.target.files[0]) restoreData(e.target.files[0]); });
   document.getElementById("eodBtn")?.addEventListener("click", () => {
     localStorage.removeItem(".eod_check");
     checkEndOfDay();
@@ -1648,7 +1642,6 @@ const initInventory = () => {
   const genreFilter     = document.getElementById("genreFilter");
   const boxFilter       = document.getElementById("boxFilter");
   const stockFilter     = document.getElementById("stockFilter");
-  const conditionFilter = document.getElementById("conditionFilter");
   const addTitle        = document.getElementById("addTitle");
   const addAuthor       = document.getElementById("addAuthor");
   const addGenre        = document.getElementById("addGenre");
@@ -1656,7 +1649,6 @@ const initInventory = () => {
   const addPrice        = document.getElementById("addPrice");
   const addStock        = document.getElementById("addStock");
   const addType         = document.getElementById("addType");
-  const addCondition    = document.getElementById("addCondition");
   const addBox          = document.getElementById("addBox");
   const addBookBtn      = document.getElementById("addBookBtn");
   const priceCalcBtn    = document.getElementById("priceCalcBtn");
@@ -1710,7 +1702,6 @@ const initInventory = () => {
     const genre     = genreFilter?.value ?? "";
     const box       = boxFilter?.value ?? "";
     const stock     = stockFilter?.value ?? "";
-    const condition = conditionFilter?.value ?? "";
 
     const filtered = books.filter(book => {
       const matchesSearch    = book.title.toLowerCase().includes(search) || book.author.toLowerCase().includes(search);
@@ -1721,16 +1712,15 @@ const initInventory = () => {
         (stock === "low"      && book.stock > 0 && book.stock < 5) ||
         (stock === "out"      && book.stock === 0) ||
         (stock === "reserved" && Array.isArray(book.layawayHolds) && book.layawayHolds.length > 0);
-      const matchesCondition = !condition || book.condition === condition;
-      return matchesSearch && matchesGenre && matchesBox && matchesStock && matchesCondition;
+      return matchesSearch && matchesGenre && matchesBox && matchesStock;
     });
 
     if (books.length > 0 && filtered.length === 0) {
-      rows.innerHTML = `<tr><td colspan="9" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="10" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
       return;
     }
     if (books.length === 0) {
-      rows.innerHTML = `<tr><td colspan="9" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="10" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
       return;
     }
 
@@ -1750,11 +1740,11 @@ const initInventory = () => {
         : book.stock;
       const genreOpts     = ["Fiction","Non-Fiction","Fantasy","Mystery","Romance","Thriller","Horror","Self-Help","Biography","History","Science","Technology","Poetry","Drama","Adventure","Dystopian","Science Fiction","Children's","Young Adult","Other"];
       const typeOpts      = ["Paperback","Hardbound","MMPB","Sprayed","Leatherbound","Slipcase","Special Edition","Box Set","Signed","Other"];
-      const conditionOpts = ["New","Pre Loved","Remaindered"];
       const currentType   = book.type || "Paperback";
       const genreClass    = `genre-${(book.genre || "other").toLowerCase().replace(/\s+/g, "").replace(/['-]/g, "")}`;
       return `<tr class="${genreClass}">
         <td contenteditable="true" data-field="title"  data-id="${book.id}">${book.title}</td>
+        <td contenteditable="true" data-field="variant" data-id="${book.id}" title="Use this to distinguish copies of the same title">${book.variant || ""}</td>
         <td contenteditable="true" data-field="author" data-id="${book.id}">${book.author}</td>
         <td>
           <select class="inv-select" data-field="genre" data-id="${book.id}">
@@ -1769,10 +1759,6 @@ const initInventory = () => {
             ${typeOpts.map(t => `<option value="${t}"${currentType === t ? " selected" : ""}>${t}</option>`).join("")}
           </select>
         </td>
-        <td>
-          <select class="inv-select" data-field="condition" data-id="${book.id}">
-            ${conditionOpts.map(c => `<option value="${c}"${(book.condition || "New") === c ? " selected" : ""}>${c}</option>`).join("")}
-          </select>
         </td>
         <td>
           ${reservedBadge}
@@ -1782,7 +1768,6 @@ const initInventory = () => {
               : ""}
             <button class="btn ghost action-btn inv-action-btn" data-action="manage-book-photos" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="Add, remove, or reorder this book's photos">🖼 Photos${book.images && book.images.length ? ` (${book.images.length})` : ""}</button>
             <button class="btn ghost action-btn inv-action-btn" data-action="edit-book-description" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="${book.description ? "Edit the description buyers see" : "Add a description — condition, edition, notes, etc."}">${book.description ? "📝 Desc ✓" : "📝 Add Desc"}</button>
-            <button class="btn primary action-btn inv-action-btn${book.shopVisible ? " active" : ""}" data-action="toggle-shop" data-id="${book.id}" title="${book.shopVisible ? "Remove from shop" : "Add to shop"}" style="font-size:11px;padding:3px 8px;min-width:0;">${book.shopVisible ? "🛒 In Shop" : "➕ Add Shop"}</button>
             <button class="btn primary action-btn inv-action-btn sold" data-action="sold"    data-id="${book.id}">Sold</button>
             <button class="btn ghost action-btn inv-action-btn reserve${holds.length ? " is-reserved" : ""}" data-action="layaway" data-id="${book.id}"${availableForLayaway <= 0 ? " disabled title=\"Every copy of this book is already on layaway — cancel a hold above to free one up\"" : ""}>${availableForLayaway > 0 ? "🗓️ Layaway" : "Fully Reserved"}</button>
             <button class="btn ghost action-btn inv-action-btn delete" data-action="delete"  data-id="${book.id}">Delete</button>
@@ -1954,7 +1939,7 @@ const initInventory = () => {
         price:     addPrice?.value || 0,
         stock:     addStock?.value || 1,
         type:      addType?.value || "Paperback",
-        condition: addCondition?.value || "Pre Loved",
+        condition: "Pre Loved",
         box:       addBox?.value.trim() || "",
       };
       console.log("Adding book:", bookData);
@@ -1970,7 +1955,6 @@ const initInventory = () => {
       genreManuallyEdited = false;
       updateGenreSuggestion();
       if (addType) addType.value = "Paperback";
-      if (addCondition) addCondition.value = "Pre Loved";
       alert("✓ Book added successfully!");
     } catch(error) {
       console.error("Error in addBookBtn click:", error);
@@ -2133,7 +2117,7 @@ const initInventory = () => {
             price:     document.getElementById("addPrice")?.value || 0,
             stock:     document.getElementById("addStock")?.value || 1,
             type:      document.getElementById("addType")?.value || "Paperback",
-            condition: document.getElementById("addCondition")?.value || "Pre Loved",
+            condition: "Pre Loved",
             box:       document.getElementById("addBox")?.value.trim() || "",
           }]);
           const btn = retryAddBtn;
@@ -2149,7 +2133,6 @@ const initInventory = () => {
           document.getElementById("addPrice").value = "";
           document.getElementById("addStock").value = "";
           document.getElementById("addType").value = "Paperback";
-          document.getElementById("addCondition").value = "Pre Loved";
           if (document.getElementById("addBox")) document.getElementById("addBox").value = "";
         });
         retryAddBtn._inventoryInitialized = true;
@@ -2643,7 +2626,7 @@ const initInventory = () => {
     if (event.key === "Enter") { event.preventDefault(); target.blur(); }
   });
 
-  [searchInput, genreFilter, boxFilter, stockFilter, conditionFilter].forEach(el => {
+  [searchInput, genreFilter, boxFilter, stockFilter].forEach(el => {
     if (el) el.addEventListener("input", refresh);
   });
 
@@ -4074,16 +4057,14 @@ const clearStoredPhotos = () => {
 
 const backupData = async () => {
   const data = {
-    schemaVersion: 3,
+    schemaVersion: 2,
     app: "BookNest",
-    books:          getBooks(),
-    sales:          getSales(),
-    receipts:       getReceipts(),
-    purchases:      getPurchases(),
-    sellerPayment:  getSellerPayment(),
-    shopOrders:     getData(STORAGE_KEYS.shopOrders, []),
-    eodCheck:       localStorage.getItem(".eod_check") || localStorage.getItem("booknest.eod_check") || null,
-    exportedAt:     new Date().toISOString(),
+    books:      getBooks(),
+    sales:      getSales(),
+    receipts:   getReceipts(),
+    purchases:  getPurchases(),
+    eodCheck:   localStorage.getItem(".eod_check") || localStorage.getItem("booknest.eod_check") || null,
+    exportedAt: new Date().toISOString(),
   };
   const blob    = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url     = URL.createObjectURL(blob);
@@ -4123,8 +4104,8 @@ const restoreData = (file) => {
   reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      if (!data || data.app !== "BookNest" || !Array.isArray(data.books) || !Array.isArray(data.sales)) {
-        showNotice("Invalid BookNest backup file. Please choose a JSON backup downloaded from BookNest.", "Restore Failed");
+      if (!Array.isArray(data.books) || !Array.isArray(data.sales)) {
+        showNotice("Invalid backup file.", "Restore Failed");
         return;
       }
       const { confirmed } = await openActionDialog({
@@ -4139,35 +4120,10 @@ const restoreData = (file) => {
       saveSales(data.sales);
       saveReceipts(Array.isArray(data.receipts) ? data.receipts : []);
       savePurchases(Array.isArray(data.purchases) ? data.purchases : []);
-      setData(STORAGE_KEYS.sellerPayment, data.sellerPayment || { gcashNumber: "", gcashQR: "" });
-      setData(STORAGE_KEYS.shopOrders, Array.isArray(data.shopOrders) ? data.shopOrders : []);
       if (typeof data.eodCheck === "string" && data.eodCheck) {
         localStorage.setItem(".eod_check", data.eodCheck);
-      } else {
-        localStorage.removeItem(".eod_check");
       }
-
-      // Local restore is the important part and is immediate. Then mirror all
-      // restored datasets to Supabase in ONE request instead of waiting for six
-      // separate network writes. A slow/offline cloud must not erase or block
-      // the restored local data.
-      let cloudSaved = true;
-      if (window.BookNestCloud?.enabled && window.BookNestCloud.saveMany) {
-        cloudSaved = await window.BookNestCloud.saveMany([
-          { key: STORAGE_KEYS.books, value: data.books },
-          { key: STORAGE_KEYS.sales, value: data.sales },
-          { key: STORAGE_KEYS.receipts, value: Array.isArray(data.receipts) ? data.receipts : [] },
-          { key: STORAGE_KEYS.purchases, value: Array.isArray(data.purchases) ? data.purchases : [] },
-          { key: STORAGE_KEYS.sellerPayment, value: data.sellerPayment || { gcashNumber: "", gcashQR: "" } },
-          { key: STORAGE_KEYS.shopOrders, value: Array.isArray(data.shopOrders) ? data.shopOrders : [] },
-        ]);
-      }
-      await showNotice(
-        cloudSaved
-          ? "Books, sales, receipts, purchases, shop orders, and payment settings were restored successfully."
-          : "Everything was restored on this computer. Supabase could not be reached, so the restored data is currently saved locally. Try syncing again when your internet connection is working.",
-        cloudSaved ? "Restore Complete" : "Restore Saved Locally"
-      );
+      await showNotice("Data restored successfully.", "Restore Complete");
       location.reload();
     } catch { showNotice("Could not read backup file.", "Restore Failed"); }
   };
@@ -4247,10 +4203,7 @@ const safeRun = (fn, name) => {
   try { fn(); } catch (err) { console.error(`[BookNest] ${name} failed:`, err); }
 };
 
-const init = () => {
-  // Render from localStorage immediately. Do NOT make the whole seller UI wait
-  // for Supabase; a slow/offline network should never make Add Book, Sales,
-  // Receipts, or Backup/Restore feel frozen. Cloud data refreshes underneath.
+const renderSellerWorkspace = () => {
   migrateStorage();
   ensureSeedData();
   safeRun(initDashboard,     "initDashboard");
@@ -4259,16 +4212,16 @@ const init = () => {
   safeRun(initReceiptModal,  "initReceiptModal");
   safeRun(initReports,       "initReports");
   safeRun(initReceiptHistory,"initReceiptHistory");
+};
 
-  if (window.BookNestCloud?.ready) {
-    window.BookNestCloud.ready.then(() => {
-      safeRun(initDashboard,     "refreshDashboard");
-      safeRun(initInventory,     "refreshInventory");
-      safeRun(initSales,         "refreshSales");
-      safeRun(initReports,       "refreshReports");
-      safeRun(initReceiptHistory,"refreshReceiptHistory");
-    }).catch(err => console.warn("[BookNest] Cloud refresh skipped:", err));
-  }
+// Render from the local cache immediately. Supabase refreshes in the background
+// and the same workspace is refreshed when the cloud snapshot arrives. This
+// removes the old 5–10 second blank/loading wait on seller pages.
+const init = () => {
+  renderSellerWorkspace();
+  window.addEventListener("booknest-cloud-ready", () => {
+    requestAnimationFrame(() => renderSellerWorkspace());
+  }, { once: true });
 };
 
 document.addEventListener("DOMContentLoaded", init);
