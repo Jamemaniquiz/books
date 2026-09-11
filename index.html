@@ -49,7 +49,8 @@
       }
       .choices{
         display:grid;
-        grid-template-columns:1fr 1fr;
+        grid-template-columns:minmax(0,420px);
+        justify-content:center;
         gap:20px;
       }
       @media (max-width:520px){
@@ -107,15 +108,11 @@
           <div class="choice-title">I'm a Buyer</div>
           <div class="choice-desc">Browse books, add to cart, and check out — no account needed.</div>
         </a>
-        <a class="choice-card admin" href="admin.html">
-          <div class="choice-icon">🔒</div>
-          <div class="choice-title">I'm the Admin</div>
-          <div class="choice-desc">Manage inventory, sales, and orders. Passcode required.</div>
-        </a>
       </div>
 
       <div class="footer-note">© <span id="year"></span> BookNest</div>
     </div>
     <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  </body>
+  <script src="mobile-enhancements.js"></script>
+</body>
 </html>

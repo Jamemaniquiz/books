@@ -3,85 +3,93 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <script src="performance.js" defer></script>
-<title>Add Book - BookNest Seller Center</title>
+<title>Add Books - BookNest Seller Center</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <script src="admin-gate.js"></script>
 <style>
-  body.add-book-page{background:#f4f1e8;color:#25231f}
-  .add-wrap{max-width:980px;margin:0 auto;padding:30px 22px 70px}
-  .add-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
-  .brandline{display:flex;align-items:center;gap:14px}.brandline img{width:58px;height:58px;object-fit:contain;border-radius:15px;background:#fff;padding:6px;box-shadow:0 6px 18px #00000010}
-  h1{margin:0;font:700 32px Georgia,serif}.lead{margin:5px 0 0;color:#756e60;font-size:13px;line-height:1.5}
-  .add-card{background:#fffdf8;border:1px solid #ddd2bb;border-radius:22px;padding:25px;box-shadow:0 14px 40px rgba(49,43,32,.08)}
-  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}.card-head h2{margin:0 0 4px;font:700 21px Georgia,serif}.card-head p{margin:0;color:#756e60;font-size:13px}
-  .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field.full{grid-column:1/-1}.field label{display:block;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#655d4f;margin-bottom:6px}
-  input,select{width:100%;border:1px solid #d7cbb2;background:#fff;border-radius:12px;padding:12px;font:inherit;color:#29251f}.helper{font-size:11px;color:#7b756a;margin-top:5px}
-  .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;text-decoration:none}.primary{background:linear-gradient(135deg,#0f766e,#0b3f3b);color:#fff}.secondary{background:#fff;border:1px solid #d7cbb2;color:#2f3d36}.primary:disabled{opacity:.6;cursor:wait}
-  .notice{display:none;margin-top:15px;padding:12px 14px;border-radius:12px;font-size:13px}.notice.show{display:block}.notice.ok{background:#eaf6ee;color:#21613d;border:1px solid #bfe1ca}.notice.err{background:#fff1ef;color:#8a2f20;border:1px solid #efc2b8}
-  .tip{margin-top:18px;padding:13px 14px;background:#f5f0e3;border:1px solid #e9dcbd;border-radius:14px;color:#5f584b;font-size:12px;line-height:1.55}
-  @media(max-width:700px){.add-wrap{padding:20px 14px 50px}.add-card{padding:18px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.form-actions{display:grid;grid-template-columns:1fr}.form-actions .btn{width:100%}.brandline img{width:48px;height:48px}.brandline{align-items:flex-start}.h1{font-size:28px}}
-</style>
-</head>
-<body class="add-book-page">
-<header class="site-header"><div class="logo"><img class="logo-image" src="logo.png" alt="BookNest logo"><span>BookNest Seller Center</span></div><nav class="nav"><a href="admin.html">Home</a><a class="active" href="add-books.html">➕ Add Book</a><a href="inventory.html">Inventory</a><a href="orders.html">Shop Orders</a><a href="shop-manager.html">Add to Shop</a><a href="shop.html" style="margin-left:auto">View Shop</a></nav></header>
-<main class="add-wrap">
-  <div class="add-hero">
-    <div class="brandline"><img src="logo.png" alt="BookNest logo"><div><h1>Add Book</h1><p class="lead">Add the essential inventory information here. Photos and detailed descriptions are managed from Inventory.</p></div></div>
-    <a href="inventory.html" class="btn secondary">← Back to Inventory</a>
-  </div>
+  body.add-books-page{background:#f4f1e8;color:#25231f}
+  .add-wrap{max-width:1180px;margin:0 auto;padding:32px 22px 60px}
+  .add-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+  .add-brand{display:flex;align-items:center;gap:14px}.add-brand img{width:64px;height:64px;object-fit:contain;border-radius:16px;background:#fff;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+  .add-brand h1{margin:0;font-family:Georgia,serif;font-size:32px}.add-brand p{margin:4px 0 0;color:#756e60}
+  .variant-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px}
+  .add-card{background:#fffdf8;border:1px solid #ddd2bb;border-radius:20px;padding:24px;box-shadow:0 12px 35px rgba(49,43,32,.08)}
+  .section-title{font:700 21px Georgia,serif;margin:0 0 6px}.hint{color:#756e60;font-size:13px;line-height:1.5}
+  .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.field.full{grid-column:1/-1}
+  label{display:block;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#655d4f;margin-bottom:6px}
+  input,select,textarea{width:100%;border:1px solid #d7cbb2;background:#fff;border-radius:12px;padding:12px;font:inherit;color:#29251f}textarea{min-height:90px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid #4a6151;outline-offset:1px}
+  .photo-zone{border:2px dashed #cdbf9e;border-radius:16px;padding:18px;text-align:center;background:#fbf8ef;margin-top:18px}.photo-zone strong{display:block;margin-bottom:5px}
+  .photo-previews{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.photo-item{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#eee6d4;border:1px solid #ddd2bb}.photo-item img{width:100%;height:100%;object-fit:cover}.photo-remove{position:absolute;right:5px;top:5px;width:28px;height:28px;border:0;border-radius:50%;background:#fff;color:#8a3220;font-weight:900;cursor:pointer;box-shadow:0 3px 10px #0002}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.actions button,.actions a{border:0;border-radius:999px;padding:12px 18px;font-weight:800;cursor:pointer;text-decoration:none}.primary{background:#35493c;color:#fff}.secondary{background:#eee7d8;color:#302b24}.success{background:#237447;color:#fff}
+  .variant-help{background:#35493c;color:#fff;border-radius:20px;padding:22px;position:sticky;top:20px}.variant-help h2{margin:0 0 10px;font:700 23px Georgia,serif}.variant-help p{color:#e8eee9;line-height:1.55;font-size:13px}.example{background:rgba(255,255,255,.1);border-radius:14px;padding:14px;margin-top:14px}.example div{margin:7px 0}.mini{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#d7c28d;font-weight:900}
+  .same-title{margin-top:20px;border-top:1px solid #ddd2bb;padding-top:18px}.same-list{display:grid;gap:8px;margin-top:10px}.same-item{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #e0d7c5;border-radius:12px;background:#fff}.same-thumb{width:45px;height:55px;object-fit:cover;border-radius:6px;background:#eee}.same-item b{font-size:13px}.same-item span{display:block;font-size:11px;color:#756e60}
+  .notice{margin-top:14px;padding:12px 14px;border-radius:12px;display:none;font-weight:700}.notice.ok{display:block;background:#eaf7ee;color:#17633b}.notice.err{display:block;background:#fff0ed;color:#9b3423}
+  @media(max-width:850px){.variant-layout{grid-template-columns:1fr}.variant-help{position:static}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.photo-previews{grid-template-columns:repeat(3,1fr)}}
 
-  <section class="add-card">
-    <div class="card-head"><div><h2>📚 New inventory book</h2><p>Each saved row is one physical copy. Keep duplicate titles separate when copies have different prices or conditions.</p></div></div>
-    <form id="addBookForm" autocomplete="off">
+
+@media(max-width:720px){.add-wrap{padding:18px 12px 45px}.add-head{margin-bottom:14px}.add-brand img{width:50px;height:50px}.add-brand h1{font-size:27px}.add-card{padding:17px;border-radius:17px}.form-grid{gap:11px}.actions{display:grid;grid-template-columns:1fr}.actions button,.actions a{width:100%;text-align:center}.variant-help{display:none}.booksCloudBar{font-size:11px}.add-head>a{width:100%;text-align:center}.same-title{font-size:12px}}
+</style>
+<script src="seller-nav.js"></script><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+</head>
+<body class="add-books-page">
+<header class="site-header"><div class="logo"><img class="logo-image" src="logo.png" alt="BookNest logo"><span>BookNest Seller Center</span></div><nav class="nav"><a href="admin.html">Home</a><a class="active" href="add-books.html">Add Books</a><a href="inventory.html">Inventory</a><a href="orders.html">Shop Orders</a><a href="shop.html" style="margin-left:auto">View Shop</a></nav></header>
+<main class="add-wrap">
+  <div class="add-head"><div class="add-brand"><img src="logo.png" alt="BookNest logo"><div><h1>Add Books</h1><p>Add physical books to your Inventory. Photos are handled later when you place a book in the Shop.</p></div></div><a href="inventory.html" class="actions secondary" style="padding:11px 16px">Back to Inventory</a></div>
+  <div class="variant-layout">
+    <section class="add-card">
+      <h2 class="section-title">Add a book</h2><p class="hint">Enter the details for one physical book. Add photos later from the Shop editor when you are ready to publish it.</p>
       <div class="form-grid">
-        <div class="field full"><label for="title">Book title</label><input id="title" required placeholder="e.g. The Hunger Games"></div>
-        <div class="field"><label for="variant">Copy / variant</label><input id="variant" required placeholder="e.g. Paperback Copy 1"><div class="helper">Use a unique copy name when you have multiple copies.</div></div>
-        <div class="field"><label for="author">Author</label><input id="author" placeholder="e.g. Suzanne Collins"></div>
-        <div class="field"><label for="genre">Genre</label><select id="genre"><option>Fiction</option><option>Non-Fiction</option><option>Fantasy</option><option>Mystery</option><option>Romance</option><option>Thriller</option><option>Horror</option><option>Self-Help</option><option>Biography</option><option>History</option><option>Science</option><option>Technology</option><option>Poetry</option><option>Drama</option><option>Adventure</option><option>Dystopian</option><option>Science Fiction</option><option>Children's</option><option>Young Adult</option><option>Other</option></select></div>
-        <div class="field"><label for="price">Price (₱)</label><input id="price" type="number" min="0" step="0.01" placeholder="0.00"></div>
-        <div class="field"><label for="stock">Stock</label><input id="stock" type="number" min="0" step="1" value="1"></div>
-        <div class="field"><label for="type">Format</label><select id="type"><option>Paperback</option><option>Hardbound</option><option>MMPB</option><option>Sprayed</option><option>Leatherbound</option><option>Slipcase</option><option>Special Edition</option><option>Box Set</option><option>Signed</option><option>Other</option></select></div>
-        <div class="field"><label for="condition">Condition</label><select id="condition"><option>Pre Loved</option><option>Brand New</option><option>New</option><option>Remaindered</option></select></div>
-        <div class="field"><label for="box">Box / Batch</label><input id="box" placeholder="Optional"></div>
+        <div class="field full"><label>Book title</label><input id="title" placeholder="e.g. The Hunger Games"></div>
+        <div class="field"><label>Copy name</label><input id="variant" placeholder="e.g. Paperback Copy 1"></div>
+        <div class="field"><label>Author</label><input id="author" placeholder="e.g. Suzanne Collins"></div>
+        <div class="field"><label>Genre</label><select id="genre"><option>Fiction</option><option>Non-Fiction</option><option>Fantasy</option><option>Mystery</option><option>Romance</option><option>Thriller</option><option>Horror</option><option>Self-Help</option><option>Biography</option><option>History</option><option>Science</option><option>Technology</option><option>Poetry</option><option>Drama</option><option>Adventure</option><option>Dystopian</option><option>Science Fiction</option><option>Children's</option><option>Young Adult</option><option>Other</option></select></div>
+        <div class="field"><label>Price (₱)</label><input id="price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="field"><label>Stock</label><input id="stock" type="number" min="0" step="1" value="1"></div>
+        <div class="field"><label>Format</label><select id="type"><option>Paperback</option><option>Hardbound</option><option>MMPB</option><option>Sprayed</option><option>Leatherbound</option><option>Slipcase</option><option>Special Edition</option><option>Box Set</option><option>Signed</option><option>Other</option></select></div>
+        <div class="field"><label>Condition</label><select id="condition"><option>Pre Loved</option><option>Brand New</option><option>Damaged</option><option>Remaindered</option></select></div>
+        <div class="field"><label>Box / Batch (optional)</label><input id="box" placeholder="e.g. Box 3"></div>
+        <div class="field full"><label>Description</label><textarea id="description" placeholder="Describe this exact copy: markings, tanning, foxing, special edition details, etc."></textarea></div>
       </div>
-      <div class="tip">💡 <strong>After saving:</strong> open <strong>Inventory</strong> to add photos, edit the full description, and manage stock. When the book is ready for customers, use <strong>Add to Shop</strong>.</div>
-      <div class="form-actions"><a href="inventory.html" class="btn secondary">Cancel</a><button id="saveBtn" class="btn primary" type="submit">Save Book to Inventory</button></div>
-      <div id="notice" class="notice" aria-live="polite"></div>
-    </form>
-  </section>
+      <div id="notice" class="notice"></div>
+      <div class="actions"><button id="saveBtn" class="primary">Save Book</button><button id="resetBtn" class="secondary" type="button">Clear fields</button></div>
+      <div id="sameTitle" class="same-title" style="display:none"><strong>Other copies of this title</strong><div id="sameList" class="same-list"></div></div>
+      <div id="booksCloudBar" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin:12px 0;border:1px solid #dfe7df;border-radius:12px;background:#f7fbf7;font-size:12px"><strong id="booksCloudStatus">● Waiting for Supabase…</strong><button id="booksCloudRefresh" type="button" class="secondary" style="white-space:nowrap">↻ Refresh from Supabase</button></div>
+</section>
+    <aside class="variant-help"><div class="mini">HOW VARIANTS WORK</div><h2>Same title? Keep each copy separate.</h2><p>If you have 3 physical copies of the same book, save all 3 separately. Each one can have a different condition, price, description, and photo.</p><div class="example"><div><b>The Hunger Games</b></div><div>Copy 1</div><div>Copy 2</div><div>Copy 3</div><p style="margin:12px 0 0">Each copy keeps its own condition, price, description, and stock. Add Shop photos later when publishing.</p></div><div class="actions"><a href="inventory.html" class="secondary">Open Inventory</a></div></aside>
+  </div>
 </main>
-<footer class="site-footer">BookNest © 2026</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
-<script src="supabase-data.js"></script>
-<script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="supabase-data.js"></script>
 <script>
 (function(){
-  const $=id=>document.getElementById(id);
-  const read=()=>{try{return JSON.parse(localStorage.getItem('.books')||'[]')}catch{return[]}};
-  const notice=(text,ok)=>{const n=$('notice');n.textContent=text;n.className='notice show '+(ok?'ok':'err')};
-  const id=()=>`BK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-  async function saveBooks(books){
-    localStorage.setItem('.books',JSON.stringify(books));
-    if(!window.BookNestCloud?.enabled) return true;
-    try { return await window.BookNestCloud.save('.books',books); } catch(e){ console.error('[BookNest] add book cloud save failed',e); return false; }
-  }
-  $('addBookForm').addEventListener('submit',async e=>{
-    e.preventDefault();
-    const btn=$('saveBtn'); const title=$('title').value.trim(); const variant=$('variant').value.trim();
-    if(!title||!variant){notice('Please enter the book title and copy / variant.',false);return;}
-    btn.disabled=true;btn.textContent='Saving to Supabase…';
-    try{
-      if(window.BookNestCloud?.ready) await window.BookNestCloud.ready.catch(()=>{});
-      const books=read();
-      const item={id:id(),title:title.toUpperCase(),variant,author:$('author').value.trim().toUpperCase()||'UNKNOWN',genre:$('genre').value,price:Number($('price').value)||0,stock:Number($('stock').value)||0,type:$('type').value,condition:$('condition').value,box:$('box').value.trim(),shopVisible:false,layawayHolds:[],description:'',images:[],image:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-      books.push(item);
-      const ok=await saveBooks(books);
-      if(!ok){notice('The book was not confirmed by Supabase. Nothing was marked as complete. Please check the connection and try again.',false);return;}
-      notice('✓ Book saved to Inventory and Supabase.',true);
-      $('addBookForm').reset();$('stock').value='1';$('genre').value='Fiction';$('type').value='Paperback';$('condition').value='Pre Loved';
-    }finally{btn.disabled=false;btn.textContent='Save Book to Inventory';}
-  });
+ const $=id=>document.getElementById(id); const KEY='.books';
+ const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}};
+ const save=async books=>{localStorage.setItem(KEY,JSON.stringify(books));if(window.BookNestCloud?.enabled){try{return await window.BookNestCloud.save(KEY,books)}catch(e){console.error(e);return false}}return true};
+ const id=()=>`b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+ const show=(msg,ok=true)=>{const n=$('notice');n.textContent=msg;n.className='notice '+(ok?'ok':'err')};
+ const normalizeCondition=v=>String(v||'').toLowerCase()==='new'?'Brand New':(v||'Pre Loved');
+ const sameTitle=()=>{const title=$('title').value.trim().toUpperCase(); const box=$('sameTitle'); if(!box)return; const count=read().filter(b=>String(b.title||'').toUpperCase()===title).length; box.style.display=title&&count?'block':'none'; if(title&&count) box.innerHTML=`<strong>${count} other ${count===1?'copy':'copies'} of this title are already in Inventory.</strong><div class="actions"><a href="inventory.html" class="secondary">View Inventory</a></div>`};
+ ['title'].forEach(id=>$(id)?.addEventListener('input',sameTitle));
+ $('resetBtn').onclick=()=>{['title','variant','author','price','box','description'].forEach(x=>$(x).value='');$('stock').value='1';$('genre').value='Fiction';$('type').value='Paperback';$('condition').value='Pre Loved';$('sameTitle').style.display='none';$('notice').className='notice'};
+ $('saveBtn').onclick=async()=>{
+   if(window.BookNestCloud?.ready)await window.BookNestCloud.ready.catch(()=>{});
+   const title=$('title').value.trim(); if(!title)return show('Please enter the book title.',false);
+   const books=read();
+   const item={id:id(),title:title.toUpperCase(),variant:$('variant').value.trim()||'Copy 1',author:$('author').value.trim().toUpperCase()||'UNKNOWN',genre:$('genre').value,price:Number($('price').value)||0,stock:Number($('stock').value)||0,type:$('type').value,condition:normalizeCondition($('condition').value),box:$('box').value.trim(),shopVisible:false,layawayHolds:[],description:$('description').value.trim(),images:[]};
+   books.push(item);
+   const btn=$('saveBtn');btn.disabled=true;btn.textContent='Saving…';
+   const ok=await save(books);btn.disabled=false;btn.textContent='Save book';
+   show(ok?'✓ Book added to Inventory. You can add its photos when publishing it to the Shop.':'⚠ Book saved locally, but Supabase did not confirm it.',ok);
+   if(!ok)return;
+   $('variant').value='';$('price').value='';$('stock').value='1';$('box').value='';$('description').value='';sameTitle();
+ };
+ function setCloudStatus(ok){const e=$('booksCloudStatus');if(!e)return;e.textContent=ok?'● Supabase connected — Inventory is shared online':'● Supabase connection problem — changes may not be shared yet';e.style.color=ok?'#2c6b47':'#a32b22'}
+ $('booksCloudRefresh')?.addEventListener('click',async()=>{const b=$('booksCloudRefresh');b.disabled=true;b.textContent='Refreshing…';try{await window.BookNestCloud?.refresh?.();setCloudStatus(!!window.BookNestCloud?.lastSync?.ok)}finally{b.disabled=false;b.textContent='↻ Refresh from Supabase'}});
+ (async()=>{if(window.BookNestCloud?.ready)await window.BookNestCloud.ready.catch(()=>{});setCloudStatus(!!window.BookNestCloud?.lastSync?.ok)})();
 })();
 </script>
+<script src="mobile-enhancements.js"></script>
 </body></html>

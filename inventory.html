@@ -19,7 +19,6 @@
       </div>
       <nav class="nav">
         <a href="admin.html">Home</a>
-        <a href="add-books.html">➕ Add Book</a>
         <a class="active" href="inventory.html">Inventory &amp; Sales</a>
         <a href="receipt-history.html">Receipts</a>
         <a href="orders.html">🛒 Shop Orders</a>
@@ -157,8 +156,7 @@
             <h2>📚 Inventory</h2>
             <span class="muted">Click any cell to edit. Use <strong>Sold</strong> to record a sale.</span>
           </div>
-          <div class="panel-header-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-            <a href="add-books.html" class="btn primary">➕ Add Book</a>
+          <div class="panel-header-actions">
             <button class="btn danger" id="deleteAllBooksBtn" type="button">🗑 Delete All</button>
           </div>
         </div>
@@ -180,13 +178,13 @@
           </div>
         </div>
 
-        <!-- Book creation moved to Add Book page. Inventory is for managing existing books. -->
+        <!-- Book creation moved to Add Books page. Inventory is for managing existing books. -->
         <div class="inv-banner" style="margin-bottom:18px;">
           <div>
-            <div class="inv-banner-title">➕ Add / Create Book Variants</div>
-            <div class="inv-banner-sub">Manage your existing physical book copies, stock, prices, conditions, and variants.</div>
+            <div class="inv-banner-title">➕ Add a Book</div>
+            <div class="inv-banner-sub">Add a new physical book here. Existing books stay below in Inventory.</div>
           </div>
-          <a href="add-books.html" class="btn primary inv-banner-btn">Open Add Book →</a>
+          <a href="add-books.html" class="btn primary inv-banner-btn">Open Add Books →</a>
         </div>
 
         <div class="filters inv-filters">
@@ -550,5 +548,6 @@
     <script src="supabase-config.js"></script>
     <script src="supabase-data.js"></script>
     <script src="app.js"></script>
-  </body>
+  <script src="mobile-enhancements.js"></script>
+</body>
 </html>
