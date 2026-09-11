@@ -1620,125 +1620,20 @@ body:has(.inventory-page) table tbody tr:hover{background:#fffdf8;transform:tran
 /* Animated user-supplied BookNest status art: blended to the warm paper palette. */
 .bn-gif-blended{background:#F8F3E7;border-radius:12px;display:block;overflow:hidden;}
 
-/* ═══════════════════════════════════════════════════════════════
-   BookNest Responsive Mobile Refresh
-   Designed for phones first: no page-width overflow, readable data,
-   touch-friendly controls, and calmer transitions.
-   ═══════════════════════════════════════════════════════════════ */
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
-body{overflow-x:hidden;min-width:0;}
-img{max-width:100%;}
-button,input,select,textarea{max-width:100%;}
-
-/* Desktop tables stay tables; on small screens each row becomes a card. */
-@media (max-width: 680px){
-  .container{width:100%;padding:14px 12px 32px;gap:14px;box-sizing:border-box;}
-  .site-header{position:sticky;top:0;z-index:50;align-items:flex-start;box-sizing:border-box;}
-  .site-header .logo{width:100%;}
-  .logo-image{width:36px;height:36px;}
-  .nav{width:100%;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap!important;padding-bottom:3px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-  .nav::-webkit-scrollbar{display:none;}
-  .nav a{flex:0 0 auto;white-space:nowrap;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;}
-  .panel{padding:14px 13px;border-radius:16px;}
-  .panel-header{gap:10px;}
-  .panel-header-actions,.hero-actions,.modal-actions{width:100%;}
-  .panel-header-actions .btn,.hero-actions .btn,.modal-actions .btn{flex:1;min-width:0;}
-  .filters{grid-template-columns:1fr!important;gap:9px!important;}
-  .filters input,.filters select{width:100%!important;min-width:0!important;box-sizing:border-box;}
-  .sale-form,.form-grid,.sheet-row{grid-template-columns:1fr!important;}
-  .sheet-row{gap:9px;}
-  .btn{min-height:42px;padding:.68rem .85rem;font-size:.86rem;}
-  input,select,textarea{min-height:42px;font-size:16px!important;box-sizing:border-box;}
-  textarea{resize:vertical;}
-  .action-group{grid-template-columns:1fr 1fr;min-width:0;}
-  .action-btn{min-width:0;min-height:38px;padding:7px 8px;font-size:.78rem;}
-
-  /* General data tables: keep them readable through deliberate horizontal scrolling. */
-  .table-wrap{width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
-  .table-wrap table{min-width:650px;}
-  .table-wrap th,.table-wrap td{white-space:normal;word-break:break-word;vertical-align:top;line-height:1.35;}
-
-  /* Receipt history: convert to stacked cards so the user doesn't need to pinch/scroll. */
-  .receipt-history-wrap{overflow:visible;border:none;background:transparent;box-shadow:none;}
-  .receipt-history-table{display:block;min-width:0!important;table-layout:auto!important;}
-  .receipt-history-table thead{display:none;}
-  .receipt-history-table tbody{display:grid;gap:10px;}
-  .receipt-history-table tr{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:14px;background:var(--card-solid);overflow:hidden;box-shadow:0 7px 18px rgba(17,35,32,.07);}
-  .receipt-history-table td{display:flex;gap:8px;align-items:flex-start;padding:10px 11px;border-right:0!important;border-bottom:1px solid var(--line);min-width:0;}
-  .receipt-history-table td::before{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;flex:0 0 72px;}
-  .receipt-history-table td:nth-child(1)::before{content:'Date';}
-  .receipt-history-table td:nth-child(2)::before{content:'Receipt';}
-  .receipt-history-table td:nth-child(3)::before{content:'Customer';}
-  .receipt-history-table td:nth-child(4)::before{content:'Items';}
-  .receipt-history-table td:nth-child(5)::before{content:'Box';}
-  .receipt-history-table td:nth-child(6)::before{content:'Books';}
-  .receipt-history-table td:nth-child(7)::before{content:'Shipping';}
-  .receipt-history-table td:nth-child(8)::before{content:'Total';}
-  .receipt-history-table td:nth-child(9)::before{content:'Shipment';}
-  .receipt-history-table td:nth-child(10)::before{content:'Payment';}
-  .receipt-history-table td:nth-child(11)::before{content:'Actions';}
-  .receipt-history-table td:nth-child(11){grid-column:1/-1;border-bottom:0;display:grid;gap:7px;}
-  .receipt-history-table td:nth-child(11)::before{display:block;}
-  .receipt-history-table .rh-actions-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;}
-  .receipt-history-table .rc-btn{white-space:normal;min-height:38px;}
-
-  /* Inventory and seller tables: more useful phone view while preserving all fields. */
-  .inventory-wrap{overflow-x:auto;}
-  .inventory-table{min-width:760px!important;}
-  .inventory-table th,.inventory-table td{padding:9px 8px;font-size:.78rem;}
-
-  /* Receipt modal becomes a comfortable phone sheet. */
-  .bn-modal,.action-modal,.pc-modal{width:calc(100vw - 18px)!important;max-width:none!important;margin:auto;}
-  .bn-modal-inner{max-height:92vh;overflow:auto;}
-  .bn-modal-bar{gap:8px;flex-wrap:wrap;}
-  .bn-modal-bar>div{width:100%;display:grid!important;grid-template-columns:1fr 1fr 1fr;gap:6px!important;}
-  .bn-header{padding:18px 14px;}
-  .bn-header-left{min-width:0;}
-  .bn-logo-circle{width:52px;height:52px;flex:0 0 auto;}
-  .bn-title{font-size:25px;}
-  .bn-invoice-info{text-align:left;width:100%;}
-  .bn-warning-box,.bn-order-section,.bn-total-section,.bn-info-grid,.bn-note-wrap,.bn-photos-section,.bn-customer-readonly{margin-left:12px!important;margin-right:12px!important;}
-  .bn-order-section{overflow:hidden;}
-  .bn-table{min-width:700px;}
-  .bn-info-grid{display:grid;grid-template-columns:1fr;}
-  .bn-card{min-width:0!important;width:100%;box-sizing:border-box;padding:16px;}
-  .bn-total-section{padding:18px 14px;}
-  .bn-grand-total{font-size:26px;}
-  .bn-note-card{padding:16px;}
-  .bn-photos-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px;}
-
-  /* Buttons and controls never fall outside the viewport. */
-  .action-modal__actions{display:grid;grid-template-columns:1fr 1fr;}
-  .action-modal__actions .btn:last-child:nth-child(3){grid-column:1/-1;}
-  .pc-grid{grid-template-columns:1fr;}
-
-  /* Buyer shop cards. */
-  .buyer-main,.main,.shop-grid,.product-grid{width:100%;min-width:0;box-sizing:border-box;}
-  .product-grid,.shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+/* ── BookNest responsive/mobile polish ─────────────────────────────── */
+.bn-mobile-table-wrap{width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:14px;scrollbar-width:thin}
+.bn-mobile-table-wrap table{min-width:720px}
+@media(max-width:720px){
+  html{overflow-x:hidden} body{overflow-x:hidden} .site-header{padding:.75rem 3vw;gap:.65rem;align-items:flex-start;flex-wrap:wrap}.site-header .logo{flex:0 0 auto}.nav{width:100%;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:3px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}.nav a{flex:0 0 auto;font-size:.82rem;padding:.55rem .8rem;white-space:nowrap}.container{padding:1.2rem 3vw 3rem;gap:1rem}.panel{padding:1.15rem;border-radius:15px}.panel-header{align-items:flex-start}.panel-header-actions{width:100%}.panel-header-actions>*{max-width:100%}.btn,.actions button,.actions a{min-height:44px}.filters{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}.filters input,.filters select{min-width:0!important;width:100%!important}.table-wrap,.table-scroll,.inventory-table-wrap,.receipt-history-wrap{max-width:100%;overflow-x:auto!important;-webkit-overflow-scrolling:touch}.table-wrap table,.table-scroll table,.inventory-table-wrap table,.receipt-history-wrap table{min-width:760px}.bn-mobile-table-wrap{max-width:100%}.bn-mobile-table-wrap table{min-width:720px}.modal-backdrop{padding:10px}.edit-modal{max-height:94vh;padding:15px}.bn-modal{width:96vw!important;max-width:96vw!important;max-height:94vh!important}.bn-modal-inner{max-height:94vh}.bn-modal-bar{padding:.8rem 1rem}.bn-modal-bar>div{width:100%}.bn-modal-bar button{min-height:42px}.hero-card,.hero{width:100%}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.site-footer{padding:1rem 3vw}
+}
+@media(max-width:480px){
+  .site-header .logo span{font-size:1rem}.logo-image{width:34px;height:34px}.container{padding-left:2.5vw;padding-right:2.5vw}.panel{padding:.95rem}.panel-header h2{font-size:1.15rem}.bn-table{font-size:12px}.bn-table th,.bn-table td{padding:8px 9px}.stat-grid{grid-template-columns:1fr 1fr}.actions{width:100%}.actions>*{width:100%;text-align:center}.table-wrap,.table-scroll{border-radius:12px}
 }
 
-@media (max-width: 430px){
-  .container{padding-left:9px;padding-right:9px;}
-  .site-header{padding-left:9px!important;padding-right:9px!important;}
-  .nav a{font-size:.78rem;padding:.45rem .65rem;}
-  .panel{padding:12px 10px;}
-  .panel-header h2{font-size:1.08rem;}
-  .product-grid,.shop-grid{grid-template-columns:1fr!important;}
-  .receipt-history-table tr{grid-template-columns:1fr;}
-  .receipt-history-table td:nth-child(11){grid-column:auto;}
-  .receipt-history-table .rh-actions-grid{grid-template-columns:1fr 1fr!important;}
-  .bn-modal-bar>div{grid-template-columns:1fr 1fr;}
-  .bn-modal-bar>div .bn-btn-slate:last-child{grid-column:1/-1;}
-  .bn-warning-box,.bn-order-section,.bn-total-section,.bn-info-grid,.bn-note-wrap,.bn-photos-section,.bn-customer-readonly{margin-left:8px!important;margin-right:8px!important;}
-}
-
-/* Touch polish — do not make phone interactions feel like desktop hover menus. */
-@media (hover:none){
-  .btn:hover,.panel:hover,body:has(.shop-manager-page) .variant-card:hover,body:has(.inventory-page) table tbody tr:hover{transform:none;box-shadow:initial;}
-  .btn:active{transform:scale(.98);}
-}
-
-/* Respect reduced-motion preferences. */
-@media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+@media(max-width:720px){
+  .bn-mobile-table-wrap table{min-width:680px}
+  .bn-mobile-table-wrap{border:1px solid var(--line);background:var(--paper);box-shadow:0 6px 18px rgba(17,35,32,.06)}
+  .bn-mobile-table-wrap td,.bn-mobile-table-wrap th{white-space:normal;word-break:normal}
+  input,select,textarea{font-size:16px!important}
+  button,.btn{touch-action:manipulation}
 }

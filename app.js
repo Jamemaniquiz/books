@@ -1797,9 +1797,10 @@ const initInventory = () => {
   const normalizeCondition = (c) => {
     if (!c) return "Pre Loved";
     const s = String(c).toLowerCase().replace(/[-_\s]+/g,"");
-    if (s === "new") return "New";
+    if (s === "new" || s === "brandnew") return "Brand New";
     if (s === "preloved" || s === "used" || s === "good") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
+    if (s === "damaged" || s === "damage") return "Damaged";
     return "Pre Loved";
   };
 
@@ -1974,9 +1975,10 @@ const initInventory = () => {
   const matchCondition = (raw) => {
     const s = String(raw || "").toLowerCase().replace(/[-_\s]+/g, "");
     if (!s) return null;
-    if (s === "new") return "New";
+    if (s === "new" || s === "brandnew") return "Brand New";
     if (s === "preloved" || s === "used" || s === "good" || s === "secondhand") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
+    if (s === "damaged" || s === "damage") return "Damaged";
     return null;
   };
 
@@ -2945,7 +2947,6 @@ const initReceiptHistory = () => {
       const updated = setReceiptFlags(id, { shipped: !shipped });
       if (updated) {
         render();
-        // photo so a thank-you card can be sent to the buyer.
 
       }
     }
@@ -3186,9 +3187,141 @@ const renderShipmentControls = (receipt) => {
     };
   }
 
-
-
 };
+
+const openShipmentReviewModal = (receiptOrId) => {
+  const modal = document.getElementById("shipmentReviewModal");
+  if (!modal) return;
+  const receipt = typeof receiptOrId === "string"
+    ? getReceipts().find(r => r.id === receiptOrId)
+    : (getReceipts().find(r => r.id === receiptOrId.id) || receiptOrId);
+  if (!receipt) return;
+
+  const idLabel = document.getElementById("review-bn-id");
+  if (idLabel) idLabel.textContent = receipt.id;
+
+  const reviewText = document.getElementById("shipmentReviewText");
+  const photoInput = document.getElementById("shipmentReviewPhotos");
+  if (reviewText) reviewText.value = "";
+  if (photoInput) photoInput.value = "";
+
+  renderShipmentReviews(receipt);
+
+  const saveReviewBtn = document.getElementById("saveShipmentReviewBtn");
+  if (saveReviewBtn) {
+    saveReviewBtn.onclick = async () => {
+      await openShipmentReviewComposer(receipt);
+      const updated = getReceipts().find(r => r.id === receipt.id) || receipt;
+      renderShipmentReviews(updated);
+    };
+  }
+
+  modal.showModal();
+
+  const closeBtn = document.getElementById("closeShipmentReviewModal");
+  if (closeBtn) closeBtn.onclick = () => modal.close();
+};
+
+const openShipmentReviewComposer = async (receipt) => {
+  const text = document.getElementById("shipmentReviewText");
+  const photoInput = document.getElementById("shipmentReviewPhotos");
+  if (text) text.focus();
+  const files = Array.from(photoInput?.files || []).slice(0, MAX_SHIPMENT_REVIEW_PHOTOS);
+  const reviewText = text?.value.trim() || "";
+  if (!reviewText && files.length === 0) {
+    showNotice("Please add a note or at least one photo before saving the review.", "Nothing to save");
+    return;
+  }
+  const photos = [];
+  for (const file of files) {
+    try {
+      photos.push(await compressImageFile(file));
+    } catch {
+      // skip bad file
+    }
+  }
+  const receipts = getReceipts();
+  const idx = receipts.findIndex(r => r.id === receipt.id);
+  if (idx < 0) return;
+  receipts[idx].shipmentReviews = Array.isArray(receipts[idx].shipmentReviews) ? receipts[idx].shipmentReviews : [];
+  receipts[idx].shipmentReviews.push({
+    id: createId("rev"),
+    date: new Date().toISOString(),
+    text: reviewText,
+    photos,
+  });
+  saveReceipts(receipts);
+  showNotice("Shipment review saved.", "Saved");
+  const updated = receipts[idx];
+  renderShipmentReviews(updated);
+  text.value = "";
+  if (photoInput) photoInput.value = "";
+};
+
+const renderReceiptPhotosReadOnly = (receipt) => {
+  const photosSection = document.getElementById("view-bn-photos-section");
+  const photosGrid    = document.getElementById("view-bn-photos-grid");
+  if (!photosSection || !photosGrid) return;
+  const rawPhotos = Array.isArray(receipt.photos) ? receipt.photos : [];
+  const photos = rawPhotos.filter(isValidPhotoSrc);
+  console.log("[BookNest] rendering photos for receipt", receipt.id,
+    "— stored:", rawPhotos.length, "valid:", photos.length,
+    photos.length ? photos.map(p => p.slice(0, 30) + "...") : "(none)");
+
+  // Auto-repair: if some stored entries were corrupted/empty (e.g. from an earlier
+  // bug), quietly clean them out of storage so they don't keep showing as blank boxes.
+  if (rawPhotos.length !== photos.length) {
+    const receipts = getReceipts();
+    const idx = receipts.findIndex(r => r.id === receipt.id);
+    if (idx >= 0) {
+      receipts[idx].photos = photos;
+      saveReceipts(receipts);
+      console.log("[BookNest] auto-removed", rawPhotos.length - photos.length, "corrupted photo entr(y/ies) from receipt", receipt.id);
+    }
+  }
+
+  const headerEl = photosSection.querySelector(".bn-photos-header");
+  if (headerEl) headerEl.textContent = "📷 ITEM / SHIPPING PHOTOS";
+  if (photos.length > 0) {
+    photosGrid.innerHTML = photos.map((src, i) => `
+      <div class="bn-photo-cell" style="aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe;background:#e8f0fe;box-shadow:0 4px 12px rgba(15,23,42,0.08);">
+        <img src="${src}" alt="Receipt photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;"
+          onerror="this.parentElement.innerHTML='&lt;div style=&quot;display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:11px;color:#94a3b8;text-align:center;padding:4px;&quot;&gt;⚠ Photo unavailable&lt;/div&gt;'" />
+      </div>`
+    ).join("");
+    photosSection.style.display = "";
+  } else {
+    photosGrid.innerHTML = "";
+    photosSection.style.display = "none";
+  }
+};
+
+const MAX_RECEIPT_PHOTOS = 4;
+
+const compressImageFile = (file, maxDim = 900, quality = 0.75) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 
 // ── Receipt photos (editable, max 4) ────────────────────────────────────
 const renderReceiptPhotosEditable = (currentPhotos, onChange) => {

@@ -14,40 +14,6 @@
   const STORAGE_KEY = "bn_admin_password_hash";
   const SESSION_FLAG = "bn_admin_ok";
   const DEFAULT_PASSWORD = "booknest2026";
-
-  // Seller password sync: keeps the seller access password consistent across devices.
-  // This is still a client-side gate; production-grade security should eventually use Supabase Auth.
-  const CLOUD_URL = "https://ryyhsbkuukbctflcetcn.supabase.co";
-  const CLOUD_KEY = "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
-  const CLOUD_PASSWORD_KEY = ".seller_password_hash";
-
-  async function cloudGetPasswordHash() {
-    try {
-      const url = `${CLOUD_URL}/rest/v1/booknest_data?select=key,value&key=eq.${encodeURIComponent(CLOUD_PASSWORD_KEY)}`;
-      const res = await fetch(url, {headers:{apikey:CLOUD_KEY,Authorization:`Bearer ${CLOUD_KEY}`,Accept:"application/json"},cache:"no-store"});
-      if(!res.ok) return null;
-      const rows = await res.json();
-      return rows?.[0]?.value?.hash || null;
-    } catch(e) { console.warn("[BookNest] seller password cloud read failed", e); return null; }
-  }
-  async function cloudSetPasswordHash(hash) {
-    try {
-      const res = await fetch(`${CLOUD_URL}/rest/v1/booknest_data`, {
-        method:"POST",
-        headers:{apikey:CLOUD_KEY,Authorization:`Bearer ${CLOUD_KEY}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"},
-        body:JSON.stringify({key:CLOUD_PASSWORD_KEY,value:{hash,updatedAt:new Date().toISOString()},updated_at:new Date().toISOString()})
-      });
-      if(!res.ok){ const text=await res.text(); console.error("[BookNest] seller password cloud write failed",res.status,text); return false; }
-      return true;
-    } catch(e){ console.error("[BookNest] seller password cloud write failed",e); return false; }
-  }
-  async function hydrateSellerPassword() {
-    const cloud=await cloudGetPasswordHash();
-    if(cloud){ try{localStorage.setItem(STORAGE_KEY,cloud)}catch{}; return cloud; }
-    const local=getPasswordHash();
-    await cloudSetPasswordHash(local);
-    return local;
-  }
   
   // Simple hash function (NOT cryptographic - client-side deterrent only)
   function simpleHash(str) {
@@ -351,13 +317,12 @@
     const loginBtn = document.getElementById("bn-gate-login-btn");
     const errorDiv = document.getElementById("bn-gate-error");
 
-    async function attemptLogin() {
+    function attemptLogin() {
       const password = passwordInput.value;
       if (!password) {
         showError(errorDiv, "Enter your password");
         return;
       }
-      await hydrateSellerPassword();
       if (validatePassword(password)) {
         sessionStorage.setItem(SESSION_FLAG, "1");
         document.getElementById("bn-admin-gate").remove();
@@ -388,15 +353,15 @@
 
   // Global API for testing
   window.BN_Security = {
-    changePassword: async function(current, newPass, confirm) {
-      await hydrateSellerPassword();
+    changePassword: function(current, newPass, confirm) {
       if (!validatePassword(current)) return "Current password incorrect";
       if (newPass.length < 6) return "Password too short";
       if (newPass !== confirm) return "Passwords don't match";
       const newHash = simpleHash(newPass);
-      try { localStorage.setItem(STORAGE_KEY, newHash); } catch {}
-      const cloudOk = await cloudSetPasswordHash(newHash);
-      return cloudOk ? "Password changed" : "Password changed locally, but cloud confirmation failed";
+      localStorage.setItem(STORAGE_KEY, newHash);
+      // Force the current seller session to end so the new password is used immediately.
+      sessionStorage.removeItem(SESSION_FLAG);
+      return "Password changed";
     },
     logout: function() {
       sessionStorage.removeItem(SESSION_FLAG);
