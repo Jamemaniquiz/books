@@ -3,7 +3,7 @@
 // ============================================================
 (function () {
   "use strict";
-  const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbtflcetcn.supabase.co";
+  const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   const CLOUD_TABLE = "booknest_data";
   const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings"];
