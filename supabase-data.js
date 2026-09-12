@@ -6,21 +6,15 @@
   const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   const CLOUD_TABLE = "booknest_data";
-  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".cart_holds",".site_status",".buyer_accounts"];
+  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".cart_holds",".site_status",".buyer_accounts",".seller_password_hash"];
   // One-time clean-slate migration for this rebuilt BookNest release.
   // It only clears browser caches; the matching SQL reset file clears the
   // shared cloud snapshot. After this flag is recorded, future deploys do not
   // wipe newly entered books again.
-  const RESET_VERSION = "2026-09-11-clean-v5";
-  try {
-    if (localStorage.getItem("booknest_cloud_reset_version") !== RESET_VERSION) {
-      KEYS.forEach(key => localStorage.removeItem(key));
-      localStorage.setItem("booknest_cloud_reset_version", RESET_VERSION);
-      localStorage.removeItem("booknest_cloud_reset_warning_seen");
-    }
-  } catch (e) {
-    console.warn("[BookNest] clean-slate cache reset could not complete", e);
-  }
+  // IMPORTANT: Never clear application data automatically on a new deploy.
+  // Previous releases used a one-time clean-slate reset here, which could make
+  // locally cached receipts/books appear to disappear after an update.
+  // Existing data is preserved and migrated normally instead.
   const hasConfig = () => typeof window.supabase !== "undefined" && SUPABASE_URL.startsWith("https://") && !!SUPABASE_PUBLISHABLE_KEY;
   if (!hasConfig()) {
     window.BookNestCloud = {enabled:false, ready:Promise.resolve(false), save:async()=>false, pull:async()=>false, refresh:async()=>false, pushLocalData:async()=>false};

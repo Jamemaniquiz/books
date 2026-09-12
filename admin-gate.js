@@ -12,8 +12,11 @@
 (function () {
   // ── Configuration ──────────────────────────────────────────────────
   const STORAGE_KEY = "bn_admin_password_hash";
+  const CLOUD_KEY = ".seller_password_hash";
   const SESSION_FLAG = "bn_admin_ok";
   const DEFAULT_PASSWORD = "booknest2026";
+  const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
+  const SUPABASE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   
   // Simple hash function (NOT cryptographic - client-side deterrent only)
   function simpleHash(str) {
@@ -24,6 +27,38 @@
       hash = hash & hash;
     }
     return Math.abs(hash).toString(16);
+  }
+
+  async function sha256(str) {
+    const data = new TextEncoder().encode(str);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function getCloudPasswordHash() {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/booknest_data?key=eq.${encodeURIComponent(CLOUD_KEY)}&select=value`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+        cache: 'no-store'
+      });
+      if (!r.ok) return null;
+      const rows = await r.json();
+      const value = rows?.[0]?.value;
+      if (value && typeof value === 'object' && value.hash) return String(value.hash);
+      if (typeof value === 'string') return value;
+    } catch (e) { console.warn('[BookNest] seller password cloud read failed', e); }
+    return null;
+  }
+
+  async function saveCloudPasswordHash(hash) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/booknest_data?on_conflict=key`, {
+        method:'POST',
+        headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({key:CLOUD_KEY,value:{hash,updatedAt:new Date().toISOString()},updated_at:new Date().toISOString()})
+      });
+      return r.ok;
+    } catch(e) { console.warn('[BookNest] seller password cloud save failed',e); return false; }
   }
 
   // Check if already unlocked this session
@@ -42,10 +77,11 @@
   }
 
   // Validate password attempt
-  function validatePassword(attempt) {
+  async function validatePassword(attempt) {
+    const cloudHash = await getCloudPasswordHash();
+    if (cloudHash) return (await sha256(attempt)) === cloudHash || simpleHash(attempt) === cloudHash;
     const storedHash = getPasswordHash();
-    const attemptHash = simpleHash(attempt);
-    return attemptHash === storedHash;
+    return simpleHash(attempt) === storedHash || (await sha256(attempt)) === storedHash;
   }
 
   // Hide page until gate is resolved
@@ -317,13 +353,15 @@
     const loginBtn = document.getElementById("bn-gate-login-btn");
     const errorDiv = document.getElementById("bn-gate-error");
 
-    function attemptLogin() {
+    async function attemptLogin() {
       const password = passwordInput.value;
       if (!password) {
         showError(errorDiv, "Enter your password");
         return;
       }
-      if (validatePassword(password)) {
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Checking…';
+      if (await validatePassword(password)) {
         sessionStorage.setItem(SESSION_FLAG, "1");
         document.getElementById("bn-admin-gate").remove();
         const hideStyle = document.getElementById("bn-admin-gate-style");
@@ -334,6 +372,8 @@
         passwordInput.value = "";
         passwordInput.focus();
       }
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Open Seller Workspace →';
     }
 
     loginBtn.addEventListener("click", attemptLogin);
@@ -353,15 +393,17 @@
 
   // Global API for testing
   window.BN_Security = {
-    changePassword: function(current, newPass, confirm) {
-      if (!validatePassword(current)) return "Current password incorrect";
+    changePassword: async function(current, newPass, confirm) {
+      if (!(await validatePassword(current))) return "Current password incorrect";
       if (newPass.length < 6) return "Password too short";
       if (newPass !== confirm) return "Passwords don't match";
-      const newHash = simpleHash(newPass);
+      const newHash = await sha256(newPass);
       localStorage.setItem(STORAGE_KEY, newHash);
+      const saved = await saveCloudPasswordHash(newHash);
+      if (!saved) console.warn('[BookNest] seller password saved locally; cloud save failed');
       // Force the current seller session to end so the new password is used immediately.
       sessionStorage.removeItem(SESSION_FLAG);
-      return "Password changed";
+      return saved ? "Password changed" : "Password changed locally";
     },
     logout: function() {
       sessionStorage.removeItem(SESSION_FLAG);

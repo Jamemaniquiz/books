@@ -386,7 +386,7 @@
         if (accountBtn) accountBtn.addEventListener("click", () => document.getElementById("sellerAccount")?.scrollIntoView({behavior:"smooth", block:"center"}));
         document.getElementById("sellerLogoutBtn")?.addEventListener("click", logoutSeller);
         document.getElementById("sellerLogoutBtn2")?.addEventListener("click", logoutSeller);
-        document.getElementById("changeSellerPasswordBtn")?.addEventListener("click", () => {
+        document.getElementById("changeSellerPasswordBtn")?.addEventListener("click", async () => {
           const current = document.getElementById("currentSellerPassword").value;
           const next = document.getElementById("newSellerPassword").value;
           const confirm = document.getElementById("confirmSellerPassword").value;
@@ -394,8 +394,8 @@
           if (next.length < 6) return showAccountMessage("New password must be at least 6 characters.", "error");
           if (next !== confirm) return showAccountMessage("The new passwords do not match.", "error");
           if (!window.BN_Security || typeof BN_Security.changePassword !== "function") return showAccountMessage("Seller security is not ready. Please refresh the page.", "error");
-          const result = BN_Security.changePassword(current, next, confirm);
-          if (result !== "Password changed") return showAccountMessage(result, "error");
+          const result = await BN_Security.changePassword(current, next, confirm);
+          if (result !== "Password changed" && result !== "Password changed locally") return showAccountMessage(result, "error");
           document.getElementById("currentSellerPassword").value = "";
           document.getElementById("newSellerPassword").value = "";
           document.getElementById("confirmSellerPassword").value = "";

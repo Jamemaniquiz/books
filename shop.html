@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="performance.js" defer></script>
-<title>BookNest — Pre-loved Books</title>
+<title>BookNest — HATCH A NEW WORLD , 1 PAGE AT A TIME</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -2010,32 +2010,53 @@
       el('div',{class:'shop-title-block'},[
         el('div',{class:'eyebrow'},['BOOKNEST ACCOUNT']),
         el('h1',{},['Buyer Settings']),
-        el('p',{},['Manage your saved checkout details and account options.'])
+        el('p',{},['Manage your saved details and password.'])
       ])
     ]));
     let profile={};
     try{profile=JSON.parse(sessionStorage.getItem('booknest_buyer_profile')||'{}')||{};}catch(e){}
     const identity=getBuyerIdentity();
     const card=el('div',{class:'panel'},[]);
-    const grid=el('div',{class:'buyer-settings-grid'},[]);
-    [['Full name',profile.name||'Not set'],['Contact number',profile.contact||'Not set'],['Shipping address',profile.address||'Not set'],['Facebook',profile.facebook||'Not set'],['Account status',identity&&identity.type==='user'?'Logged-in account':'Guest session'],['Password','🔒 Protected by Supabase Auth']].forEach(([label,value])=>{
-      grid.appendChild(el('div',{style:'padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff;'},[
-        el('div',{class:'meta',style:'margin-bottom:5px;'},[label]),
-        el('div',{style:'font-weight:800;word-break:break-word;'},[value])
-      ]));
-    });
-    card.appendChild(grid);
-    const actions=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;'},[]);
     if(identity&&identity.type==='user'){
-      actions.appendChild(el('a',{class:'btn btn-outline',href:'buyer-login.html#reset'},['Forgot / Reset Password']));
+      const accounts=readLocal('.buyer_accounts',[])||[];
+      const account=accounts.find(a=>String(a.id)===String(identity.id)&&!a.deleted);
+      const form=el('div',{class:'buyer-settings-form'},[]);
+      const fields=[['Full name','buyer-name',account?.name||profile.name||'','text'],['Phone number','buyer-phone',account?.phone||profile.contact||'','tel'],['Shipping address','buyer-address',account?.address||profile.address||'','text'],['Facebook','buyer-facebook',account?.facebook||profile.facebook||'','text']];
+      fields.forEach(([label,id,val,type])=>form.appendChild(el('label',{class:'field'},[el('span',{},[label]),el('input',{id,type,value:val,autocomplete:id==='buyer-phone'?'tel':'off'})])));
+      const saveBtn=el('button',{class:'btn btn-primary',type:'button',onclick:async()=>{
+        const latest=readLocal('.buyer_accounts',[])||[]; const idx=latest.findIndex(a=>String(a.id)===String(identity.id)&&!a.deleted); if(idx<0)return showToast('Account not found.');
+        const phone=String($('buyer-phone')?.value||'').replace(/\D/g,'');
+        if(phone.length<10)return showToast('Please enter a valid phone number.');
+        const duplicate=latest.some((a,i)=>i!==idx&&!a.deleted&&String(a.phone||'').replace(/\D/g,'')===phone); if(duplicate)return showToast('That phone number is already used by another buyer.');
+        latest[idx]={...latest[idx],name:$('buyer-name').value.trim(),phone:$('buyer-phone').value.trim(),address:$('buyer-address').value.trim(),facebook:$('buyer-facebook').value.trim(),updatedAt:new Date().toISOString()};
+        localStorage.setItem('.buyer_accounts',JSON.stringify(latest));
+        try{await window.BookNestCloud?.save('.buyer_accounts',latest)}catch(e){}
+        sessionStorage.setItem('booknest_buyer_profile',JSON.stringify({name:latest[idx].name,contact:latest[idx].phone,address:latest[idx].address,facebook:latest[idx].facebook}));
+        showToast('✓ Account details saved');
+      }},['Save account details']);
+      form.appendChild(saveBtn);
+      const pw=el('div',{style:'margin-top:24px;padding-top:20px;border-top:1px solid var(--line);'},[
+        el('h3',{},['Change password']),
+        el('p',{class:'muted'},['You can change your password here. If you forget it later, contact the BookNest seller.'])
+      ]);
+      [['Current password','buyer-current-password'],['New password','buyer-new-password'],['Confirm new password','buyer-confirm-password']].forEach(([label,id])=>pw.appendChild(el('label',{class:'field'},[el('span',{},[label]),el('input',{id,type:'password',autocomplete:'new-password',placeholder:'At least 6 characters'})])));
+      pw.appendChild(el('button',{class:'btn btn-outline',type:'button',onclick:async()=>{
+        const cur=$('buyer-current-password').value,next=$('buyer-new-password').value,conf=$('buyer-confirm-password').value;
+        if(!cur||!next||!conf)return showToast('Complete all password fields.'); if(next.length<6)return showToast('New password must be at least 6 characters.'); if(next!==conf)return showToast('New passwords do not match.');
+        const latest=readLocal('.buyer_accounts',[])||[]; const idx=latest.findIndex(a=>String(a.id)===String(identity.id)&&!a.deleted); if(idx<0)return showToast('Account not found.');
+        const hash=async p=>{const d=new TextEncoder().encode(p),h=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('')};
+        const currentHash=await hash(cur); if(currentHash!==latest[idx].passwordHash)return showToast('Current password is incorrect.');
+        const nextHash=await hash(next); latest[idx]={...latest[idx],password:next,passwordHash:nextHash,passwordChangedAt:new Date().toISOString()}; localStorage.setItem('.buyer_accounts',JSON.stringify(latest));
+        try{await window.BookNestCloud?.save('.buyer_accounts',latest)}catch(e){}
+        $('buyer-current-password').value='';$('buyer-new-password').value='';$('buyer-confirm-password').value='';showToast('✓ Password changed successfully');
+      }},['Change password']));
+      form.appendChild(pw); card.appendChild(form);
     }else{
-      actions.appendChild(el('a',{class:'btn btn-primary',href:'buyer-login.html#login'},['Log In']));
-      actions.appendChild(el('a',{class:'btn btn-outline',href:'buyer-login.html#signup'},['Create Account']));
+      card.appendChild(el('p',{},['You are using a guest session. Create or log in to an account to edit saved buyer details.']));
+      card.appendChild(el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;'},[el('a',{class:'btn btn-primary',href:'buyer-login.html#login'},['Log In']),el('a',{class:'btn btn-outline',href:'buyer-login.html#signup'},['Create Account'])]));
     }
-    actions.appendChild(el('button',{class:'btn btn-outline',onclick:()=>setState({view:'shop'})},['Back to Shop']));
-    card.appendChild(actions);
-    wrap.appendChild(card);
-    return wrap;
+    card.appendChild(el('button',{class:'btn btn-outline',style:'margin-top:12px;',onclick:()=>setState({view:'shop'})},['Back to Shop']));
+    wrap.appendChild(card); return wrap;
   }
 
   function buildBuyerTopToolbar(){
@@ -2068,7 +2089,7 @@
     spine.appendChild(el('div',{class:'brand'},[
       el('img',{class:'brand-logo-image',src:'logo.png',alt:'BookNest'}),
       el('div',{class:'brand-mark'},['BookNest']),
-      el('div',{class:'brand-sub'},['PRE-LOVED BOOKS'])
+      el('div',{class:'brand-sub'},['HATCH A NEW WORLD , 1 PAGE AT A TIME'])
     ]));
     spine.appendChild(navItem('shop','Shop'));
     spine.appendChild(navItem('cart','Cart', cartCount()||null));
@@ -2154,7 +2175,7 @@
       el('div',{class:'shop-brand-mark'},[el('img',{src:'logo.png',alt:'BookNest logo',style:'width:58px;height:58px;object-fit:contain;background:#fff;border-radius:12px;padding:5px;'})]),
       el('div',{},[
         el('strong',{},['BookNest']),
-        el('span',{},['Pre-loved books • New books • Layaway available'])
+        el('span',{},['HATCH A NEW WORLD , 1 PAGE AT A TIME'])
       ])
     ]);
 
