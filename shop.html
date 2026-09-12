@@ -475,7 +475,7 @@
     body.sidebar-collapsed .spine{width:100%;}
     .sidebar-toggle,.sidebar-socials{display:none;}
     .app{ flex-direction:column; }
-    .buyer-top-toolbar{display:flex;position:sticky;top:0;z-index:45;gap:7px;overflow-x:auto;padding:9px 12px;background:rgba(255,252,246,.97);border-bottom:1px solid var(--line);box-shadow:0 4px 16px rgba(45,35,20,.08);scrollbar-width:none;}
+    .buyer-top-toolbar{display:flex;position:sticky;top:0;z-index:120;gap:7px;overflow-x:auto;padding:9px 12px;background:rgba(255,252,246,.97);border-bottom:1px solid var(--line);box-shadow:0 4px 16px rgba(45,35,20,.08);scrollbar-width:none;}
     .buyer-top-toolbar::-webkit-scrollbar{display:none;}
     .buyer-top-toolbar button{flex:0 0 auto;}
 
@@ -701,7 +701,7 @@
 @media (max-width: 760px){
   html,body{width:100%;overflow-x:hidden;}
   .app{display:block;min-height:100vh;}
-  .spine{position:sticky;top:0;left:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:none;display:block;padding:10px 10px 8px;z-index:100;overflow:visible;}
+  .spine{position:relative;top:auto;left:auto;bottom:auto;width:100%;height:auto;min-height:0;max-height:none;display:block;padding:10px 10px 8px;z-index:100;overflow:visible;}
   .spine::after{display:none;}
   .brand{display:flex;align-items:center;gap:10px;padding:4px 6px 10px;margin:0 0 8px;border-bottom:1px solid rgba(255,255,255,.14);}
   .brand-logo-image{width:42px;height:42px;margin:0;border-radius:9px;}

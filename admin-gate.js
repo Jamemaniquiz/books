@@ -78,27 +78,8 @@
 
   // Validate password attempt
   async function validatePassword(attempt) {
-    attempt = String(attempt || '').trim();
     const cloudHash = await getCloudPasswordHash();
-
-    // Normal cloud password check.
-    if (cloudHash) {
-      if ((await sha256(attempt)) === cloudHash || simpleHash(attempt) === cloudHash) return true;
-
-      // One-time recovery for installations that still contain an old/stale
-      // cloud hash. This makes the documented initial password work again.
-      // Once the seller changes the password, the new cloud hash replaces this.
-      if (attempt === DEFAULT_PASSWORD) {
-        const defaultHash = await sha256(DEFAULT_PASSWORD);
-        const repaired = await saveCloudPasswordHash(defaultHash);
-        if (repaired) {
-          localStorage.setItem(STORAGE_KEY, defaultHash);
-          return true;
-        }
-      }
-      return false;
-    }
-
+    if (cloudHash) return (await sha256(attempt)) === cloudHash || simpleHash(attempt) === cloudHash;
     const storedHash = getPasswordHash();
     return simpleHash(attempt) === storedHash || (await sha256(attempt)) === storedHash;
   }

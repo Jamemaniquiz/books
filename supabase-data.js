@@ -92,6 +92,7 @@
     }
   };
   const queues = new Map();
+  const remoteCache = new Map();
   async function rawSave(key,value){
     const cloudValue=await encodeCloudValue(key,value);
     const body={key,value:cloudValue,updated_at:new Date().toISOString()};
@@ -99,6 +100,7 @@
     console.log(`[BookNest] Supabase save ${key}: ${(approxBytes/1024).toFixed(0)} KB`);
     const {error}=await client.from(CLOUD_TABLE).upsert(body,{onConflict:'key'});
     if(error){ console.error(`[BookNest] Supabase save failed for ${key}:`,error); throw error; }
+    remoteCache.set(key, value);
     return true;
   }
   function save(key,value){
@@ -153,6 +155,7 @@
       for(const key of wanted){
         if(Object.prototype.hasOwnProperty.call(byKey,key)){
           const decoded=await decodeCloudValue(byKey[key].value);
+          remoteCache.set(key, decoded);
           writeLocal(key,decoded);
         } else localStorage.removeItem(key);
       }
@@ -173,6 +176,24 @@
     }
     return false;
   }
+  async function read(keys=PAGE_KEYS){
+    const wanted=(keys&&keys.length?keys:PAGE_KEYS).filter(k=>KEYS.includes(k));
+    if(!wanted.length) return {};
+    const rows=await getCloudRows(wanted);
+    const byKey=Object.fromEntries(rows.map(r=>[r.key,r]));
+    const out={};
+    for(const key of wanted){
+      if(Object.prototype.hasOwnProperty.call(byKey,key)){
+        const decoded=await decodeCloudValue(byKey[key].value);
+        remoteCache.set(key,decoded);
+        out[key]=decoded;
+      }
+    }
+    return out;
+  }
+  const getCached = key => remoteCache.has(key) ? remoteCache.get(key) : undefined;
+  const cacheValues = values => { for(const [key,value] of Object.entries(values||{})) if(KEYS.includes(key)) remoteCache.set(key,value); };
+
   async function pushLocalData(){
     const rows=[]; for(const key of KEYS){const local=readLocal(key);if(local!==null) rows.push(save(key,local));} await Promise.all(rows); return true;
   }
@@ -190,5 +211,5 @@
   }catch(e){
     console.warn('[BookNest] Realtime subscription unavailable.',e);
   }
-  window.BookNestCloud={enabled:true,client,ready:PAGE_KEYS.length?pullWithRetry(PAGE_KEYS):Promise.resolve(true),save,pull:pullWithRetry,refresh:pullWithRetry,pushLocalData,lastSync:null};
+  window.BookNestCloud={enabled:true,client,ready:PAGE_KEYS.length?pullWithRetry(PAGE_KEYS):Promise.resolve(true),save,pull:pullWithRetry,refresh:pullWithRetry,read,getCached,cacheValues,pushLocalData,lastSync:null};
 })();
