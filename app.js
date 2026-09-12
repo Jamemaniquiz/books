@@ -4008,35 +4008,118 @@ const backupData = async () => {
   }
 };
 
-const restoreData = (file) => {
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!Array.isArray(data.books) || !Array.isArray(data.sales)) {
-        showNotice("Invalid backup file.", "Restore Failed");
-        return;
-      }
-      const { confirmed } = await openActionDialog({
-        title: "Restore backup?",
-        message: "This will replace all current data on this computer. Continue?",
-        confirmText: "Restore",
-        cancelText: "Cancel",
-        iconText: "!",
-      });
-      if (!confirmed) return;
-      saveBooks(data.books);
-      saveSales(data.sales);
-      saveReceipts(Array.isArray(data.receipts) ? data.receipts : []);
-      savePurchases(Array.isArray(data.purchases) ? data.purchases : []);
-      if (typeof data.eodCheck === "string" && data.eodCheck) {
-        localStorage.setItem(".eod_check", data.eodCheck);
-      }
-      await showNotice("Data restored successfully.", "Restore Complete");
-      location.reload();
-    } catch { showNotice("Could not read backup file.", "Restore Failed"); }
+const restoreData = async (file) => {
+  // Restore is deliberately merge-based and cloud-confirmed. Older versions
+  // wrote to localStorage only and could be overwritten by the realtime pull.
+  // This version parses the backup, merges records by stable id, writes local
+  // cache first, then explicitly awaits every cloud save before refreshing.
+  const readBackup = async (f) => {
+    const name = String(f?.name || '').toLowerCase();
+    const raw = await f.arrayBuffer();
+    let text;
+    if (name.endsWith('.gz')) {
+      if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot open .gz backups. Use the normal .json backup.');
+      const ds = new DecompressionStream('gzip');
+      text = await new Response(new Blob([raw]).stream().pipeThrough(ds)).text();
+    } else {
+      text = new TextDecoder().decode(raw);
+    }
+    return JSON.parse(text);
   };
-  reader.readAsText(file);
+
+  try {
+    const data = await readBackup(file);
+    if (!data || !Array.isArray(data.books) || !Array.isArray(data.sales)) {
+      await showNotice('Invalid BookNest backup file.', 'Restore Failed');
+      return;
+    }
+
+    const { confirmed } = await openActionDialog({
+      title: 'Restore backup?',
+      message:
+        'This will MERGE the backup into your current BookNest data. Existing records are kept and matching IDs are updated from the backup. Nothing will be cleared.',
+      confirmText: 'Restore & Save',
+      cancelText: 'Cancel',
+      iconText: '✓',
+    });
+    if (!confirmed) return;
+
+    const mergeById = (current, incoming) => {
+      const result = Array.isArray(current) ? [...current] : [];
+      const index = new Map(result.map((item, i) => [String(item?.id ?? ''), i]));
+      for (const item of (Array.isArray(incoming) ? incoming : [])) {
+        const id = item?.id == null ? '' : String(item.id);
+        if (id && index.has(id)) result[index.get(id)] = item;
+        else { index.set(id || `__new_${result.length}`, result.length); result.push(item); }
+      }
+      return result;
+    };
+
+    const merged = {
+      books: mergeById(getBooks(), data.books),
+      sales: mergeById(getSales(), data.sales),
+      receipts: mergeById(getReceipts(), Array.isArray(data.receipts) ? data.receipts : []),
+      purchases: mergeById(getPurchases(), Array.isArray(data.purchases) ? data.purchases : []),
+    };
+
+    // Update the local cache immediately so the UI can render restored data.
+    const localOk = [
+      setData(STORAGE_KEYS.books, merged.books),
+      setData(STORAGE_KEYS.sales, merged.sales),
+      setData(STORAGE_KEYS.receipts, merged.receipts),
+      setData(STORAGE_KEYS.purchases, merged.purchases),
+    ].every(Boolean);
+    if (!localOk) throw new Error('Could not write the restored data to this browser.');
+
+    if (typeof data.eodCheck === 'string' && data.eodCheck) {
+      localStorage.setItem('.eod_check', data.eodCheck);
+    }
+
+    // CRITICAL: explicitly await cloud persistence. setData() mirrors saves in
+    // the background, so awaiting it is not sufficient. We write again here
+    // and wait for the promises to settle before allowing a reload/realtime pull.
+    const cloud = window.BookNestCloud;
+    if (cloud?.enabled && typeof cloud.save === 'function') {
+      const saves = [
+        cloud.save(STORAGE_KEYS.books, merged.books),
+        cloud.save(STORAGE_KEYS.sales, merged.sales),
+        cloud.save(STORAGE_KEYS.receipts, merged.receipts),
+        cloud.save(STORAGE_KEYS.purchases, merged.purchases),
+      ];
+      await Promise.all(saves);
+
+      // Verify the most important restored dataset by reading it back from the
+      // cloud before reloading. This prevents a false-success restore message.
+      if (typeof cloud.pull === 'function') {
+        const verified = await cloud.pull([STORAGE_KEYS.receipts, STORAGE_KEYS.sales]);
+        if (!verified) throw new Error('Supabase did not confirm the restored receipts.');
+      }
+      const savedReceipts = getReceipts();
+      const expectedIds = new Set((Array.isArray(data.receipts) ? data.receipts : []).map(r => String(r?.id || '')).filter(Boolean));
+      const savedIds = new Set(savedReceipts.map(r => String(r?.id || '')).filter(Boolean));
+      const missing = [...expectedIds].filter(id => !savedIds.has(id));
+      if (missing.length) throw new Error(`${missing.length} receipt record(s) were not confirmed after saving.`);
+    }
+
+    await showNotice(
+      `Restore completed and saved successfully.\n\n` +
+      `Books in current data: ${merged.books.length}\n` +
+      `Sales in current data: ${merged.sales.length}\n` +
+      `Receipts in current data: ${merged.receipts.length}\n` +
+      `Purchases in current data: ${merged.purchases.length}`,
+      'Restore Complete'
+    );
+    location.reload();
+  } catch (err) {
+    console.error('[BookNest] restore failed:', err);
+    await showNotice(
+      `RESTORE FAILED — nothing was intentionally cleared.\n\n${String(err?.message || err)}\n\nKeep your backup file safe and try again after checking the Supabase connection.`,
+      'Restore Failed'
+    );
+  } finally {
+    const input = document.getElementById('restoreInput');
+    if (input) input.value = '';
+  }
 };
 
 // ── End of Day Summary ────────────────────────────────────────────────────────

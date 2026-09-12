@@ -18,7 +18,7 @@
   const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
   const SUPABASE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   
-  // Legacy hash retained for compatibility with older BookNest password records.
+  // Simple hash function (NOT cryptographic - client-side deterrent only)
   function simpleHash(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -78,12 +78,27 @@
 
   // Validate password attempt
   async function validatePassword(attempt) {
-    // BookNest default seller access must remain usable even if an older
-    // deployment left an incompatible/corrupt password hash in the cloud.
-    // The default is also used as the recovery/master access password.
-    if (attempt === DEFAULT_PASSWORD) return true;
+    attempt = String(attempt || '').trim();
     const cloudHash = await getCloudPasswordHash();
-    if (cloudHash) return (await sha256(attempt)) === cloudHash || simpleHash(attempt) === cloudHash;
+
+    // Normal cloud password check.
+    if (cloudHash) {
+      if ((await sha256(attempt)) === cloudHash || simpleHash(attempt) === cloudHash) return true;
+
+      // One-time recovery for installations that still contain an old/stale
+      // cloud hash. This makes the documented initial password work again.
+      // Once the seller changes the password, the new cloud hash replaces this.
+      if (attempt === DEFAULT_PASSWORD) {
+        const defaultHash = await sha256(DEFAULT_PASSWORD);
+        const repaired = await saveCloudPasswordHash(defaultHash);
+        if (repaired) {
+          localStorage.setItem(STORAGE_KEY, defaultHash);
+          return true;
+        }
+      }
+      return false;
+    }
+
     const storedHash = getPasswordHash();
     return simpleHash(attempt) === storedHash || (await sha256(attempt)) === storedHash;
   }
