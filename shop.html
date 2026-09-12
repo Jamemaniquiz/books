@@ -825,6 +825,75 @@
   .shelf-row .card{flex-basis:180px;}
   .main{padding-left:9px;padding-right:9px;}
 }
+
+/* Final mobile buyer navigation cleanup */
+@media (max-width: 760px){
+  html,body{overflow-x:hidden;}
+  .app{display:block;min-height:100vh;}
+  /* Do not keep the hidden desktop sidebar in the mobile layout. */
+  .buyer-spine{display:none!important;width:0!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important;}
+  /* Mobile buyer navigation: fixed, not sticky, so it remains visible even while
+     scrolling long product/cart/settings pages on iPhone Safari. */
+  .buyer-top-toolbar{
+    display:flex!important;
+    position:fixed!important;
+    top:0!important;
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    z-index:99999!important;
+    box-sizing:border-box;
+    gap:4px!important;
+    padding:7px 8px calc(7px + env(safe-area-inset-top))!important;
+    margin:0!important;
+    overflow:hidden!important;
+    background:rgba(248,243,231,.99)!important;
+    border-bottom:1px solid var(--line)!important;
+    box-shadow:0 4px 14px rgba(38,33,26,.14)!important;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+  }
+  /* Keep the first page content below the fixed navigation instead of hiding it. */
+  .buyer-top-toolbar + .main{
+    padding-top:70px!important;
+  }
+  .buyer-top-toolbar button,.buyer-top-toolbar .toolbar-link{
+    flex:1 1 0!important;
+    min-width:0!important;
+    height:42px;
+    padding:5px 2px!important;
+    border-radius:10px!important;
+    justify-content:center!important;
+    font-size:10px!important;
+    line-height:1.1!important;
+    white-space:nowrap!important;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .buyer-top-toolbar .toolbar-badge{min-width:16px;height:16px;padding:0 4px;font-size:9px;margin-left:2px;}
+  .buyer-top-toolbar .toolbar-link{display:inline-flex!important;}
+  .cart-toast{display:none!important;}
+  .main,body.sidebar-collapsed .main{margin-left:0!important;padding:14px 10px 28px!important;width:100%!important;}
+  .shop-page{width:100%;max-width:none;}
+  .shop-main-head{margin-top:4px!important;}
+  .shop-controls{border-radius:14px!important;padding:9px!important;gap:8px!important;}
+  .shop-search{min-width:0!important;flex-basis:100%!important;height:44px!important;}
+  .genre-filter-wrap{width:100%!important;}
+  .all-products-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;}
+  .all-products-grid .card{min-width:0;border-radius:12px!important;}
+  .all-products-grid .cover{height:240px!important;}
+  .card-body{padding:9px!important;}
+  .card-actions{gap:5px!important;}
+  .card-actions .btn{font-size:11px!important;padding:8px 6px!important;}
+  .cart-limit-note{margin:0 0 12px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--paper-light);font-size:11px;line-height:1.4;color:var(--ink-soft);}
+  .cart-limit-note strong{color:var(--spine-dark);}
+}
+@media (max-width:420px){
+  .buyer-top-toolbar + .main{padding-top:68px!important;}
+  .buyer-top-toolbar button,.buyer-top-toolbar .toolbar-link{font-size:9px!important;height:40px;}
+  .all-products-grid{grid-template-columns:1fr!important;}
+  .all-products-grid .cover{height:300px!important;}
+}
 </style>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
@@ -897,13 +966,57 @@
   function loadOrders(){ return readLocal(ORDERS_KEY, []); }
   function loadListings(){ return readLocal(SHOP_LISTINGS_KEY, []); }
   function buildShopBooks(books, listings){
-    const byId = new Map((books||[]).map(b=>[String(b.id), b]));
-    return (listings||[]).filter(l=>{
-      const source=byId.get(String(l.sourceBookId));
-      return source && !l.archived && Math.max(0,Number(source.stock)||0)>0;
+    const sourceBooks = Array.isArray(books) ? books : [];
+    const byId = new Map(sourceBooks.map(b=>[String(b.id), b]));
+    let liveListings = Array.isArray(listings) ? listings.filter(Boolean) : [];
+
+    // RECOVERY: if the shared Shop-listing snapshot is missing/empty, rebuild the
+    // storefront from Inventory records that the seller has explicitly published
+    // online. This prevents a cloud/local-cache mismatch from making a real Shop
+    // with published books appear completely empty.
+    if(!liveListings.length){
+      liveListings = sourceBooks
+        .filter(b=>b && b.shopVisible === true && Math.max(0, Number(b.stock)||0) > 0)
+        .map(b=>({
+          id:'RECOVERED-'+String(b.id),
+          sourceBookId:b.id,
+          title:b.title||'Untitled',
+          author:b.author||'',
+          genre:b.genre||'General',
+          price:Number(b.price)||0,
+          type:b.type||'Paperback',
+          condition:b.condition||'Pre Loved',
+          variant:b.variant||'',
+          shopStock:Math.max(1, Number(b.stock)||1),
+          images:Array.isArray(b.images)&&b.images.length?b.images:(b.image?[b.image]:[]),
+          description:b.description||'',
+          sections:Array.isArray(b.sections)?b.sections:[],
+          promo:!!b.promo
+        }));
+    }
+
+    // The storefront is driven by the seller's ONLINE listings, not by a fragile
+    // requirement that the Inventory record still exists or has the same stock.
+    // If the source exists, merge its latest details; otherwise keep the listing's
+    // own saved details so one stale ID cannot make the whole shop disappear.
+    return liveListings.filter(l=>{
+      if(!l || l.archived) return false;
+      return Math.max(0, Number(l.shopStock ?? l.stock ?? 0)) > 0;
     }).map(l=>{
       const source=byId.get(String(l.sourceBookId));
-      return {...source,...l,id:l.id,shopListingId:l.id,sourceBookId:source.id,stock:1,shopStock:1,shopVisible:true,sections:Array.isArray(l.sections)?l.sections:[],promo:!!l.promo};
+      const merged = source ? {...source,...l} : {...l};
+      const listingStock=Math.max(0, Number(l.shopStock ?? l.stock ?? 0));
+      return {...merged,
+        id:l.id,
+        shopListingId:l.id,
+        sourceBookId:l.sourceBookId || source?.id || l.id,
+        stock:listingStock,
+        shopStock:listingStock,
+        shopVisible:true,
+        sections:Array.isArray(l.sections)?l.sections:[],
+        promo:!!l.promo,
+        images:Array.isArray(l.images)&&l.images.length?l.images:(Array.isArray(source?.images)?source.images:source?.image?[source.image]:[])
+      };
     });
   }
 
@@ -983,6 +1096,10 @@
 
   const uid = (p) => p + Math.random().toString(36).slice(2,9);
   const peso = (n) => 'PHP ' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  // Buyers may keep a maximum of 3 books in the cart at one time.
+  // This counts quantities, so 3 copies of one title also uses all 3 slots.
+  const MAX_CART_ITEMS = 3;
 
   function loadCartSession(){
     try{ return JSON.parse(sessionStorage.getItem('booknest_cart')||'{}') || {}; }catch(e){ return {}; }
@@ -1103,7 +1220,61 @@
   }
 
   // ---------- cart logic ----------
-  function cartCount(){ return Object.values(state.cart).reduce((a,b)=>a+b,0); }
+  function cartCount(){
+    // Always return a real number. Older/local storage records can contain
+    // string quantities, and using + directly can turn 1 + "1" into "11".
+    return Object.values(state.cart||{}).reduce((total,qty)=>total + Math.max(0, Number(qty)||0),0);
+  }
+
+  // A real modal (instead of a state toast) is used for the 3-book limit.
+  // This is intentionally DOM-only so attempting a 4th book NEVER triggers
+  // a full app render. The previous version could repaint the entire shop
+  // while the click handler was still running, which made the storefront
+  // appear to go down on some mobile browsers.
+  function showCartLimitDialog(){
+    const existing=document.getElementById('bn-cart-limit-dialog');
+    if(existing) return;
+    const backdrop=document.createElement('div');
+    backdrop.id='bn-cart-limit-dialog';
+    backdrop.className='modal-backdrop bn-cart-limit-backdrop';
+    backdrop.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(20,28,22,.62);box-sizing:border-box;';
+    const modal=document.createElement('div');
+    modal.className='modal bn-cart-limit-modal';
+    modal.style.cssText='width:min(430px,calc(100vw - 28px));max-width:430px;background:var(--paper,#fffdf7);border:1px solid var(--line,#ddd2bb);border-radius:18px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.28);box-sizing:border-box;';
+    modal.innerHTML=`
+      <div style="font-size:34px;text-align:center;margin-bottom:8px;">🛒</div>
+      <h2 style="margin:0 0 8px;text-align:center;color:var(--ink,#24352b);">3-book limit reached</h2>
+      <p style="margin:0 0 16px;text-align:center;line-height:1.55;color:var(--ink-soft,#625d53);font-size:14px;">
+        You can only add <strong>3 books at a time</strong> here.
+      </p>
+      <div style="background:#f8f0df;border:1px solid #dfcda9;border-radius:12px;padding:13px 14px;line-height:1.55;font-size:13px;color:#514632;">
+        If you want to buy <strong>4 or more books</strong>, kindly contact our page and send a screenshot of the books you want to buy. Our admin will assist you.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px;">
+        <button type="button" class="btn btn-primary" data-cart-limit-cart style="justify-content:center;">🛒 View Cart</button>
+        <button type="button" class="btn btn-primary" data-cart-limit-checkout style="justify-content:center;">💳 Checkout</button>
+        <a class="btn btn-outline" href="${BOOKNEST_FACEBOOK_URL}" target="_blank" rel="noopener noreferrer" style="justify-content:center;text-decoration:none;">Facebook</a>
+        <a class="btn btn-outline" href="${BOOKNEST_TIKTOK_URL}" target="_blank" rel="noopener noreferrer" style="justify-content:center;text-decoration:none;">TikTok</a>
+      </div>
+      <button type="button" class="btn" data-close-cart-limit style="width:100%;justify-content:center;margin-top:9px;">Back to shopping</button>
+    `;
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    const close=()=>backdrop.remove();
+    modal.querySelector('[data-close-cart-limit]').addEventListener('click',close);
+    modal.querySelector('[data-cart-limit-cart]').addEventListener('click',()=>{
+      close();
+      setState({view:'cart'});
+    });
+    modal.querySelector('[data-cart-limit-checkout]').addEventListener('click',()=>{
+      close();
+      openCheckoutConfirm();
+    });
+    backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
+    document.addEventListener('keydown',function esc(e){
+      if(e.key==='Escape'){close();document.removeEventListener('keydown',esc);}
+    },{once:true});
+  }
   function cartItems(){
     return Object.entries(state.cart).map(([id,qty])=>{
       const book = state.shopBooks.find(b=>b.id===id);
@@ -1116,6 +1287,15 @@
     const book = state.shopBooks.find(b=>String(b.id)===String(id));
     if(!book) return;
     const current=Number(state.cart[id]||0);
+
+    // Hard cart limit: never allow the buyer to exceed 3 total books.
+    // Do NOT call setState/showToast here: the limit dialog must not repaint
+    // the whole storefront while the add-to-cart click is being processed.
+    if(cartCount() >= MAX_CART_ITEMS){
+      showCartLimitDialog();
+      return;
+    }
+
     const freshHolds=activeHolds();
     const available=availableForBuyer(book);
     if(current>=available){
@@ -1130,20 +1310,27 @@
     if(existing){ existing.qty=Number(existing.qty||0)+1; existing.expiresAt=expiresAt; }
     else holds.push({id:uid('hold-'),listingId:book.id,sourceBookId:book.sourceBookId,qty:1,buyerId,expiresAt,createdAt:new Date().toISOString()});
     saveHolds(holds);
-    // Save to cloud in the background so the button feels instant on phones.
     if(window.BookNestCloud?.enabled) saveCloudNow(CART_HOLDS_KEY,holds);
     const wasEmpty=cartCount()===0;
     const startedAt=wasEmpty?now:(state.cartStartedAt||now);
     const nextCart={...state.cart,[book.id]:current+1};
     persistCartSession(nextCart,startedAt);
-    const msg='✓ Added to cart · 1 hour to checkout';
+    const msg='✓ Added to cart · '+(cartCount()+1)+' / '+MAX_CART_ITEMS+' books';
     setState({cart:nextCart,cartStartedAt:startedAt,toast:msg});
   }
 
   function setCartQty(id, qty){
     const book = state.shopBooks.find(b=>String(b.id)===String(id));
     const current=Number(state.cart[id]||0);
-    qty = Math.max(0, Math.min(qty, book?Number(book.shopStock ?? book.stock ?? qty):qty));
+    const stockMax = book ? Number(book.shopStock ?? book.stock ?? qty) : qty;
+    const otherCartCount = cartCount() - current;
+    const maxAllowed = Math.max(0, Math.min(stockMax, MAX_CART_ITEMS - otherCartCount));
+    const requested = Number.isFinite(Number(qty)) ? Number(qty) : current;
+    if(requested > maxAllowed && requested > current && cartCount() >= MAX_CART_ITEMS){
+      showCartLimitDialog();
+      return;
+    }
+    qty = Math.max(0, Math.min(requested, maxAllowed));
     if(qty===current) return;
     if(qty>current){
       for(let n=current;n<qty;n++) addToCart(id);
@@ -1156,6 +1343,7 @@
     persistCartSession(next,nowEmpty?null:state.cartStartedAt);
     setState({cart:next,cartStartedAt:nowEmpty?null:state.cartStartedAt});
   }
+
   function releaseHoldQty(id, qty){
     const me=currentBuyerHoldId();
     const holds=activeHolds();
@@ -1669,8 +1857,14 @@
       panel.appendChild(el('div',{class:'meta', id:'cart-countdown', style:'margin-bottom:10px; padding:8px 10px; background:var(--paper-light); border-radius:6px;'},
         [formatCartCountdown()]));
     }
+    panel.appendChild(el('div',{class:'cart-limit-note'},[
+      el('strong',{},['Cart: '+cartCount()+' / '+MAX_CART_ITEMS+' books']),
+      ' — only 3 books can be added at a time. Remove an item or checkout to add more.'
+    ]));
     items.forEach(item=>{
       const avail = availableStock(item) + item.qty; // qty already reserved in cart counts toward what THIS buyer can hold
+      const otherCartCount = cartCount() - Number(item.qty||0);
+      const qtyMax = Math.max(1, Math.min(avail, MAX_CART_ITEMS - otherCartCount));
       const row = el('div',{class:'cart-row'});
       row.appendChild(coverEl(item,'mini-cover'));
       const info = el('div',{},[
@@ -1679,7 +1873,7 @@
       ]);
       row.appendChild(info);
       row.appendChild(el('div',{class:'meta'},[item.box?('📦 '+item.box):'']));
-      const qtyInput = el('input',{class:'qty-input', type:'number', min:'1', max:String(avail), value:String(item.qty)});
+      const qtyInput = el('input',{class:'qty-input', type:'number', min:'1', max:String(qtyMax), value:String(item.qty)});
       qtyInput.addEventListener('change', e=>setCartQty(item.id, parseInt(e.target.value||'1',10)));
       row.appendChild(qtyInput);
       row.appendChild(el('div',{style:'font-weight:600;'},[peso(item.price*item.qty)]));

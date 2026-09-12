@@ -183,7 +183,12 @@
         if(Object.prototype.hasOwnProperty.call(byKey,key)){
           const decoded=await decodeCloudValue(byKey[key].value);
           writeLocal(key,decoded);
-        } else localStorage.removeItem(key);
+        } else {
+          // Do not destroy a valid browser cache just because a cloud row is
+          // temporarily missing. Pages such as Shop can recover from the local
+          // published catalog and re-sync it later.
+          console.warn('[BookNest] Cloud row missing; preserving local cache for',key);
+        }
       }
       window.BookNestCloud.lastSync={ok:true,at:new Date().toISOString(),keys:rows.map(r=>r.key)};
       window.dispatchEvent(new CustomEvent('booknest-cloud-ready',{detail:{ok:true,keys:rows.map(r=>r.key)}}));

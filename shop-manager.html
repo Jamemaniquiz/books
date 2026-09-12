@@ -270,21 +270,29 @@
   }
   books=read(BOOKS_KEY);
   listings=read(LISTINGS_KEY);
-  // One-time cleanup requested by the seller: remove every existing storefront
-  // listing, but keep Inventory untouched. New listings can be published normally.
-  const SHOP_CLEAR_VERSION='2026-09-12-shop-clear-v1';
-  let shopWasCleared=false;
-  try{ shopWasCleared=localStorage.getItem('booknest_shop_clear_version')===SHOP_CLEAR_VERSION; }catch(e){}
-  if(!shopWasCleared){
-    listings=[];
+  // IMPORTANT: never clear the seller's online Shop during startup.
+  // A previous release used a one-time clear migration here; that unexpectedly
+  // deleted the storefront listings from both the browser and Supabase. Startup
+  // must only read/repair data, never wipe it.
+  listings=read(LISTINGS_KEY);
+
+  // Recovery for a Shop snapshot that was accidentally emptied by that old
+  // migration: if Inventory contains in-stock books and there are no online
+  // listings, rebuild the online list from those physical Inventory records.
+  // This is only done when the Shop list is empty, so an existing seller-curated
+  // Shop is never overwritten.
+  if(!listings.length && books.some(b=>Math.max(0,Number(b?.stock)||0)>0)){
+    const now=new Date().toISOString();
+    listings=books.filter(b=>Math.max(0,Number(b?.stock)||0)>0).map(b=>({
+      id:makeId(), sourceBookId:b.id, title:b.title||'Untitled', author:b.author||'',
+      genre:b.genre||'General', price:Number(b.price)||0, type:b.type||'Paperback',
+      condition:b.condition||'Pre Loved', variant:b.variant||'', shopStock:Math.max(1,Math.min(Number(b.stock)||1,1)),
+      images:imagesOf(b).slice(0,8), description:b.description||'', sections:[], promo:false,
+      updatedAt:now, createdAt:now
+    }));
     saveLocal(LISTINGS_KEY,listings);
     if(window.BookNestCloud?.enabled) await saveCloud(LISTINGS_KEY,listings);
-    try{localStorage.setItem('booknest_shop_clear_version',SHOP_CLEAR_VERSION)}catch(e){}
   }
-  // Do not automatically repopulate the Shop from Inventory. Inventory stays
-  // intact; the seller chooses which books to publish.
-
-  listings=read(LISTINGS_KEY);
 
   // HARD RULE: every Inventory row is a separate physical entity.
   // Older versions could accidentally create duplicate IDs. Repair them here
