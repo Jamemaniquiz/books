@@ -4013,96 +4013,28 @@ const restoreData = (file) => {
   reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      if (!data || !Array.isArray(data.books) || !Array.isArray(data.sales)) {
-        showNotice("Invalid BookNest backup file.", "Restore Failed");
+      if (!Array.isArray(data.books) || !Array.isArray(data.sales)) {
+        showNotice("Invalid backup file.", "Restore Failed");
         return;
       }
-
-      // Restore is intentionally MERGE-based. This brings back records that are
-      // missing from the current device without deleting newer books, receipts,
-      // orders, or buyer data. Records with the same ID are kept from the current
-      // device so a restore cannot overwrite newer edits.
-      const mergeById = (current, incoming) => {
-        const out = Array.isArray(current) ? [...current] : [];
-        const seen = new Set(out.map(x => x && x.id).filter(Boolean));
-        for (const item of (Array.isArray(incoming) ? incoming : [])) {
-          if (!item || typeof item !== "object") continue;
-          if (item.id && seen.has(item.id)) continue;
-          out.push(item);
-          if (item.id) seen.add(item.id);
-        }
-        return out;
-      };
-
-      const currentBooks = getBooks();
-      const currentSales = getSales();
-      const currentReceipts = getReceipts();
-      const currentPurchases = getPurchases();
-
-      const mergedBooks = mergeById(currentBooks, data.books);
-      const mergedSales = mergeById(currentSales, data.sales);
-      const mergedReceipts = mergeById(currentReceipts, data.receipts);
-      const mergedPurchases = mergeById(currentPurchases, data.purchases);
-
-      const incomingCounts =
-        `Books: ${Math.max(0, mergedBooks.length - currentBooks.length)} new\n` +
-        `Sales: ${Math.max(0, mergedSales.length - currentSales.length)} new\n` +
-        `Receipts: ${Math.max(0, mergedReceipts.length - currentReceipts.length)} new\n` +
-        `Purchases: ${Math.max(0, mergedPurchases.length - currentPurchases.length)} new`;
-
       const { confirmed } = await openActionDialog({
         title: "Restore backup?",
-        message:
-          "This will MERGE the backup into your current BookNest data. " +
-          "Nothing currently on this device will be deleted or replaced.\n\n" +
-          incomingCounts,
-        confirmText: "Restore & Merge",
+        message: "This will replace all current data on this computer. Continue?",
+        confirmText: "Restore",
         cancelText: "Cancel",
-        iconText: "⬆",
+        iconText: "!",
       });
       if (!confirmed) return;
-
-      // Write locally first so the UI is immediately restored.
-      saveBooks(mergedBooks);
-      saveSales(mergedSales);
-      saveReceipts(mergedReceipts);
-      savePurchases(mergedPurchases);
-
+      saveBooks(data.books);
+      saveSales(data.sales);
+      saveReceipts(Array.isArray(data.receipts) ? data.receipts : []);
+      savePurchases(Array.isArray(data.purchases) ? data.purchases : []);
       if (typeof data.eodCheck === "string" && data.eodCheck) {
         localStorage.setItem(".eod_check", data.eodCheck);
       }
-
-      // Wait for the cloud writes. The previous implementation only fired these
-      // saves in the background, so a realtime pull could race the restore and
-      // put the old cloud snapshot back into localStorage.
-      if (window.BookNestCloud?.enabled) {
-        try {
-          await Promise.all([
-            window.BookNestCloud.save(".books", mergedBooks),
-            window.BookNestCloud.save(".sales", mergedSales),
-            window.BookNestCloud.save(".receipts", mergedReceipts),
-            window.BookNestCloud.save(".purchases", mergedPurchases),
-          ]);
-        } catch (cloudErr) {
-          console.error("[BookNest] Restore cloud sync failed:", cloudErr);
-          await showNotice(
-            "The backup was restored on this device, but cloud sync failed. " +
-            "Do not clear this browser. Check your Supabase connection before trying again.",
-            "Restore Partially Complete"
-          );
-          return;
-        }
-      }
-
-      await showNotice(
-        "Backup restored successfully. Your previous receipts and other records were merged without deleting your current data.",
-        "Restore Complete"
-      );
+      await showNotice("Data restored successfully.", "Restore Complete");
       location.reload();
-    } catch (err) {
-      console.error("[BookNest] Restore failed:", err);
-      showNotice("Could not read or restore this backup file.", "Restore Failed");
-    }
+    } catch { showNotice("Could not read backup file.", "Restore Failed"); }
   };
   reader.readAsText(file);
 };
