@@ -65,8 +65,15 @@
 <script>
 (function(){
  const $=id=>document.getElementById(id); const KEY='.books';
- const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}};
- const save=async books=>{localStorage.setItem(KEY,JSON.stringify(books));if(window.BookNestCloud?.enabled){try{return await window.BookNestCloud.save(KEY,books)}catch(e){console.error(e);return false}}return true};
+ const read=()=>{try{const raw=localStorage.getItem(KEY);if(raw!=null)return JSON.parse(raw)||[]}catch(e){}return window.__BookNestCloudCache?.[KEY]||[]};
+ const save=async books=>{
+   window.__BookNestCloudCache=window.__BookNestCloudCache||{};
+   window.__BookNestCloudCache[KEY]=books;
+   try{localStorage.setItem(KEY,JSON.stringify(books))}
+   catch(e){console.warn('[BookNest] localStorage full; using cloud/in-memory cache for books.',e);try{localStorage.removeItem(KEY)}catch(_){}}
+   if(window.BookNestCloud?.enabled){try{return await window.BookNestCloud.save(KEY,books)}catch(e){console.error(e);return false}}
+   return true;
+ };
  const id=()=>`b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
  const show=(msg,ok=true)=>{const n=$('notice');n.textContent=msg;n.className='notice '+(ok?'ok':'err')};
  const normalizeCondition=v=>String(v||'').toLowerCase()==='new'?'Brand New':(v||'Pre Loved');

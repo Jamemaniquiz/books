@@ -69,32 +69,31 @@ const sampleSales = [
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
 const getData    = (key, fallback) => {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
-  try { return JSON.parse(raw); } catch { return fallback; }
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  const cached = window.__BookNestCloudCache?.[key];
+  return cached != null ? cached : fallback;
 };
-const setData    = (key, value) => {
+const setData = (key, value) => {
+  // Always keep the synchronous in-memory copy. This prevents photo-heavy
+  // mobile sessions from breaking when localStorage reaches its quota.
+  window.__BookNestCloudCache = window.__BookNestCloudCache || {};
+  window.__BookNestCloudCache[key] = value;
   try {
     localStorage.setItem(key, JSON.stringify(value));
-    // Keep the existing synchronous API for the app, but mirror every save
-    // to Supabase in the background. The local cache is updated immediately.
-    if (window.BookNestCloud?.enabled) {
-      window.BookNestCloud.save(key, value).catch(err =>
-        console.error('[BookNest] Cloud save failed for', key, err)
-      );
-    }
-    return true;
-  } catch (err) {
-    console.error("[BookNest] setData failed for", key, err);
-    if (typeof showNotice === "function") {
-      showNotice(
-        "Could not save — your browser's storage is full (this often happens after adding several photos). " +
-        "Try removing a photo, deleting old receipts, or downloading a backup and clearing some data.",
-        "Save Failed"
-      );
-    }
-    return false;
+  } catch (e) {
+    console.warn("[BookNest] localStorage full; using cloud/in-memory cache for", key, e);
+    try { localStorage.removeItem(key); } catch {}
   }
+  // Supabase is the persistent/shared source when available.
+  if (window.BookNestCloud?.enabled) {
+    window.BookNestCloud.save(key, value).catch(err =>
+      console.error('[BookNest] Cloud save failed for', key, err)
+    );
+  }
+  return true;
 };
 
 const getBooks    = ()         => getData(STORAGE_KEYS.books,    []).map(b => ({
@@ -1331,11 +1330,32 @@ const ensurePhotoLightbox = () => {
       <img class="photo-lightbox__img" style="width:100%;border-radius:12px;display:block;" />
     </div>
     <div class="action-modal__actions">
+      <button class="btn modal-ghost" data-action="download" type="button">⬇ Download photo</button>
       <button class="btn modal-primary" data-action="close" type="button">Close</button>
     </div>
   `;
   document.body.appendChild(dialog);
   dialog.querySelector("[data-action='close']").addEventListener("click", () => dialog.close());
+  dialog.querySelector("[data-action='download']").addEventListener("click", async () => {
+    const img = dialog.querySelector(".photo-lightbox__img");
+    const src = img?.src || "";
+    if (!src) return;
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `BookNest_photo_${new Date().toISOString().slice(0,10)}.jpg`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e) {
+      // data: URLs can be downloaded directly when fetch is unavailable.
+      const a = document.createElement("a");
+      a.href = src; a.download = `BookNest_photo_${Date.now()}.jpg`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+  });
   photoLightbox = dialog;
   return dialog;
 };
@@ -3356,30 +3376,38 @@ const renderReceiptPhotosReadOnly = (receipt) => {
 
 const MAX_RECEIPT_PHOTOS = 4;
 
-const compressImageFile = (file, maxDim = 900, quality = 0.75) =>
+const compressImageFile = (file, maxDim = 900, quality = 0.72) =>
   new Promise((resolve, reject) => {
+    if (!file || !String(file.type || '').startsWith('image/')) { reject(new Error('Please choose an image file.')); return; }
     const reader = new FileReader();
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error('Could not read the selected image.'));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = reject;
+      img.onerror = () => reject(new Error('Could not decode the selected image.'));
       img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          const ratio = Math.min(maxDim / width, maxDim / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        try {
+          let { width, height } = img;
+          const ratio = Math.min(1, maxDim / Math.max(width, height));
+          width = Math.max(1, Math.round(width * ratio));
+          height = Math.max(1, Math.round(height * ratio));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d", { alpha: false });
+          if (!ctx) throw new Error('Canvas unavailable');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } catch (err) { reject(err); }
       };
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+window.BookNestCompressImage = window.BookNestCompressImage || compressImageFile;
 
 // ── Receipt photos (editable, max 4) ────────────────────────────────────
 const renderReceiptPhotosEditable = (currentPhotos, onChange) => {

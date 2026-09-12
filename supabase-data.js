@@ -51,8 +51,33 @@
     };
     reader.readAsDataURL(file);
   });
-  const readLocal = key => { try { const raw=localStorage.getItem(key); return raw==null?null:JSON.parse(raw); } catch(e){ return null; } };
-  const writeLocal = (key,value) => { try { localStorage.setItem(key,JSON.stringify(value)); return true; } catch(e){ console.warn("[BookNest] cache write failed",key,e); return false; } };
+  // Mobile browsers have a small localStorage quota. Photo-heavy Shop/Inventory
+  // data can exceed it even when Supabase has plenty of room. Keep an in-memory
+  // cache as a safe fallback so a successful cloud sync is never reported as a
+  // browser-save failure.
+  window.__BookNestCloudCache = window.__BookNestCloudCache || {};
+  const readLocal = key => {
+    try {
+      const raw=localStorage.getItem(key);
+      if(raw!=null) return JSON.parse(raw);
+    } catch(e) { console.warn("[BookNest] local cache read failed",key,e); }
+    return Object.prototype.hasOwnProperty.call(window.__BookNestCloudCache,key)
+      ? window.__BookNestCloudCache[key] : null;
+  };
+  const writeLocal = (key,value) => {
+    window.__BookNestCloudCache[key]=value;
+    try {
+      localStorage.setItem(key,JSON.stringify(value));
+      return true;
+    } catch(e) {
+      // QuotaExceededError is expected on photo-heavy mobile sessions. The
+      // cloud copy remains authoritative, and the in-memory copy keeps the
+      // current page working without a misleading "could not save" dialog.
+      console.warn("[BookNest] local cache full; using cloud/in-memory cache for",key,e);
+      try { localStorage.removeItem(key); } catch {}
+      return true;
+    }
+  };
 
   // Mobile-safe cloud snapshots: .books can contain many base64 photos. Store that
   // one dataset gzip-compressed inside JSONB, while keeping the browser-side value
