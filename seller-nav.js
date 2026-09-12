@@ -12,42 +12,105 @@
     'buyers.html': 'buyers.html'
   };
   const active = activeMap[file] || '';
+
+  const NAV_ITEMS = [
+    ['🏠', 'Dashboard', 'admin.html'],
+    ['📚', 'Inventory & Sales', 'inventory.html'],
+    ['➕', 'Add Books', 'add-books.html'],
+    ['🛍️', 'Add to Shop', 'shop-manager.html'],
+    ['🧾', 'Receipts', 'receipt-history.html'],
+    ['🛒', 'Shop Orders', 'orders.html'],
+    ['👤', 'Buyers', 'buyers.html']
+  ];
+
   function init() {
-    document.querySelectorAll('.site-header .nav').forEach(nav => {
-      const sellerAccount = document.getElementById('sellerAccountBtn');
-      const sellerLogout = document.getElementById('sellerLogoutBtn');
-      [...nav.children].forEach(child => {
-        if (child !== sellerAccount && child !== sellerLogout) child.remove();
-      });
-      const items = [
-        ['Home', 'admin.html'],
-        ['Inventory & Sales', 'inventory.html'],
-        ['Add Books', 'add-books.html'],
-        ['Add to Shop', 'shop-manager.html'],
-        ['Receipts', 'receipt-history.html'],
-        ['🛒 Shop Orders', 'orders.html'],
-        ['👤 Buyers', 'buyers.html']
-      ];
-      const fragment = document.createDocumentFragment();
-      items.forEach(([label, href]) => {
-        const a = document.createElement('a');
-        a.href = href;
-        a.textContent = label;
-        a.dataset.sellerNav = '1';
-        if (href === active) a.classList.add('active');
-        fragment.appendChild(a);
-      });
-      const view = document.createElement('a');
-      view.href = 'shop.html';
-      view.textContent = '🛒 View Shop';
-      view.dataset.sellerNav = '1';
-      view.classList.add('nav-view-shop');
-      fragment.appendChild(view);
-      if (sellerAccount) fragment.appendChild(sellerAccount);
-      if (sellerLogout) fragment.appendChild(sellerLogout);
-      nav.appendChild(fragment);
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+
+    const mainEl = document.querySelector('main');
+    if (!mainEl) return;
+
+    // Reuse the existing DOM nodes (don't recreate) so any listeners
+    // already bound to these ids elsewhere keep working.
+    const sellerAccount = document.getElementById('sellerAccountBtn');
+    const sellerLogout = document.getElementById('sellerLogoutBtn');
+    const logoImg = header.querySelector('.logo-image');
+    const logoSrc = (logoImg && logoImg.getAttribute('src')) || 'logo.png';
+
+    const spine = document.createElement('div');
+    spine.className = 'spine';
+
+    const brand = document.createElement('a');
+    brand.className = 'brand';
+    brand.href = 'admin.html';
+    brand.innerHTML =
+      '<img class="brand-logo-image" src="' + logoSrc + '" alt="BookNest logo">' +
+      '<div><div class="brand-mark">BookNest</div><div class="brand-sub">SELLER CENTER</div></div>';
+    spine.appendChild(brand);
+
+    const navList = document.createElement('nav');
+    navList.className = 'spine-nav';
+    NAV_ITEMS.forEach(([icon, label, href]) => {
+      const a = document.createElement('a');
+      a.href = href;
+      a.className = 'nav-item' + (href === active ? ' active' : '');
+      a.innerHTML = '<span class="nav-icon">' + icon + '</span><span class="nav-label">' + label + '</span>';
+      navList.appendChild(a);
     });
+    spine.appendChild(navList);
+
+    const viewShop = document.createElement('a');
+    viewShop.href = 'shop.html';
+    viewShop.className = 'nav-item spine-view-shop';
+    viewShop.innerHTML = '<span class="nav-icon">🔎</span><span class="nav-label">View Shop</span>';
+    spine.appendChild(viewShop);
+
+    const footerActions = document.createElement('div');
+    footerActions.className = 'spine-footer-actions';
+    if (sellerAccount) footerActions.appendChild(sellerAccount);
+    if (sellerLogout) footerActions.appendChild(sellerLogout);
+    if (footerActions.children.length) spine.appendChild(footerActions);
+
+    const copyright = document.createElement('div');
+    copyright.className = 'spine-copyright';
+    copyright.textContent = '© ' + new Date().getFullYear() + ' BookNest';
+    spine.appendChild(copyright);
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'sidebar-toggle seller-sidebar-toggle';
+    toggle.setAttribute('aria-label', 'Toggle menu');
+    toggle.innerHTML = '☰';
+    toggle.addEventListener('click', () => document.body.classList.toggle('seller-sidebar-open'));
+
+    const app = document.createElement('div');
+    app.className = 'seller-app';
+
+    const mainWrap = document.createElement('div');
+    mainWrap.className = 'seller-main';
+
+    const topbar = document.createElement('div');
+    topbar.className = 'seller-topbar';
+    const topbarBrand = document.createElement('div');
+    topbarBrand.className = 'seller-topbar-brand';
+    topbarBrand.innerHTML = '<img src="' + logoSrc + '" alt="BookNest logo"><span>BookNest</span>';
+    topbar.appendChild(toggle);
+    topbar.appendChild(topbarBrand);
+
+    mainEl.parentNode.insertBefore(app, mainEl);
+    mainWrap.appendChild(topbar);
+    mainWrap.appendChild(mainEl);
+    app.appendChild(spine);
+    app.appendChild(mainWrap);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'seller-sidebar-overlay';
+    overlay.addEventListener('click', () => document.body.classList.remove('seller-sidebar-open'));
+    app.appendChild(overlay);
+
+    header.remove();
   }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

@@ -1,47 +1,153 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="performance.js" defer></script><title>Buyer Login & Sign Up — BookNest</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="supabase-data.js"></script><script src="site-status.js"></script><style>:root{--paper:#f8f3e7;--ink:#26211a;--muted:#665f52;--green:#35493c;--brick:#a8402a;--line:#d9cdb2}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;font-family:Inter,sans-serif;background:linear-gradient(150deg,#35493c,#263329)}.box{width:min(480px,100%);background:var(--paper);border-radius:24px;padding:32px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.brand{text-align:center}.brand img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:18px;padding:6px}.brand h1{font:600 30px Fraunces,serif;color:#263329;margin:12px 0 3px}.sub{font-size:11px;letter-spacing:.12em;color:var(--muted)}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:25px 0 18px}.tabs button{padding:12px;border:1px solid var(--line);background:#fffaf0;border-radius:999px;font-weight:800;cursor:pointer}.tabs button.active{background:var(--green);color:#fff}.field{margin:11px 0}.field label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}.field input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font:inherit;background:#fff}.btn{width:100%;padding:13px;border:0;border-radius:999px;background:var(--brick);color:#fff;font-weight:800;cursor:pointer;margin-top:10px}.guest{background:transparent;color:var(--green);border:1px solid var(--line)}.msg{min-height:22px;font-size:12px;margin:12px 0;color:var(--muted);line-height:1.5}.links{text-align:center;margin-top:15px}.links a{color:var(--green);font-weight:700;font-size:12px;text-decoration:none}</style><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-</head><body><div class="box"><div class="brand"><img src="logo.png" alt="BookNest logo"><h1>BookNest</h1><div class="sub">BUYER ACCOUNT</div><div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4">New here? Create your buyer account below. You can also continue as a guest.</div></div><div class="tabs"><button id="loginTab" class="active">Log In</button><button id="signupTab">Sign Up</button></div><div id="loginForm"><div id="normalLogin"><div class="field"><label>Phone number</label><input id="loginEmail" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password"></div><button class="btn" id="loginBtn">Log In</button><button class="btn guest" id="forgotBtn" type="button">Forgot Password</button></div></div><div id="signupForm" style="display:none"><div class="field"><label>Full name</label><input id="signupName" type="text" autocomplete="name" placeholder="Juan Dela Cruz"></div><div class="field"><label>Phone number</label><input id="signupPhone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX"></div><div class="field"><label>Complete shipping address</label><input id="signupAddress" type="text" autocomplete="street-address" placeholder="House / Street / Barangay / City / Province"></div><div class="field"><label>Facebook (optional)</label><input id="signupFacebook" type="text" autocomplete="url" placeholder="Facebook profile name or link"></div><div class="field"><label>Password</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div><button class="btn" id="signupBtn">Create Account</button></div><div class="msg" id="msg"></div><button class="btn guest" id="guestBtn">Continue as Guest</button><div class="links"><a href="index.html">← Back to BookNest</a></div><script>
-const FB_URL='https://www.facebook.com/profile.php?id=61573580501585';
-const TT_URL='https://www.tiktok.com/@booknest123';
+</head><body><div class="box"><div class="brand"><img src="logo.png" alt="BookNest logo"><h1>BookNest</h1><div class="sub">BUYER ACCOUNT</div><div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4">New here? Create your buyer account below. You can also continue as a guest.</div></div><div class="tabs"><button id="loginTab" class="active">Log In</button><button id="signupTab">Sign Up</button></div><div id="loginForm"><div id="resetForm" style="display:none"></div><div id="normalLogin"><div class="field"><label>Phone number</label><input id="loginPhone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password"></div><button class="btn" id="loginBtn">Log In</button></div></div><div id="signupForm" style="display:none"><div class="field"><label>Full name</label><input id="signupName" type="text" autocomplete="name" placeholder="Juan Dela Cruz"></div><div class="field"><label>Phone number</label><input id="signupPhone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX"></div><div class="field"><label>Complete shipping address</label><input id="signupAddress" type="text" autocomplete="street-address" placeholder="House / Street / Barangay / City / Province"></div><div class="field"><label>Facebook (optional)</label><input id="signupFacebook" type="text" autocomplete="url" placeholder="Facebook profile name or link"></div><div class="field"><label>Password</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div><button class="btn" id="signupBtn">Create Account</button></div><div class="msg" id="msg"></div><button class="btn guest" id="guestBtn">Continue as Guest</button><div class="links"><a href="index.html">← Back to BookNest</a></div><script>
+const client=window.supabase.createClient(window.BOOKNEST_SUPABASE_URL,window.BOOKNEST_SUPABASE_ANON_KEY,{auth:{persistSession:true}});
+function normalizePhone(v){let p=String(v||'').replace(/[^0-9+]/g,'');if(p.startsWith('09')) p='+63'+p.slice(1);else if(p.startsWith('63')) p='+'+p;return p;}
+const BOOKNEST_FACEBOOK_URL='https://www.facebook.com/profile.php?id=61573580501585';
+const BOOKNEST_TIKTOK_URL='https://vt.tiktok.com/ZS9S9VtagFvAL-RcE8b/';
 const $=id=>document.getElementById(id);
-function msg(t){$('msg').innerHTML=t}
+async function hashPassword(value){
+  const data=new TextEncoder().encode(String(value||''));
+  const digest=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function loadBuyerAccounts(){
+  try{
+    const raw=localStorage.getItem('.buyer_accounts');
+    const local=raw?JSON.parse(raw):{};
+    if(local && Object.keys(local).length) return local;
+  }catch(e){}
+  try{
+    const {data,error}=await client.from('booknest_data').select('value').eq('key','.buyer_accounts').maybeSingle();
+    if(error) throw error;
+    const accounts=(data&&data.value&&typeof data.value==='object')?data.value:{};
+    localStorage.setItem('.buyer_accounts',JSON.stringify(accounts));
+    return accounts;
+  }catch(e){
+    console.error('[BookNest] Could not load buyer accounts:',e);
+    return {};
+  }
+}
+function deletedPhone(phone){
+  const normalized=normalizePhone(phone);
+  try{
+    const raw=localStorage.getItem('.deleted_buyers');
+    const deleted=raw?JSON.parse(raw):[];
+    return Array.isArray(deleted) && deleted.some(x=>normalizePhone(x?.phone||x?.normalizedPhone||x?.key||'')===normalized);
+  }catch(e){return false;}
+}
+
+function msg(t){$('msg').textContent=t}
 function tab(sign){$('loginForm').style.display=sign?'none':'';$('signupForm').style.display=sign?'':'none';$('loginTab').classList.toggle('active',!sign);$('signupTab').classList.toggle('active',sign);if($('normalLogin'))$('normalLogin').style.display='';if($('resetForm'))$('resetForm').style.display='none';msg('')}
 $('loginTab').onclick=()=>tab(false);$('signupTab').onclick=()=>tab(true);
 if(location.hash==='#signup') tab(true); else tab(false);
-if(location.hash==='#reset'){$('normalLogin').style.display='';tab(false);msg(`<strong>Forgot your password?</strong><br><span style="display:block;margin-top:6px">Please contact BookNest seller to get your password.</span><div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap"><a class="btn guest" style="width:auto;padding:10px 14px" href="${FB_URL}" target="_blank" rel="noopener noreferrer">Facebook</a><a class="btn guest" style="width:auto;padding:10px 14px" href="${TT_URL}" target="_blank" rel="noopener noreferrer">TikTok</a></div>`)}
-async function hashPassword(password){const data=new TextEncoder().encode(password);const hash=await crypto.subtle.digest('SHA-256',data);return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-function readAccounts(){try{return JSON.parse(localStorage.getItem('.buyer_accounts')||'[]')||[]}catch(e){return[]}}
-function saveAccounts(v){try{localStorage.setItem('.buyer_accounts',JSON.stringify(v));return true}catch(e){return false}}
-async function cloudSaveAccounts(v){try{if(window.BookNestCloud?.enabled) await window.BookNestCloud.save('.buyer_accounts',v)}catch(e){console.warn('buyer account cloud save failed',e)}}
-async function ensureAccounts(){try{await window.BookNestCloud?.ready}catch(e){} return readAccounts()}
+function showChangePassword(){
+  tab(false);
+  $('normalLogin').style.display='none';
+  $('resetForm').style.display='block';
+  $('resetForm').innerHTML=`
+    <div class="field"><label>Current password</label><input id="currentPassword" type="password" autocomplete="current-password" placeholder="Your current password"></div>
+    <div class="field"><label>New password</label><input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div>
+    <div class="field"><label>Confirm new password</label><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter your new password"></div>
+    <button class="btn" id="changePasswordBtn" type="button">Change Password</button>
+    <div class="msg" id="resetMsg"></div>
+    <div class="links"><a href="buyer-login.html#login">← Back to Log In</a></div>`;
+  const identity=(()=>{try{return JSON.parse(sessionStorage.getItem('booknest_buyer_identity')||'null')}catch(e){return null}})();
+  if(!identity||identity.type!=='user'||!identity.phone){
+    $('resetMsg').textContent='Please log in first. You can change your password from Buyer Settings.';
+    $('changePasswordBtn').disabled=true;
+    return;
+  }
+  $('changePasswordBtn').onclick=async()=>{
+    const current=$('currentPassword').value, next=$('newPassword').value, confirmNext=$('confirmPassword').value;
+    if(!current||!next||!confirmNext){$('resetMsg').textContent='Please complete all password fields.';return;}
+    if(next.length<6){$('resetMsg').textContent='New password must be at least 6 characters.';return;}
+    if(next!==confirmNext){$('resetMsg').textContent='New password and confirmation do not match.';return;}
+    $('resetMsg').textContent='Checking current password…';
+    const accounts=await loadBuyerAccounts(); const account=accounts[identity.phone];
+    if(!account){$('resetMsg').textContent='Buyer account not found.';return;}
+    const currentHash=await hashPassword(current);
+    if(currentHash!==account.passwordHash && current!==account.password){$('resetMsg').textContent='Current password is incorrect.';return;}
+    account.password=next; account.passwordHash=await hashPassword(next); account.updatedAt=new Date().toISOString();
+    accounts[identity.phone]=account;
+    try{localStorage.setItem('.buyer_accounts',JSON.stringify(accounts)); const ok=await window.BookNestCloud?.save?.('.buyer_accounts',accounts); if(ok===false) throw new Error('cloud');}
+    catch(e){$('resetMsg').textContent='Password was not saved online. Please try again.';return;}
+    $('currentPassword').value='';$('newPassword').value='';$('confirmPassword').value='';
+    $('resetMsg').textContent='Password changed successfully.';
+  };
+}
+function showForgotPassword(){
+  tab(false);
+  $('normalLogin').style.display='none';
+  $('resetForm').style.display='block';
+  $('resetForm').innerHTML=`
+    <div class="field"><label>Phone number</label><input id="forgotPhone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX"></div>
+    <button class="btn" id="forgotContinueBtn" type="button">Continue</button>
+    <div class="msg" id="resetMsg">Enter the phone number registered to your BookNest account.</div>`;
+  $('forgotContinueBtn').onclick=async()=>{
+    const phone=normalizePhone($('forgotPhone').value.trim());
+    if(!phone){$('resetMsg').textContent='Please enter your registered phone number.';return;}
+    const accounts=await loadBuyerAccounts();
+    const account=accounts[phone];
+    if(!account || account.active===false || deletedPhone(phone)){
+      $('resetMsg').textContent='We could not verify that phone number. Please contact BookNest through Facebook or TikTok.';
+      return;
+    }
+    $('resetForm').innerHTML=`
+      <div style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#fffaf0;line-height:1.55;font-size:13px;">
+        <strong>Password reset request</strong><br>
+        Your phone number has been verified. Please contact the BookNest admin to request your password.
+        <br><br>Send your registered phone number through Facebook or TikTok and <strong>wait for the admin to give you your password.</strong>
+      </div>
+      <a class="btn" href="${BOOKNEST_FACEBOOK_URL}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">Contact BookNest on Facebook</a>
+      <a class="btn guest" href="${BOOKNEST_TIKTOK_URL}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;text-decoration:none;margin-top:10px;">Contact BookNest on TikTok</a>
+      <div class="links"><a href="buyer-login.html#login">← Back to Log In</a></div>`;
+  };
+}
+if(location.hash==='#change-password') showChangePassword();
+else if(location.hash==='#forgot-password' || location.hash==='#reset' || location.hash.includes('type=recovery')) showForgotPassword();
 $('loginBtn').onclick=async()=>{
-  const phone=$('loginEmail').value.trim().replace(/\D/g,''); const password=$('loginPassword').value;
-  if(!phone||!password){msg('Please enter your phone number and password.');return}
-  msg('Signing in…'); const accounts=await ensureAccounts(); const account=accounts.find(a=>String(a.phone||'').replace(/\D/g,'')===phone && !a.deleted);
-  if(!account){msg('No buyer account was found for that phone number.');return}
-  const hash=await hashPassword(password);
-  if(hash!==account.passwordHash){msg('Incorrect password. If you forgot it, contact the BookNest seller.');return}
-  const identity={type:'user',id:account.id,phone:account.phone};
-  try{sessionStorage.setItem('booknest_buyer_identity',JSON.stringify(identity));sessionStorage.setItem('booknest_buyer_profile',JSON.stringify({name:account.name||'',contact:account.phone||'',address:account.address||'',facebook:account.facebook||''}));sessionStorage.removeItem('booknest_guest_id')}catch(e){}
-  location.href='shop.html';
+  const phone=normalizePhone($('loginPhone').value.trim());
+  const password=$('loginPassword').value;
+  if(!phone||!password){msg('Please enter your phone number and password.');return;}
+  msg('Signing in…');
+  try{
+    const accounts=await loadBuyerAccounts();
+    const account=accounts[phone];
+    if(!account || account.active===false || deletedPhone(phone)) { msg('Incorrect phone number or password.'); return; }
+    const passwordHash=await hashPassword(password);
+    if(password!==account.password && passwordHash!==account.passwordHash){ msg('Incorrect phone number or password.'); return; }
+    sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'user',id:account.id||phone,phone}));
+    sessionStorage.setItem('booknest_buyer_profile',JSON.stringify({name:account.name||'',contact:phone,address:account.address||'',facebook:account.facebook||''}));
+    sessionStorage.removeItem('booknest_guest_id');
+    location.href='shop.html';
+  }catch(error){console.error(error);msg('Could not sign in. Please try again.');}
 };
-$('forgotBtn').onclick=()=>msg(`<strong>Forgot your password?</strong><br><span style="display:block;margin-top:6px">Do not create a new account. Contact the BookNest seller to know your password.</span><div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap"><a class="btn guest" style="width:auto;padding:10px 14px" href="${FB_URL}" target="_blank" rel="noopener noreferrer">Facebook</a><a class="btn guest" style="width:auto;padding:10px 14px" href="${TT_URL}" target="_blank" rel="noopener noreferrer">TikTok</a></div>`);
 $('signupBtn').onclick=async()=>{
-  const name=$('signupName').value.trim(),phoneRaw=$('signupPhone').value.trim(),phone=phoneRaw.replace(/\D/g,''),address=$('signupAddress').value.trim(),facebook=$('signupFacebook').value.trim(),password=$('signupPassword').value;
+  const name=$('signupName').value.trim(),phone=normalizePhone($('signupPhone').value.trim()),address=$('signupAddress').value.trim(),facebook=$('signupFacebook').value.trim(),password=$('signupPassword').value;
   if(!name||!phone||!address){msg('Please complete your name, phone number, and address.');return}
-  if(phone.length<10){msg('Please enter a valid Philippine phone number.');return}
   if(password.length<6){msg('Password must be at least 6 characters.');return}
-  const accounts=await ensureAccounts(); const duplicate=accounts.some(a=>!a.deleted&&String(a.phone||'').replace(/\D/g,'')===phone); if(duplicate){msg('This phone number is already registered. Please log in instead.');return}
   msg('Creating account…');
-  const passwordHash=await hashPassword(password);
-  const account={id:'buyer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),name,phone:phoneRaw,address,facebook,password,passwordHash,createdAt:new Date().toISOString(),deleted:false};
-  const next=[account,...accounts]; if(!saveAccounts(next)){msg('Could not save the account on this device.');return}
-  await cloudSaveAccounts(next);
-  try{sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'user',id:account.id,phone:account.phone}));sessionStorage.setItem('booknest_buyer_profile',JSON.stringify({name,contact:phoneRaw,address,facebook}));sessionStorage.removeItem('booknest_guest_id')}catch(e){}
-  location.href='shop.html';
+  if(deletedPhone(phone)){msg('This phone number is no longer active. Please contact BookNest.');return}
+  const accounts=await loadBuyerAccounts();
+  if(accounts[phone] && accounts[phone].active!==false){msg('An account already exists for this phone number. Please log in instead.');return}
+  try{
+    const id='buyer-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+    const passwordHash=await hashPassword(password);
+    accounts[phone]={id,name,address,facebook,password,passwordHash,active:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    localStorage.setItem('.buyer_accounts',JSON.stringify(accounts));
+    const ok=await window.BookNestCloud?.save?.('.buyer_accounts',accounts);
+    if(ok===false) throw new Error('Could not save the buyer account online.');
+    sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'user',id,email:'',phone}));
+    sessionStorage.setItem('booknest_buyer_profile',JSON.stringify({name,contact:phone,address,facebook}));
+    sessionStorage.removeItem('booknest_guest_id');
+    location.href='shop.html';
+  }catch(error){
+    console.error(error);
+    msg('Could not create the account. Please try again.');
+  }
 };
 $('guestBtn').onclick=()=>{try{const id='guest-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);sessionStorage.setItem('booknest_guest_id',id);sessionStorage.setItem('booknest_buyer_identity',JSON.stringify({type:'guest',id}));sessionStorage.removeItem('booknest_buyer_profile')}catch(e){}location.href='shop.html'};
-window.addEventListener('booknest-cloud-ready',()=>{ });
 </script><script src="mobile-enhancements.js"></script>
 </body></html>

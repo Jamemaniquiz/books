@@ -51,7 +51,6 @@
         <div class="field"><label>Stock</label><input id="stock" type="number" min="0" step="1" value="1"></div>
         <div class="field"><label>Format</label><select id="type"><option>Paperback</option><option>Hardbound</option><option>MMPB</option><option>Sprayed</option><option>Leatherbound</option><option>Slipcase</option><option>Special Edition</option><option>Box Set</option><option>Signed</option><option>Other</option></select></div>
         <div class="field"><label>Condition</label><select id="condition"><option>Pre Loved</option><option>Brand New</option><option>Damaged</option><option>Remaindered</option></select></div>
-        <div class="field"><label>Box / Batch (optional)</label><input id="box" placeholder="e.g. Box 3"></div>
         <div class="field full"><label>Description</label><textarea id="description" placeholder="Describe this exact copy: markings, tanning, foxing, special edition details, etc."></textarea></div>
       </div>
       <div id="notice" class="notice"></div>
@@ -73,18 +72,18 @@
  const normalizeCondition=v=>String(v||'').toLowerCase()==='new'?'Brand New':(v||'Pre Loved');
  const sameTitle=()=>{const title=$('title').value.trim().toUpperCase(); const box=$('sameTitle'); if(!box)return; const count=read().filter(b=>String(b.title||'').toUpperCase()===title).length; box.style.display=title&&count?'block':'none'; if(title&&count) box.innerHTML=`<strong>${count} other ${count===1?'copy':'copies'} of this title are already in Inventory.</strong><div class="actions"><a href="inventory.html" class="secondary">View Inventory</a></div>`};
  ['title'].forEach(id=>$(id)?.addEventListener('input',sameTitle));
- $('resetBtn').onclick=()=>{['title','variant','author','price','box','description'].forEach(x=>$(x).value='');$('stock').value='1';$('genre').value='Fiction';$('type').value='Paperback';$('condition').value='Pre Loved';$('sameTitle').style.display='none';$('notice').className='notice'};
+ $('resetBtn').onclick=()=>{['title','variant','author','price','description'].forEach(x=>$(x).value='');$('stock').value='1';$('genre').value='Fiction';$('type').value='Paperback';$('condition').value='Pre Loved';$('sameTitle').style.display='none';$('notice').className='notice'};
  $('saveBtn').onclick=async()=>{
    if(window.BookNestCloud?.ready)await window.BookNestCloud.ready.catch(()=>{});
    const title=$('title').value.trim(); if(!title)return show('Please enter the book title.',false);
    const books=read();
-   const item={id:id(),title:title.toUpperCase(),variant:$('variant').value.trim()||'Copy 1',author:$('author').value.trim().toUpperCase()||'UNKNOWN',genre:$('genre').value,price:Number($('price').value)||0,stock:Number($('stock').value)||0,type:$('type').value,condition:normalizeCondition($('condition').value),box:$('box').value.trim(),shopVisible:false,layawayHolds:[],description:$('description').value.trim(),images:[]};
+   const item={id:id(),title:title.toUpperCase(),variant:$('variant').value.trim()||'Copy 1',author:$('author').value.trim().toUpperCase()||'UNKNOWN',genre:$('genre').value,price:Number($('price').value)||0,stock:Number($('stock').value)||0,type:$('type').value,condition:normalizeCondition($('condition').value),box:'',shopVisible:false,layawayHolds:[],description:$('description').value.trim(),images:[]};
    books.push(item);
    const btn=$('saveBtn');btn.disabled=true;btn.textContent='Saving…';
    const ok=await save(books);btn.disabled=false;btn.textContent='Save book';
    show(ok?'✓ Book added to Inventory. You can add its photos when publishing it to the Shop.':'⚠ Book saved locally, but Supabase did not confirm it.',ok);
    if(!ok)return;
-   $('variant').value='';$('price').value='';$('stock').value='1';$('box').value='';$('description').value='';sameTitle();
+   $('variant').value='';$('price').value='';$('stock').value='1';$('description').value='';sameTitle();
  };
  function setCloudStatus(ok){const e=$('booksCloudStatus');if(!e)return;e.textContent=ok?'● Supabase connected — Inventory is shared online':'● Supabase connection problem — changes may not be shared yet';e.style.color=ok?'#2c6b47':'#a32b22'}
  $('booksCloudRefresh')?.addEventListener('click',async()=>{const b=$('booksCloudRefresh');b.disabled=true;b.textContent='Refreshing…';try{await window.BookNestCloud?.refresh?.();setCloudStatus(!!window.BookNestCloud?.lastSync?.ok)}finally{b.disabled=false;b.textContent='↻ Refresh from Supabase'}});

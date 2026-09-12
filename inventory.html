@@ -190,7 +190,6 @@
         <div class="filters inv-filters">
           <input id="searchInput" type="search" placeholder="🔍 Search by title or author" />
           <select id="genreFilter"><option value="">All genres</option></select>
-          <select id="boxFilter"><option value="">All boxes</option></select>
           <select id="stockFilter">
             <option value="">All stock</option>
             <option value="low">Low stock (&lt; 5)</option>
@@ -202,20 +201,19 @@
         <div class="table-wrap inventory-wrap">
           <table class="inventory-table">
             <colgroup>
-              <col style="width:17%">
-              <col style="width:12%">
-              <col style="width:10%">
-              <col style="width:7%">
-              <col style="width:6%">
-              <col style="width:9%">
-              <col style="width:10%">
-              <col style="width:9%">
               <col style="width:20%">
+              <col style="width:12%">
+              <col style="width:14%">
+              <col style="width:10%">
+              <col style="width:8%">
+              <col style="width:8%">
+              <col style="width:10%">
+              <col style="width:18%">
             </colgroup>
             <thead>
               <tr>
                 <th>Title</th><th>Variant / Copy</th><th>Author</th><th>Genre</th>
-                <th>Price</th><th>Stock</th><th>Box</th><th>Type</th><th>Actions</th>
+                <th>Price</th><th>Stock</th><th>Type</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="inventoryRows"></tbody>
@@ -412,12 +410,12 @@
       .inv-banner {
         margin: 0;
         padding: 1.1rem 1.3rem;
-        border: 1px solid rgba(15, 118, 110, 0.22);
+        border: 1px solid rgba(53, 73, 60, 0.22);
         border-radius: 16px;
-        background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), #f8fbff);
+        background: linear-gradient(135deg, rgba(53, 73, 60, 0.08), #f8fbff);
         display: flex; justify-content: space-between; align-items: center;
         gap: 1rem; flex-wrap: wrap;
-        box-shadow: 0 6px 18px rgba(15, 118, 110, 0.1);
+        box-shadow: 0 6px 18px rgba(53, 73, 60, 0.1);
         flex: 1 1 320px;
       }
       .inv-banner-title { font-weight: 800; color: var(--primary-dark); font-size: 1.02rem; margin-bottom: 4px; }
@@ -465,7 +463,7 @@
         position: sticky;
         top: 0;
         z-index: 2;
-        background: linear-gradient(135deg, #0f766e, #0b3f3b);
+        background: linear-gradient(135deg, #35493c, #263329);
         color: #f8fafc !important;
         font-size: 0.76rem;
         text-transform: uppercase;
@@ -488,11 +486,11 @@
       }
       .inventory-table tbody tr:hover {
         background: #f8fbff;
-        box-shadow: inset 4px 0 0 rgba(15, 118, 110, 0.55);
+        box-shadow: inset 4px 0 0 rgba(53, 73, 60, 0.55);
       }
       .inventory-table td[contenteditable="true"]:focus {
         background: #eefaf8;
-        box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.35);
+        box-shadow: inset 0 0 0 2px rgba(53, 73, 60, 0.35);
         border-radius: 6px;
       }
 
@@ -512,8 +510,8 @@
         color: #fff !important; border-color: transparent !important;
       }
       .inv-action-btn.reserve {
-        background: rgba(15, 118, 110, 0.08) !important;
-        color: var(--primary-dark) !important; border-color: rgba(15, 118, 110, 0.3) !important;
+        background: rgba(53, 73, 60, 0.08) !important;
+        color: var(--primary-dark) !important; border-color: rgba(53, 73, 60, 0.3) !important;
       }
       .inv-action-btn.reserve.is-reserved {
         background: rgba(107,78,255,0.12) !important;
@@ -535,7 +533,7 @@
       }
       .inventory-table thead th:last-child {
         z-index: 3;
-        background: linear-gradient(135deg, #0f766e, #0b3f3b);
+        background: linear-gradient(135deg, #35493c, #263329);
       }
 
       @media (max-width: 720px) {

@@ -45,7 +45,9 @@
       <section class="panel">
         <div class="panel-header">
           <h2>Shop Orders</h2>
+          <button id="refreshOrdersBtn" class="btn ghost" type="button">↻ Refresh orders</button>
         </div>
+        <div id="ordersSyncStatus" class="muted" style="font-size:12px;margin:-4px 0 12px;">Checking cloud orders…</div>
         <p class="muted" style="margin-bottom:1rem">
           Orders placed by buyers through <strong>shop.html</strong>. Mark them Paid once you've confirmed payment,
           then Shipped once they're on the way. Buyers can look up their own order status with their Order ID on the
@@ -123,8 +125,8 @@
         const orders = getOrders();
         const order = orders.find(o => o.id === id);
         if(!order) return;
-        if(!confirm('Archive order '+id+'? The order will remain in history and will not be deleted.')) return;
-        if(order.status === 'Cancelled' && !order.archived) { /* stock was already returned on cancellation */ }
+        if(!confirm('Archive order '+id+'? If it is still active, its stock will be returned to Inventory.')) return;
+        if(order.status !== 'Cancelled' && !order.archived) adjustStockForOrder(order, +1);
         const updated = orders.map(o => o.id===id ? {...o, archived:true, archivedAt:new Date().toISOString()} : o);
         saveOrders(updated);
         render();
@@ -152,23 +154,17 @@
       function render(){
         const orders = getOrders();
         const list = document.getElementById('ordersList');
-        const activeOrders = orders.filter(o => !o.archived);
-        const archivedOrders = orders.filter(o => !!o.archived);
-        if(!orders.length){
-          list.innerHTML = '<p class="muted" style="padding:20px 0;text-align:center;">No orders yet — they\'ll show up here as soon as a buyer checks out on the shop.</p>';
-          return;
-        }
-        const renderOrder = o => {
+        const activeOrders = orders.filter(o => !o.archived && o.status !== 'Cancelled');
+        const archivedOrders = orders.filter(o => o.archived || o.status === 'Cancelled');
+
+        function renderOrder(o){
           const itemLines = (o.items||[]).map(i =>
             `<div class="line"><span>${escapeHtml(i.title)} × ${i.qty}</span><span>${peso(i.price*i.qty)}</span></div>`
           ).join('');
-          // Archived orders are history: don't allow status changes that could
-          // accidentally take stock back out after a cancellation/refund.
-          const statuses = o.archived ? [] : ['Pending','Paid','Shipped','Cancelled'].filter(s => s !== o.status);
+          const statuses = ['Pending','Paid','Shipped','Cancelled'].filter(s => s !== o.status);
           const actionBtns = statuses.map(s =>
             `<button class="btn ghost" data-action="set-status" data-id="${escapeHtml(o.id)}" data-status="${s}">Mark ${s}</button>`
           ).join('');
-          const archiveBtn = o.archived ? '' : `<button class="btn ghost delete-order" data-action="archive-order" data-id="${escapeHtml(o.id)}">🗄 Archive Order</button>`;
           return `
             <div class="order-card">
               <div class="order-head">
@@ -187,13 +183,20 @@
                   <span>Total via ${escapeHtml(o.paymentMode)}</span><span>${peso(o.total)}</span>
                 </div>
                 <div class="line"><span>Courier</span><span>${escapeHtml(o.courier||'J&T')}</span></div>
-                <div class="proof-view">${o.proofOfPayment ? `<div style="font-weight:800;margin-bottom:8px;">📸 GCash payment proof — uploaded</div><img class="proof-thumb" data-proof="${escapeHtml(o.id)}" src="${escapeHtml(o.proofOfPayment)}" alt="GCash payment proof" loading="lazy"><div class="muted" style="font-size:11px;margin-top:6px;">Tap the image to view it larger.</div>` : '<div class="proof-empty">No payment proof uploaded.</div>'}</div>
+                <div class="proof-view">${o.proofOfPayment ? `<div style="font-weight:800;margin-bottom:8px;">📸 GCash payment proof — uploaded</div><img class="proof-thumb" data-proof="${escapeHtml(o.id)}" src="${o.proofOfPayment}" alt="GCash payment proof" loading="lazy"><div class="muted" style="font-size:11px;margin-top:6px;">Tap the image to view it larger.</div>` : '<div class="proof-empty">No payment proof uploaded.</div>'}</div>
               </div>
-              ${actionBtns||archiveBtn ? `<div class="order-actions">${actionBtns}${archiveBtn}</div>` : ''}
+              <div class="order-actions">${actionBtns}<button class="btn ghost delete-order" data-action="archive-order" data-id="${escapeHtml(o.id)}">🗄 Archive Order</button></div>
             </div>`;
-        };
+        }
+
+        if(!orders.length){
+          list.innerHTML = '<p class="muted" style="padding:20px 0;text-align:center;">No orders yet — they\'ll show up here as soon as a buyer checks out on the shop.</p>';
+          return;
+        }
         const activeHtml = activeOrders.map(renderOrder).join('');
-        const archivedHtml = archivedOrders.length ? `<details style="margin-top:18px;"><summary style="cursor:pointer;font-weight:800;padding:10px 0;">🗄 Archived Orders (${archivedOrders.length})</summary><div style="margin-top:10px;">${archivedOrders.map(renderOrder).join('')}</div></details>` : '';
+        const archivedHtml = archivedOrders.length
+          ? `<details style="margin-top:18px;"><summary style="cursor:pointer;font-weight:800;padding:10px 0;">🗄 Archived Orders (${archivedOrders.length})</summary><div style="margin-top:10px;">${archivedOrders.map(renderOrder).join('')}</div></details>`
+          : '';
         list.innerHTML = activeHtml || '<p class="muted" style="padding:20px 0;text-align:center;">No active orders.</p>';
         list.insertAdjacentHTML('beforeend', archivedHtml);
       }
@@ -214,13 +217,38 @@
       document.getElementById('ordersList').addEventListener('click',e=>{const img=e.target.closest('[data-proof]');if(!img)return;proofModalImg.src=img.src;proofModal.classList.add('open');proofModal.setAttribute('aria-hidden','false');});
       document.getElementById('proofClose').onclick=()=>{proofModal.classList.remove('open');proofModal.setAttribute('aria-hidden','true');proofModalImg.src='';};
       proofModal.addEventListener('click',e=>{if(e.target===proofModal)document.getElementById('proofClose').click()});
+      async function refreshOrdersFromCloud(){
+        const status=document.getElementById('ordersSyncStatus');
+        const btn=document.getElementById('refreshOrdersBtn');
+        if(btn){btn.disabled=true;btn.textContent='Refreshing…';}
+        if(status) status.textContent='Checking cloud orders…';
+        try{
+          if(window.BookNestCloud?.refresh){
+            const ok=await window.BookNestCloud.refresh(['.shop_orders','.books']);
+            if(status) status.textContent=ok ? '✓ Orders synced from Supabase' : '⚠ Could not sync cloud orders. Showing the last saved data.';
+          } else if(status){
+            status.textContent='Cloud sync is unavailable. Showing saved orders.';
+          }
+          render();
+        }catch(err){
+          console.error('[BookNest] order refresh failed',err);
+          if(status) status.textContent='⚠ Could not sync cloud orders. Showing the last saved data.';
+          render();
+        }finally{
+          if(btn){btn.disabled=false;btn.textContent='↻ Refresh orders';}
+        }
+      }
+      document.getElementById('refreshOrdersBtn')?.addEventListener('click',refreshOrdersFromCloud);
+      // Fallback polling keeps Seller > Shop Orders current even when Supabase realtime is unavailable.
+      setInterval(()=>{ if(document.visibilityState==='visible') refreshOrdersFromCloud(); },15000);
       window.addEventListener('booknest-cloud-ready', (e) => {
         if(!e.detail?.ok) return;
         const active=document.activeElement;
         const editing=active && active.matches('input,textarea,select,[contenteditable="true"]');
-        if(!editing) render();
+        if(!editing){ render(); const status=document.getElementById('ordersSyncStatus'); if(status) status.textContent='✓ Orders synced from Supabase'; }
       });
       render();
+      refreshOrdersFromCloud();
     </script>
   <script src="mobile-enhancements.js"></script>
 </body>

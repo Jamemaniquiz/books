@@ -6,15 +6,21 @@
   const SUPABASE_URL = window.BOOKNEST_SUPABASE_URL || "https://ryyhsbkuukbctflcetcn.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = window.BOOKNEST_SUPABASE_ANON_KEY || "sb_publishable_Y5uk8FMgr15vEiqy5bBq3g_X1cXbKmQ";
   const CLOUD_TABLE = "booknest_data";
-  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".cart_holds",".site_status",".buyer_accounts",".seller_password_hash"];
+  const KEYS = [".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".cart_holds",".site_status",".deleted_buyers",".buyer_accounts"];
   // One-time clean-slate migration for this rebuilt BookNest release.
   // It only clears browser caches; the matching SQL reset file clears the
   // shared cloud snapshot. After this flag is recorded, future deploys do not
   // wipe newly entered books again.
-  // IMPORTANT: Never clear application data automatically on a new deploy.
-  // Previous releases used a one-time clean-slate reset here, which could make
-  // locally cached receipts/books appear to disappear after an update.
-  // Existing data is preserved and migrated normally instead.
+  const RESET_VERSION = "2026-09-11-clean-v5";
+  try {
+    if (localStorage.getItem("booknest_cloud_reset_version") !== RESET_VERSION) {
+      KEYS.forEach(key => localStorage.removeItem(key));
+      localStorage.setItem("booknest_cloud_reset_version", RESET_VERSION);
+      localStorage.removeItem("booknest_cloud_reset_warning_seen");
+    }
+  } catch (e) {
+    console.warn("[BookNest] clean-slate cache reset could not complete", e);
+  }
   const hasConfig = () => typeof window.supabase !== "undefined" && SUPABASE_URL.startsWith("https://") && !!SUPABASE_PUBLISHABLE_KEY;
   if (!hasConfig()) {
     window.BookNestCloud = {enabled:false, ready:Promise.resolve(false), save:async()=>false, pull:async()=>false, refresh:async()=>false, pushLocalData:async()=>false};
@@ -48,10 +54,9 @@
   const readLocal = key => { try { const raw=localStorage.getItem(key); return raw==null?null:JSON.parse(raw); } catch(e){ return null; } };
   const writeLocal = (key,value) => { try { localStorage.setItem(key,JSON.stringify(value)); return true; } catch(e){ console.warn("[BookNest] cache write failed",key,e); return false; } };
 
-  // Mobile-safe cloud snapshots: image-heavy datasets can contain base64 photos.
-  // Store every sufficiently large dataset gzip-compressed inside JSONB, while
-  // keeping the browser-side value normal so the rest of BookNest does not change.
-  // This covers books, shop listings, payment proofs, receipts, purchases, etc.
+  // Mobile-safe cloud snapshots: .books can contain many base64 photos. Store that
+  // one dataset gzip-compressed inside JSONB, while keeping the browser-side value
+  // as the normal array so the rest of BookNest does not need to change.
   const bytesToBase64 = bytes => {
     let binary=''; const chunk=0x8000;
     for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
@@ -63,10 +68,9 @@
     return bytes;
   };
   const encodeCloudValue = async (key,value) => {
-    if(typeof CompressionStream==='undefined') return value;
+    if(key!=='.books' || typeof CompressionStream==='undefined') return value;
     try{
       const json=JSON.stringify(value);
-      if(json.length < 2048 || (value && value.__booknestCompressed)) return value;
       const cs=new CompressionStream('gzip');
       const stream=new Blob([json]).stream().pipeThrough(cs);
       const compressed=new Uint8Array(await new Response(stream).arrayBuffer());
@@ -92,7 +96,6 @@
     }
   };
   const queues = new Map();
-  const remoteCache = new Map();
   async function rawSave(key,value){
     const cloudValue=await encodeCloudValue(key,value);
     const body={key,value:cloudValue,updated_at:new Date().toISOString()};
@@ -100,7 +103,6 @@
     console.log(`[BookNest] Supabase save ${key}: ${(approxBytes/1024).toFixed(0)} KB`);
     const {error}=await client.from(CLOUD_TABLE).upsert(body,{onConflict:'key'});
     if(error){ console.error(`[BookNest] Supabase save failed for ${key}:`,error); throw error; }
-    remoteCache.set(key, value);
     return true;
   }
   function save(key,value){
@@ -115,8 +117,8 @@
     const map={
       "":".books,.shop_listings,.site_status",
       "index.html":[".books",".shop_listings",".site_status"],
-      "shop.html":[".books",".shop_listings",".shop_orders",".cart_holds",".site_status"],
-      "buyer-login.html":[".site_status",".buyer_accounts"],
+      "shop.html":[".books",".shop_listings",".shop_orders",".cart_holds",".site_status",".deleted_buyers"],
+      "buyer-login.html":[".site_status"],
       "add-books.html":[".books",".shop_listings"],
       "inventory.html":[".books",".sales",".purchases"],
       "admin.html":[".books",".sales",".receipts",".purchases",".sellerPayment",".shop_orders",".shop_listings",".site_status"],
@@ -125,7 +127,7 @@
       "receipt-history.html":[".receipts",".sales"],
       "new-sale.html":[".books",".sales",".receipts"],
       "bundle-sale.html":[".books",".sales"],
-      "buyers.html":[".shop_orders",".buyer_accounts"],
+      "buyers.html":[".shop_orders",".deleted_buyers",".buyer_accounts"],
       "seller-login.html":[],
       "rules.html":[]
     };
@@ -155,7 +157,6 @@
       for(const key of wanted){
         if(Object.prototype.hasOwnProperty.call(byKey,key)){
           const decoded=await decodeCloudValue(byKey[key].value);
-          remoteCache.set(key, decoded);
           writeLocal(key,decoded);
         } else localStorage.removeItem(key);
       }
@@ -176,24 +177,6 @@
     }
     return false;
   }
-  async function read(keys=PAGE_KEYS){
-    const wanted=(keys&&keys.length?keys:PAGE_KEYS).filter(k=>KEYS.includes(k));
-    if(!wanted.length) return {};
-    const rows=await getCloudRows(wanted);
-    const byKey=Object.fromEntries(rows.map(r=>[r.key,r]));
-    const out={};
-    for(const key of wanted){
-      if(Object.prototype.hasOwnProperty.call(byKey,key)){
-        const decoded=await decodeCloudValue(byKey[key].value);
-        remoteCache.set(key,decoded);
-        out[key]=decoded;
-      }
-    }
-    return out;
-  }
-  const getCached = key => remoteCache.has(key) ? remoteCache.get(key) : undefined;
-  const cacheValues = values => { for(const [key,value] of Object.entries(values||{})) if(KEYS.includes(key)) remoteCache.set(key,value); };
-
   async function pushLocalData(){
     const rows=[]; for(const key of KEYS){const local=readLocal(key);if(local!==null) rows.push(save(key,local));} await Promise.all(rows); return true;
   }
@@ -211,5 +194,5 @@
   }catch(e){
     console.warn('[BookNest] Realtime subscription unavailable.',e);
   }
-  window.BookNestCloud={enabled:true,client,ready:PAGE_KEYS.length?pullWithRetry(PAGE_KEYS):Promise.resolve(true),save,pull:pullWithRetry,refresh:pullWithRetry,read,getCached,cacheValues,pushLocalData,lastSync:null};
+  window.BookNestCloud={enabled:true,client,ready:PAGE_KEYS.length?pullWithRetry(PAGE_KEYS):Promise.resolve(true),save,pull:pullWithRetry,refresh:pullWithRetry,pushLocalData,lastSync:null};
 })();

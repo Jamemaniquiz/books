@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="styles.css" />
 <script src="admin-gate.js"></script>
 <style>
-  .buyer-row td{vertical-align:top}.buyer-note{padding:12px 14px;border:1px solid var(--line,#e2ddd0);border-radius:8px;background:rgba(0,0,0,.025);margin-bottom:18px}.history-toggle{cursor:pointer;color:var(--brick,#A8402A);font-size:12.5px;font-weight:600}.history-panel{display:none;background:rgba(0,0,0,.03);padding:10px 14px;border-radius:6px;margin-top:6px}.history-panel.open{display:block}.history-item{font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line,#e2ddd0);display:flex;justify-content:space-between;gap:10px}.history-item:last-child{border-bottom:none}
+  .buyer-row td{vertical-align:top}.buyer-note{padding:12px 14px;border:1px solid var(--line,#e2ddd0);border-radius:8px;background:rgba(0,0,0,.025);margin-bottom:18px}.history-toggle{cursor:pointer;color:var(--brick,#A8402A);font-size:12.5px;font-weight:600}.history-panel{display:none;background:rgba(0,0,0,.03);padding:10px 14px;border-radius:6px;margin-top:6px}.history-panel.open{display:block}.history-item{font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line,#e2ddd0);display:flex;justify-content:space-between;gap:10px}.history-item:last-child{border-bottom:none}.password-help{font-size:11px;color:#6b665d;line-height:1.45;margin-top:8px}.buyer-mobile-card{display:none}
 </style>
 <script src="seller-nav.js"></script><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
@@ -23,8 +23,8 @@
 <main class="container">
   <section class="panel">
     <div class="panel-header"><h2>👤 Buyers</h2></div>
-    <div class="buyer-note"><strong>Customer accounts are enabled.</strong><br><span class="muted">Buyer accounts use phone + password. The seller can see the buyer password here so it can be provided when a buyer forgets it. A SHA-256 password hash is also kept with the account record.</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Facebook</th><th>Password</th><th>Password hash</th><th>Orders</th><th>Total spent</th><th>Actions</th></tr></thead><tbody id="buyersRows"></tbody></table></div>
+    <div class="buyer-note"><strong>Buyer management</strong><br><span class="muted">Manage buyer accounts here. Seller can view the buyer password saved with the account. Buyers can change their password from Buyer Settings.</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Facebook</th><th>Password</th><th>Orders</th><th>Total spent</th><th>Action</th></tr></thead><tbody id="buyersRows"></tbody></table></div>
   </section>
 </main>
 <footer class="site-footer">BookNest © 2026</footer>
@@ -35,46 +35,67 @@
 const peso=n=>'PHP '+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 function read(key,fallback=[]){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch(e){return fallback}}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function render(){
+function normalizePhone(v){let p=String(v||'').replace(/[^0-9+]/g,'');if(p.startsWith('09'))p='+63'+p.slice(1);else if(p.startsWith('63'))p='+'+p;return p;}
+
+
+function render(){
   const rows=document.getElementById('buyersRows');
-  const orders=read('.shop_orders',[]); const accounts=read('.buyer_accounts',[]);
+  const orders=read('.shop_orders',[]), deleted=read('.deleted_buyers',[]), accounts=read('.buyer_accounts',{});
+  const deletedSet=new Set((Array.isArray(deleted)?deleted:[]).flatMap(x=>[String(x.key||x).toLowerCase(),String(x.phone||'').toLowerCase(),normalizePhone(x.phone||'').toLowerCase()]));
+  const isDeleted=(key,phone)=>deletedSet.has(String(key||'').toLowerCase())||deletedSet.has(String(phone||'').toLowerCase())||deletedSet.has(normalizePhone(phone||'').toLowerCase());
   const map=new Map();
-  accounts.filter(a=>!a.deleted).forEach(a=>map.set(String(a.id),{id:a.id,name:a.name||'—',contact:a.phone||'—',facebook:a.facebook||'—',password:a.password||'—',hash:a.passwordHash||'—',count:0,total:0}));
-  orders.forEach(o=>{
+  (Array.isArray(orders)?orders:[]).forEach(o=>{
     const key=String(o.buyerId||o.contact||o.buyerName||'Unknown').toLowerCase();
-    let b=map.get(String(o.buyerId||''));
-    if(!b){
-      b={id:o.buyerId||'',name:o.buyerName||'—',contact:o.contact||'—',facebook:o.buyerFacebook||'—',password:'—',hash:'—',count:0,total:0}; map.set(String(b.id||key),b);
-    }
-    b.count++; b.total+=Number(o.total||o.grandTotal||0);
-    if((!b.facebook||b.facebook==='—')&&o.buyerFacebook)b.facebook=o.buyerFacebook;
-    if((!b.contact||b.contact==='—')&&o.contact)b.contact=o.contact;
+    if(isDeleted(key,o.contact||o.buyerPhone||'')) return;
+    if(!map.has(key)) map.set(key,{key,name:o.buyerName||'—',contact:o.contact||'—',facebook:o.buyerFacebook||'—',count:0,total:0});
+    const b=map.get(key); b.count++; b.total+=Number(o.total||o.grandTotal||0);
+    if((!b.facebook||b.facebook==='—')&&o.buyerFacebook) b.facebook=o.buyerFacebook;
+  });
+  Object.entries(accounts||{}).forEach(([phone,a])=>{
+    if(!a||a.active===false||isDeleted(String(a.id||phone),phone)) return;
+    const existing=[...map.values()].find(b=>normalizePhone(b.contact)===normalizePhone(phone));
+    if(existing){existing.account=true;existing.accountPhone=phone;existing.accountId=a.id||'';existing.accountPassword=a.password||'Not available — change password once to sync it';}
+    else map.set(String(a.id||phone).toLowerCase(),{key:String(a.id||phone).toLowerCase(),name:a.name||'—',contact:phone,facebook:a.facebook||'—',count:0,total:0,account:true,accountPhone:phone,accountId:a.id||'',accountPassword:a.password||'Not available — legacy account'});
   });
   const buyers=[...map.values()].sort((a,b)=>b.total-a.total);
-  if(!buyers.length){rows.innerHTML='<tr><td colspan="9" class="muted" style="text-align:center;padding:20px">No buyer accounts yet.</td></tr>';return}
-  rows.innerHTML=buyers.map(b=>`<tr class="buyer-row"><td><strong>${esc(b.name)}</strong></td><td>${esc(b.contact)}</td><td>${b.facebook&&b.facebook!=='—'?(String(b.facebook).startsWith('http')?`<a href="${esc(b.facebook)}" target="_blank" rel="noopener noreferrer">Open Facebook</a>`:esc(b.facebook)):'—'}</td><td><code style="word-break:break-all">${esc(b.password)}</code></td><td><code style="word-break:break-all;font-size:10px">${esc(b.hash)}</code></td><td>${b.count}</td><td><strong>${peso(b.total)}</strong></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="history-toggle" type="button" onclick="setBuyerPassword('${esc(b.id)}')">Set password</button><button class="history-toggle" type="button" onclick="deleteBuyer('${esc(b.id)}')">Delete buyer</button></div></td></tr>`).join('');
+  if(!buyers.length){rows.innerHTML='<tr><td colspan="7" class="muted" style="text-align:center;padding:20px">No active buyers yet.</td></tr>';return;}
+  rows.innerHTML=buyers.map(b=>`<tr class="buyer-row"><td><strong>${esc(b.name)}</strong></td><td>${esc(b.contact)}</td><td>${b.facebook&&b.facebook!=='—'?(String(b.facebook).startsWith('http')?`<a href="${esc(b.facebook)}" target="_blank" rel="noopener noreferrer">Open Facebook</a>`:esc(b.facebook)):'—'}</td><td><code style="font-size:12px;word-break:break-all">${esc(b.accountPassword||'Not available')}</code></td><td>${b.count}</td><td><strong>${peso(b.total)}</strong></td><td><button class="btn danger delete-buyer" data-key="${esc(b.key)}" data-phone="${esc(b.contact)}" type="button">Delete buyer</button></td></tr>`).join('');
 }
-async function deleteBuyer(id){
-  if(!id||!confirm('Delete this buyer account? Their old orders will remain, but the account will no longer be active.'))return;
-  const accounts=read('.buyer_accounts',[]); const next=accounts.map(a=>String(a.id)===String(id)?{...a,deleted:true,deletedAt:new Date().toISOString()}:a);
-  localStorage.setItem('.buyer_accounts',JSON.stringify(next));
-  try{if(window.BookNestCloud?.enabled) await window.BookNestCloud.save('.buyer_accounts',next)}catch(e){}
+
+async function deleteBuyer(key,name,phone){
+  if(!confirm('Delete this buyer? They will be removed from the active Buyers list and blocked from signing in again.'))return;
+  const normalized=normalizePhone(phone);
+  const accounts=read('.buyer_accounts',{});
+  // Remove the account itself so the buyer cannot log in again.
+  Object.keys(accounts||{}).forEach(k=>{
+    const a=accounts[k]||{};
+    if(String(k).toLowerCase()===String(key).toLowerCase() || String(a.id||'').toLowerCase()===String(key).toLowerCase() || normalizePhone(k)===normalized){
+      delete accounts[k];
+    }
+  });
+  const deleted=read('.deleted_buyers',[]);
+  const arr=Array.isArray(deleted)?deleted:[];
+  const markers=[String(key),normalized,String(phone||'')].filter(Boolean).map(v=>v.toLowerCase());
+  if(!arr.some(x=>markers.includes(String(x.key||'').toLowerCase()) || markers.includes(normalizePhone(x.phone||'').toLowerCase()))){
+    arr.push({key:String(key),name:String(name||''),phone:String(phone||''),normalizedPhone:normalized,deletedAt:new Date().toISOString()});
+  }
+  localStorage.setItem('.buyer_accounts',JSON.stringify(accounts));
+  localStorage.setItem('.deleted_buyers',JSON.stringify(arr));
+  try{
+    if(window.BookNestCloud?.enabled){
+      await window.BookNestCloud.save('.buyer_accounts',accounts);
+      await window.BookNestCloud.save('.deleted_buyers',arr);
+    }
+  }catch(e){
+    console.error(e);
+    alert('The buyer was removed from this browser, but the cloud could not confirm the change. Please press Refresh and try again.');
+  }
+  await window.BookNestCloud?.refresh?.(['.buyer_accounts','.deleted_buyers','.shop_orders']);
   render();
 }
-window.deleteBuyer=deleteBuyer;
 
-async function setBuyerPassword(id){
-  const next=prompt('Set a new buyer password (minimum 6 characters):');
-  if(next===null)return; if(next.length<6){alert('Password must be at least 6 characters.');return;}
-  const accounts=read('.buyer_accounts',[]); const idx=accounts.findIndex(a=>String(a.id)===String(id)&&!a.deleted); if(idx<0){alert('Buyer account not found.');return;}
-  const d=new TextEncoder().encode(next),h=await crypto.subtle.digest('SHA-256',d); const hash=Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('');
-  accounts[idx]={...accounts[idx],password:next,passwordHash:hash,passwordChangedAt:new Date().toISOString()}; localStorage.setItem('.buyer_accounts',JSON.stringify(accounts));
-  try{if(window.BookNestCloud?.enabled) await window.BookNestCloud.save('.buyer_accounts',accounts)}catch(e){}
-  render(); alert('Buyer password updated.');
-}
-window.setBuyerPassword=setBuyerPassword;
-
-document.addEventListener('DOMContentLoaded',()=>{render();window.addEventListener('booknest-cloud-ready',render);});
+document.addEventListener('click',async e=>{const btn=e.target.closest('.delete-buyer');if(!btn)return;if(btn.disabled)return;btn.disabled=true;btn.textContent='Deleting…';try{await deleteBuyer(btn.dataset.key,btn.closest('tr')?.querySelector('strong')?.textContent||'',btn.dataset.phone||'');}finally{btn.disabled=false;btn.textContent='Delete buyer';}});
+document.addEventListener('DOMContentLoaded',async()=>{await window.BookNestCloud?.refresh?.(['.shop_orders','.deleted_buyers','.buyer_accounts']);render();window.addEventListener('booknest-cloud-ready',render);});
 </script>
 <script src="mobile-enhancements.js"></script>
 </body>

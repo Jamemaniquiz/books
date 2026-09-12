@@ -69,14 +69,6 @@ const sampleSales = [
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
 const getData    = (key, fallback) => {
-  // Prefer the latest cloud snapshot when available. This is important on
-  // phones/browsers where localStorage can be full because of image data.
-  // The cloud layer keeps a decoded in-memory copy even when the browser
-  // cannot write the full receipt/photo payload to localStorage.
-  try {
-    const cached = window.BookNestCloud?.getCached?.(key);
-    if (cached !== undefined) return cached;
-  } catch {}
   const raw = localStorage.getItem(key);
   if (!raw) return fallback;
   try { return JSON.parse(raw); } catch { return fallback; }
@@ -160,6 +152,46 @@ const createReceiptId = () => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const rand    = crypto.getRandomValues(new Uint32Array(1))[0].toString(16).slice(0, 4).toUpperCase();
   return `BN-${dateStr}-${rand}`;
+};
+
+// Human-friendly receipt numbers are sequential (1, 2, 3...). The random
+// internal id is kept for data integrity and existing links/references.
+const ensureReceiptNumbers = () => {
+  const receipts = getReceipts();
+  if (!Array.isArray(receipts) || !receipts.length) return receipts || [];
+
+  let changed = false;
+  const used = new Set(receipts.map(r => Number(r?.receiptNumber)).filter(n => Number.isInteger(n) && n > 0));
+  let next = used.size ? Math.max(...used) + 1 : 1;
+
+  const missing = receipts
+    .filter(r => !(Number.isInteger(Number(r?.receiptNumber)) && Number(r.receiptNumber) > 0))
+    .sort((a, b) => {
+      const ta = Number.isFinite(Date.parse(a?.date)) ? Date.parse(a.date) : 0;
+      const tb = Number.isFinite(Date.parse(b?.date)) ? Date.parse(b.date) : 0;
+      return ta - tb || String(a?.id || "").localeCompare(String(b?.id || ""));
+    });
+
+  missing.forEach(r => {
+    r.receiptNumber = next++;
+    changed = true;
+  });
+  if (changed) saveReceipts(receipts);
+  return receipts;
+};
+
+const getNextReceiptNumber = () => {
+  const receipts = ensureReceiptNumbers();
+  const max = receipts.reduce((m, r) => {
+    const n = Number(r?.receiptNumber);
+    return Number.isInteger(n) && n > m ? n : m;
+  }, 0);
+  return max + 1;
+};
+
+const receiptNumberLabel = (receipt) => {
+  const n = Number(receipt?.receiptNumber);
+  return Number.isInteger(n) && n > 0 ? String(n) : String(receipt?.id || "—");
 };
 
 const currency  = (value) =>
@@ -624,7 +656,7 @@ const openReceiptModal = (saleRows, customerInfo = null) => {
   const now       = new Date().toISOString();
 
   // Fill header
-  document.getElementById("bn-receipt-id").textContent   = receiptId;
+  document.getElementById("bn-receipt-id").textContent   = getNextReceiptNumber();
   document.getElementById("bn-receipt-date").textContent = formatDateLong(now);
 
   // Fill or clear customer fields
@@ -728,6 +760,7 @@ const saveReceiptFromModal = () => {
 
   const receiptPayload = {
     id:            pendingSale.receiptId,
+    receiptNumber: getNextReceiptNumber(),
     date:          pendingSale.date,
     customer,
     address,
@@ -1340,7 +1373,7 @@ const bindPurchaseActionsOnce = () => {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 600;
+        const maxDim = 320;
         let width = img.width, height = img.height;
         if (width > height && width > maxDim) { height = height * (maxDim / width); width = maxDim; }
         else if (height > maxDim) { width = width * (maxDim / height); height = maxDim; }
@@ -1348,7 +1381,7 @@ const bindPurchaseActionsOnce = () => {
         canvas.width = Math.round(width);
         canvas.height = Math.round(height);
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
         const purchases = getPurchases();
         const target = purchases.find(p => p.id === purchaseId);
         if (target) {
@@ -1648,7 +1681,6 @@ const initInventory = () => {
 
   const searchInput     = document.getElementById("searchInput");
   const genreFilter     = document.getElementById("genreFilter");
-  const boxFilter       = document.getElementById("boxFilter");
   const stockFilter     = document.getElementById("stockFilter");
   const addTitle        = document.getElementById("addTitle");
   const addAuthor       = document.getElementById("addAuthor");
@@ -1657,7 +1689,6 @@ const initInventory = () => {
   const addPrice        = document.getElementById("addPrice");
   const addStock        = document.getElementById("addStock");
   const addType         = document.getElementById("addType");
-  const addBox          = document.getElementById("addBox");
   const addBookBtn      = document.getElementById("addBookBtn");
   const priceCalcBtn    = document.getElementById("priceCalcBtn");
   const bulkInput       = document.getElementById("bulkInput");
@@ -1708,27 +1739,27 @@ const initInventory = () => {
     console.log("[BookNest] Inventory refresh — books in storage:", books.length);
     const search    = searchInput?.value?.toLowerCase() ?? "";
     const genre     = genreFilter?.value ?? "";
-    const box       = boxFilter?.value ?? "";
+    const box       = "";
     const stock     = stockFilter?.value ?? "";
 
     const filtered = books.filter(book => {
       const matchesSearch    = book.title.toLowerCase().includes(search) || book.author.toLowerCase().includes(search);
       const matchesGenre     = !genre || book.genre === genre;
-      const matchesBox       = !box || (book.box || "") === box;
+      const matchesBox       = true; // Box assignment is retained for receipts but is hidden from Inventory.
       const matchesStock     =
         !stock ||
         (stock === "low"      && book.stock > 0 && book.stock < 5) ||
         (stock === "out"      && book.stock === 0) ||
         (stock === "reserved" && Array.isArray(book.layawayHolds) && book.layawayHolds.length > 0);
-      return matchesSearch && matchesGenre && matchesBox && matchesStock;
+      return matchesSearch && matchesGenre && matchesStock;
     });
 
     if (books.length > 0 && filtered.length === 0) {
-      rows.innerHTML = `<tr><td colspan="10" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="8" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
       return;
     }
     if (books.length === 0) {
-      rows.innerHTML = `<tr><td colspan="10" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="8" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
       return;
     }
 
@@ -1761,12 +1792,10 @@ const initInventory = () => {
         </td>
         <td contenteditable="true" data-field="price"  data-id="${book.id}">${book.price}</td>
         <td contenteditable="true" data-field="stock"  data-id="${book.id}">${book.stock}</td>
-        <td contenteditable="true" data-field="box" data-id="${book.id}" title="Which box/batch this book came from">${book.box || ""}</td>
         <td>
           <select class="inv-select" data-field="type" data-id="${book.id}">
             ${typeOpts.map(t => `<option value="${t}"${currentType === t ? " selected" : ""}>${t}</option>`).join("")}
           </select>
-        </td>
         </td>
         <td>
           ${reservedBadge}
@@ -1793,12 +1822,9 @@ const initInventory = () => {
     if (boxSuggestions) {
       boxSuggestions.innerHTML = uniqueBoxes.map(b => `<option value="${b}"></option>`).join("");
     }
-    if (boxFilter) {
-      boxFilter.innerHTML = `<option value="">All boxes</option>${uniqueBoxes.map(b => `<option value="${b}"${b === box ? " selected" : ""}>${b}</option>`).join("")}`;
-    }
    } catch (err) {
     console.error("[BookNest] Inventory refresh failed:", err);
-    rows.innerHTML = `<tr><td colspan="9" style="color:#b91c1c">⚠ Error loading inventory: ${String(err.message || err)}. Press F12 to open the console for details, or share a screenshot of the console with support.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="8" style="color:#b91c1c">⚠ Error loading inventory: ${String(err.message || err)}. Press F12 to open the console for details, or share a screenshot of the console with support.</td></tr>`;
    }
   };
 
@@ -2398,6 +2424,28 @@ const initInventory = () => {
       if (target) {
         target.description = field.value.trim();
         saveBooks(books);
+        // A book that's already published to the Shop has its own frozen
+        // copy of the description in .shop_listings (buildShopBooks in
+        // shop.html always prefers that copy over this Inventory record).
+        // Without this, editing the description here silently does nothing
+        // for a book that's already live in the Shop — push the new text
+        // into any matching listing(s) too so buyers actually see it.
+        let listings = [];
+        try { listings = JSON.parse(localStorage.getItem('.shop_listings') || '[]'); } catch (e) { listings = []; }
+        let changed = false;
+        listings.forEach(l => {
+          if (String(l.sourceBookId) === String(bookId)) {
+            l.description = target.description;
+            l.updatedAt = new Date().toISOString();
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem('.shop_listings', JSON.stringify(listings));
+            if (window.BookNestCloud?.enabled) window.BookNestCloud.save('.shop_listings', listings).catch(console.error);
+          } catch (e) { console.error(e); }
+        }
         refresh();
       }
       dialog.close();
@@ -2553,6 +2601,7 @@ const initInventory = () => {
 
       const receiptPayload = {
         id: receiptId,
+        receiptNumber: getNextReceiptNumber(),
         date: new Date().toISOString(),
         customer: (name || "").toUpperCase(),
         address: "",
@@ -2656,7 +2705,7 @@ const initInventory = () => {
     if (event.key === "Enter") { event.preventDefault(); target.blur(); }
   });
 
-  [searchInput, genreFilter, boxFilter, stockFilter].forEach(el => {
+  [searchInput, genreFilter, stockFilter].forEach(el => {
     if (el) el.addEventListener("input", refresh);
   });
 
@@ -2747,7 +2796,7 @@ const initReceiptHistory = () => {
       ...getReceipts().flatMap(rr => (rr.items || []).map(i => (i.box || "").trim())),
     ].filter(Boolean))].sort();
 
-    const receipts = getReceipts()
+    const receipts = ensureReceiptNumbers()
       .slice()
       .sort((a, b) => {
         const timeA = Number.isFinite(Date.parse(a?.date)) ? Date.parse(a.date) : 0;
@@ -2786,6 +2835,7 @@ const initReceiptHistory = () => {
       if (!query) return matchesShip && matchesPay && matchesBox;
       const haystack = [
         r.id,
+        receiptNumberLabel(r),
         r.customer,
         r.phone,
         r.address,
@@ -2884,7 +2934,7 @@ const initReceiptHistory = () => {
       return `
       <tr${refunded ? ` style="text-decoration:line-through;"` : ""}>
         <td class="rh-date">${receiptDate}</td>
-        <td class="rh-receipt">${r.id}</td>
+        <td class="rh-receipt"><span class="rh-receipt-number">#${receiptNumberLabel(r)}</span><small>${r.id}</small></td>
         <td class="rh-customer">${r.customer || "—"}${r.isBundle ? `<div style="margin-top:3px;"><span class="rh-status pending" style="background:rgba(15,118,110,0.12);color:var(--primary-dark,#0f766e);">🎁 Bundle</span></div>` : ""}</td>
         <td class="rh-items"><strong>${totalQty} item(s)</strong>${itemLines}</td>
         <td class="rh-box-col">${boxLines}</td>
@@ -3206,7 +3256,7 @@ const openShipmentReviewModal = (receiptOrId) => {
   if (!receipt) return;
 
   const idLabel = document.getElementById("review-bn-id");
-  if (idLabel) idLabel.textContent = receipt.id;
+  if (idLabel) idLabel.textContent = receiptNumberLabel(receipt);
 
   const reviewText = document.getElementById("shipmentReviewText");
   const photoInput = document.getElementById("shipmentReviewPhotos");
@@ -3306,7 +3356,7 @@ const renderReceiptPhotosReadOnly = (receipt) => {
 
 const MAX_RECEIPT_PHOTOS = 4;
 
-const compressImageFile = (file, maxDim = 800, quality = 0.62) =>
+const compressImageFile = (file, maxDim = 900, quality = 0.75) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
@@ -3520,7 +3570,7 @@ const openViewModal = (receiptOrId, autoDownload = false) => {
   `;
 
   // Fill header
-  document.getElementById("view-bn-id").textContent      = receipt.id;
+  document.getElementById("view-bn-id").textContent      = receiptNumberLabel(receipt);
   document.getElementById("view-bn-date").textContent    = formatDateLong(receipt.date);
   document.getElementById("view-bn-payment").textContent = receipt.paymentMethod || "GCash";
 
@@ -3752,7 +3802,7 @@ const openEditModal = (receipt) => {
   editingReceiptBundlePrice = Number(receipt.bundlePrice) || 0;
 
   // Fill header
-  document.getElementById("view-bn-id").textContent      = receipt.id;
+  document.getElementById("view-bn-id").textContent      = receiptNumberLabel(receipt);
   document.getElementById("view-bn-date").textContent    = formatDateLong(receipt.date);
   document.getElementById("view-bn-payment").textContent = receipt.paymentMethod || "GCash";
   
@@ -4016,130 +4066,35 @@ const backupData = async () => {
   }
 };
 
-const restoreData = async (file) => {
-  // Cloud-first restore. The old implementation wrote the complete backup to
-  // localStorage first, which fails on browsers whose quota is full (especially
-  // when receipts contain photos). A restore is a cloud operation first; the
-  // browser cache is only a best-effort convenience.
-  const readBackup = async (f) => {
-    const name = String(f?.name || '').toLowerCase();
-    const raw = await f.arrayBuffer();
-    let text;
-    if (name.endsWith('.gz')) {
-      if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot open .gz backups. Use the normal .json backup.');
-      const ds = new DecompressionStream('gzip');
-      text = await new Response(new Blob([raw]).stream().pipeThrough(ds)).text();
-    } else {
-      text = new TextDecoder().decode(raw);
-    }
-    return JSON.parse(text);
-  };
-
-  try {
-    const data = await readBackup(file);
-    if (!data || !Array.isArray(data.books) || !Array.isArray(data.sales)) {
-      await showNotice('Invalid BookNest backup file.', 'Restore Failed');
-      return;
-    }
-
-    const { confirmed } = await openActionDialog({
-      title: 'Restore backup?',
-      message: 'This will MERGE the backup into your current BookNest data. Existing records are kept and matching IDs are updated from the backup. Nothing will be cleared.',
-      confirmText: 'Restore & Save',
-      cancelText: 'Cancel',
-      iconText: '✓',
-    });
-    if (!confirmed) return;
-
-    const mergeById = (current, incoming) => {
-      const result = Array.isArray(current) ? [...current] : [];
-      const index = new Map(result.map((item, i) => [String(item?.id ?? ''), i]));
-      for (const item of (Array.isArray(incoming) ? incoming : [])) {
-        const id = item?.id == null ? '' : String(item.id);
-        if (id && index.has(id)) result[index.get(id)] = item;
-        else { index.set(id || `__new_${result.length}`, result.length); result.push(item); }
-      }
-      return result;
-    };
-
-    const cloud = window.BookNestCloud;
-    // Get the authoritative current cloud copy first. If this fails, do not
-    // pretend a restore is safe; the backup remains untouched for retry.
-    let cloudCurrent = {};
-    if (cloud?.enabled && typeof cloud.read === 'function') {
-      cloudCurrent = await cloud.read([STORAGE_KEYS.books, STORAGE_KEYS.sales, STORAGE_KEYS.receipts, STORAGE_KEYS.purchases]);
-    } else if (cloud?.enabled) {
-      throw new Error('Supabase restore is unavailable in this browser.');
-    }
-
-    const currentBooks = Array.isArray(cloudCurrent[STORAGE_KEYS.books]) ? cloudCurrent[STORAGE_KEYS.books] : getBooks();
-    const currentSales = Array.isArray(cloudCurrent[STORAGE_KEYS.sales]) ? cloudCurrent[STORAGE_KEYS.sales] : getSales();
-    const currentReceipts = Array.isArray(cloudCurrent[STORAGE_KEYS.receipts]) ? cloudCurrent[STORAGE_KEYS.receipts] : getReceipts();
-    const currentPurchases = Array.isArray(cloudCurrent[STORAGE_KEYS.purchases]) ? cloudCurrent[STORAGE_KEYS.purchases] : getPurchases();
-
-    const merged = {
-      books: mergeById(currentBooks, data.books),
-      sales: mergeById(currentSales, data.sales),
-      receipts: mergeById(currentReceipts, Array.isArray(data.receipts) ? data.receipts : []),
-      purchases: mergeById(currentPurchases, Array.isArray(data.purchases) ? data.purchases : []),
-    };
-
-    if (!cloud?.enabled || typeof cloud.save !== 'function') throw new Error('Supabase connection is not available.');
-
-    // SAVE TO CLOUD FIRST. Do not let a full browser localStorage quota block
-    // recovery of receipts/photos.
-    await Promise.all([
-      cloud.save(STORAGE_KEYS.books, merged.books),
-      cloud.save(STORAGE_KEYS.sales, merged.sales),
-      cloud.save(STORAGE_KEYS.receipts, merged.receipts),
-      cloud.save(STORAGE_KEYS.purchases, merged.purchases),
-    ]);
-
-    // Verify by reading the actual cloud rows back, not by reading localStorage.
-    const verified = await cloud.read([STORAGE_KEYS.books, STORAGE_KEYS.sales, STORAGE_KEYS.receipts, STORAGE_KEYS.purchases]);
-    const savedReceipts = Array.isArray(verified[STORAGE_KEYS.receipts]) ? verified[STORAGE_KEYS.receipts] : [];
-    const expectedReceiptIds = new Set((Array.isArray(data.receipts) ? data.receipts : []).map(r => String(r?.id || '')).filter(Boolean));
-    const savedReceiptIds = new Set(savedReceipts.map(r => String(r?.id || '')).filter(Boolean));
-    const missing = [...expectedReceiptIds].filter(id => !savedReceiptIds.has(id));
-    if (missing.length) throw new Error(`${missing.length} receipt record(s) were not confirmed in Supabase after saving.`);
-
-    // Refresh the in-memory cloud cache and best-effort browser cache. If the
-    // browser is out of localStorage space, the cloud cache still lets the UI
-    // display the restored records.
-    if (typeof cloud.cacheValues === 'function') cloud.cacheValues(verified);
+const restoreData = (file) => {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
     try {
-      setData(STORAGE_KEYS.books, merged.books);
-      setData(STORAGE_KEYS.sales, merged.sales);
-      setData(STORAGE_KEYS.receipts, merged.receipts);
-      setData(STORAGE_KEYS.purchases, merged.purchases);
-    } catch (e) {
-      console.warn('[BookNest] Browser cache is full; cloud restore is still safe.', e);
-    }
-
-    if (typeof data.eodCheck === 'string' && data.eodCheck) {
-      try { localStorage.setItem('.eod_check', data.eodCheck); } catch {}
-    }
-
-    await showNotice(
-      `Restore completed and SAVED to Supabase.\n\n` +
-      `Books in current data: ${merged.books.length}\n` +
-      `Sales in current data: ${merged.sales.length}\n` +
-      `Receipts in current data: ${merged.receipts.length}\n` +
-      `Purchases in current data: ${merged.purchases.length}\n\n` +
-      `Confirmed receipts in cloud: ${savedReceipts.length}`,
-      'Restore Complete'
-    );
-    location.reload();
-  } catch (err) {
-    console.error('[BookNest] restore failed:', err);
-    await showNotice(
-      `RESTORE FAILED — your backup was NOT cleared and no intentional data deletion was performed.\n\n${String(err?.message || err)}\n\nKeep the backup file safe and try again after checking the Supabase connection.`,
-      'Restore Failed'
-    );
-  } finally {
-    const input = document.getElementById('restoreInput');
-    if (input) input.value = '';
-  }
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data.books) || !Array.isArray(data.sales)) {
+        showNotice("Invalid backup file.", "Restore Failed");
+        return;
+      }
+      const { confirmed } = await openActionDialog({
+        title: "Restore backup?",
+        message: "This will replace all current data on this computer. Continue?",
+        confirmText: "Restore",
+        cancelText: "Cancel",
+        iconText: "!",
+      });
+      if (!confirmed) return;
+      saveBooks(data.books);
+      saveSales(data.sales);
+      saveReceipts(Array.isArray(data.receipts) ? data.receipts : []);
+      savePurchases(Array.isArray(data.purchases) ? data.purchases : []);
+      if (typeof data.eodCheck === "string" && data.eodCheck) {
+        localStorage.setItem(".eod_check", data.eodCheck);
+      }
+      await showNotice("Data restored successfully.", "Restore Complete");
+      location.reload();
+    } catch { showNotice("Could not read backup file.", "Restore Failed"); }
+  };
+  reader.readAsText(file);
 };
 
 // ── End of Day Summary ────────────────────────────────────────────────────────
