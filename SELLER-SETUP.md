@@ -10,8 +10,10 @@ Without this step, Firestore will block every read/write (Production
 mode denies everything by default).
 
 ## 2. Create your seller account
-1. Firestore console → **Authentication** → **Users** tab → **Add user**.
-2. Enter the email and password *you* (the seller) will log in with.
+0. First make sure **Authentication → Sign-in method → Email/Password** is **Enabled**.
+1. Firebase console → **Authentication** → **Users** tab → **Add user**.
+2. Enter the email and password *you* (the seller) will log in with
+   (e.g. email `jamesmaniquiz7@gmail.com` with the password you chose).
 3. Copy the **User UID** it shows you after creating it.
 4. Go to **Firestore Database** → **Start collection** → collection ID
    `sellers` → document ID = paste that UID → add any field, e.g.

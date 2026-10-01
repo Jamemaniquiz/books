@@ -63,11 +63,22 @@
       const err = document.getElementById('err');
       err.style.display = 'none';
       if(!email || !pass){ err.textContent='Please enter your email and password.'; err.style.display='block'; return; }
+      if(window.FIREBASE_CONFIGURED === false){
+        err.textContent = 'Firebase is not set up yet. Open firebase-config.js and paste your real Firebase keys (see SELLER-SETUP.md).';
+        err.style.display = 'block';
+        return;
+      }
       try{
         await sellerLogin(email, pass);
         window.location.href = 'admin.html';
       }catch(e){
-        err.textContent = e && e.message ? e.message : 'Incorrect email or password.';
+        const code = e && e.code ? e.code : '';
+        let msg = e && e.message ? e.message : 'Incorrect email or password.';
+        if(code === 'auth/api-key-not-valid' || code === 'auth/invalid-api-key') msg = 'The Firebase API key in firebase-config.js is not valid. Re-copy it from Firebase console > Project settings.';
+        else if(code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/wrong-password') msg = 'Incorrect email or password, or this seller account has not been created yet in Firebase > Authentication > Users.';
+        else if(code === 'auth/operation-not-allowed') msg = 'Email/Password sign-in is not enabled. Turn it on in Firebase > Authentication > Sign-in method.';
+        else if(code === 'auth/network-request-failed') msg = 'Network problem. Check your internet connection and try again.';
+        err.textContent = msg;
         err.style.display = 'block';
       }
     });

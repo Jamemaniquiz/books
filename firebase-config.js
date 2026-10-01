@@ -14,4 +14,9 @@ const firebaseConfig = {
   appId: "PASTE_YOUR_APP_ID"
 };
 
+// Flag used by the login pages to show a clear message if the keys above
+// are still the placeholders (otherwise Firebase just says
+// "auth/api-key-not-valid").
+window.FIREBASE_CONFIGURED = !Object.values(firebaseConfig).some(v => String(v).includes("PASTE_YOUR"));
+
 firebase.initializeApp(firebaseConfig);
