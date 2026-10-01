@@ -47,8 +47,7 @@
         <section class="panel">
           <div class="panel-header"><h2>👤 Buyers</h2></div>
           <p class="muted" style="margin-bottom:1rem">
-            Everyone who has created a buyer account. Passwords are managed by Firebase and are never visible here, even to you — that's what keeps them secure.
-            If a buyer messages you that they forgot their password, click "Send reset link" and Firebase emails them one directly.
+            Everyone who has created a buyer account. Passwords are stored scrambled (hashed) and are never visible here, even to you. If a buyer forgets their password, click "Reset password" and send them the temporary one it shows.
           </p>
           <div class="table-wrap">
             <table>
@@ -64,11 +63,7 @@
 
     <footer class="site-footer">BookNest © 2026</footer>
 
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="firebase-config.js"></script>
-    <script src="firebase-data.js"></script>
+    <script src="bn-data.js"></script>
     <script>
       const peso = (n) => 'PHP ' + Number(n||0).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
 
@@ -78,24 +73,18 @@
         setupLock();
       });
 
-      // Second password: stored in Firestore at settings/buyersLock.password —
-      // set this once yourself in the Firebase console (see SELLER-SETUP.md).
+      // Second password: checked on the server (BUYERS_PASSWORD, or the seller password).
       function setupLock(){
         document.getElementById('lockBtn').addEventListener('click', async ()=>{
           const entered = document.getElementById('lockPass').value;
           const errEl = document.getElementById('lockErr');
           try{
-            const snap = await db.collection('settings').doc('buyersLock').get();
-            const real = snap.exists ? snap.data().password : null;
-            if(real && entered === real){
-              document.getElementById('lockScreen').style.display = 'none';
-              document.getElementById('buyersContent').style.display = 'block';
-              loadBuyers();
-            } else {
-              errEl.style.display = 'block';
-            }
+            await unlockBuyersPage(entered);
+            document.getElementById('lockScreen').style.display = 'none';
+            document.getElementById('buyersContent').style.display = 'block';
+            loadBuyers();
           }catch(e){
-            errEl.textContent = 'Could not check password — check your connection.';
+            if(e.code !== 'invalid-credential') errEl.textContent = e.message;
             errEl.style.display = 'block';
           }
         });
@@ -113,7 +102,7 @@
         tbody.innerHTML = '';
         buyers.forEach(b=>{
           const theirOrders = orders.filter(o=>o.buyerUid===b.uid);
-          const joined = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toLocaleDateString('en-PH') : '—';
+          const joined = b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-PH') : '—';
           const tr = document.createElement('tr');
           tr.className = 'buyer-row';
           tr.innerHTML = `
@@ -129,7 +118,7 @@
                 `).join('') : '<div class="history-item"><span>No orders yet</span></div>'}
               </div>
             </td>
-            <td><button class="btn ghost btn-sm" data-reset="${b.email}">Send reset link</button></td>
+            <td><button class="btn ghost btn-sm" data-reset="${b.email}">Reset password</button></td>
           `;
           tbody.appendChild(tr);
         });
@@ -142,10 +131,10 @@
         tbody.querySelectorAll('[data-reset]').forEach(btn=>{
           btn.addEventListener('click', async ()=>{
             try{
-              await requestPasswordReset(btn.dataset.reset);
-              alert('Reset link sent to '+btn.dataset.reset);
+              const r = await resetBuyerPassword(btn.dataset.reset);
+              alert('Temporary password for '+btn.dataset.reset+':\n\n'+r.tempPassword+'\n\nSend it to the buyer.');
             }catch(e){
-              alert('Could not send reset link: '+(e.message||e));
+              alert('Could not reset password: '+(e.message||e));
             }
           });
         });

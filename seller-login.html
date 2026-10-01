@@ -42,46 +42,24 @@
     <h2>Seller login</h2>
     <div class="sub">This account manages inventory, sales, and orders.</div>
     <div class="err" id="err"></div>
-    <div class="field"><label>Email</label><input type="email" id="email" placeholder="you@email.com"></div>
     <div class="field"><label>Password</label><input type="password" id="pass" placeholder="••••••••"></div>
     <button class="btn btn-primary" id="loginBtn">Log in</button>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="firebase-data.js"></script>
+    <script src="bn-data.js"></script>
   <script>
-    whenAuthReady((user, role)=>{
-      if(user && role==='seller') window.location.href = 'admin.html';
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', async ()=>{
-      const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('pass').value;
-      const err = document.getElementById('err');
+    whenAuthReady((user, role)=>{ if(user && role==='seller') window.location.href = 'admin.html'; });
+    const err = document.getElementById('err'), passEl = document.getElementById('pass');
+    async function go(){
+      const pass = passEl.value;
       err.style.display = 'none';
-      if(!email || !pass){ err.textContent='Please enter your email and password.'; err.style.display='block'; return; }
-      if(window.FIREBASE_CONFIGURED === false){
-        err.textContent = 'Firebase is not set up yet. Open firebase-config.js and paste your real Firebase keys (see SELLER-SETUP.md).';
-        err.style.display = 'block';
-        return;
-      }
-      try{
-        await sellerLogin(email, pass);
-        window.location.href = 'admin.html';
-      }catch(e){
-        const code = e && e.code ? e.code : '';
-        let msg = e && e.message ? e.message : 'Incorrect email or password.';
-        if(code === 'auth/api-key-not-valid' || code === 'auth/invalid-api-key') msg = 'The Firebase API key in firebase-config.js is not valid. Re-copy it from Firebase console > Project settings.';
-        else if(code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/wrong-password') msg = 'Incorrect email or password, or this seller account has not been created yet in Firebase > Authentication > Users.';
-        else if(code === 'auth/operation-not-allowed') msg = 'Email/Password sign-in is not enabled. Turn it on in Firebase > Authentication > Sign-in method.';
-        else if(code === 'auth/network-request-failed') msg = 'Network problem. Check your internet connection and try again.';
-        err.textContent = msg;
-        err.style.display = 'block';
-      }
-    });
+      if(!pass){ err.textContent='Please enter your password.'; err.style.display='block'; return; }
+      try{ await sellerLogin(pass); window.location.href = 'admin.html'; }
+      catch(e){ err.textContent = e.message || 'Incorrect password.'; err.style.display='block'; }
+    }
+    document.getElementById('loginBtn').addEventListener('click', go);
+    passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+    passEl.focus();
   </script>
 </body>
 </html>
