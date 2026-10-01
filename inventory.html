@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  </head>
+      <link rel="stylesheet" href="buttons.css">
+</head>
   <body class="inventory-page">
     <header class="site-header">
       <div class="logo">
@@ -551,33 +552,7 @@
         border-radius: 6px;
       }
 
-      /* Pill-style action buttons for inventory rows */
-      .inv-action-btn {
-        border-radius: 999px !important;
-        padding: 0.4rem 0.85rem !important;
-        font-size: 0.78rem !important;
-        font-weight: 700 !important;
-        border-width: 1.5px !important;
-        white-space: nowrap;
-        transition: all 0.15s ease;
-      }
-      .inv-action-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(15,23,42,0.14); }
-      .inv-action-btn.sold {
-        background: linear-gradient(135deg, var(--primary), #14b8a6) !important;
-        color: #fff !important; border-color: transparent !important;
-      }
-      .inv-action-btn.reserve {
-        background: rgba(15, 118, 110, 0.08) !important;
-        color: var(--primary-dark) !important; border-color: rgba(15, 118, 110, 0.3) !important;
-      }
-      .inv-action-btn.reserve.is-reserved {
-        background: rgba(107,78,255,0.12) !important;
-        color: #6b4eff !important; border-color: rgba(107,78,255,0.35) !important;
-      }
-      .inv-action-btn.delete {
-        background: rgba(239,68,68,0.08) !important;
-        color: var(--danger) !important; border-color: rgba(239,68,68,0.3) !important;
-      }
+      /* Action button look now lives in buttons.css (same for every page) */
 
       /* Keep Actions column visible while scrolling horizontally */
       .inventory-table th:last-child,

@@ -1763,15 +1763,11 @@ const initInventory = () => {
         <td>
           ${reservedBadge}
           <div class="action-group">
-            ${book.images && book.images.length
-              ? `<img src="${book.images[0]}" class="book-photo-thumb" data-action="view-book-photo" data-id="${book.id}" title="Click to view cover photo" />`
-              : ""}
-            <button class="btn ghost action-btn inv-action-btn" data-action="manage-book-photos" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="Add, remove, or reorder this book's photos">🖼 Photos${book.images && book.images.length ? ` (${book.images.length})` : ""}</button>
-            <button class="btn ghost action-btn inv-action-btn" data-action="edit-book-description" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="${book.description ? "Edit the description buyers see" : "Add a description — condition, edition, notes, etc."}">${book.description ? "📝 Desc ✓" : "📝 Add Desc"}</button>
-            <button class="btn primary action-btn inv-action-btn${book.shopVisible ? " active" : ""}" data-action="toggle-shop" data-id="${book.id}" title="${book.shopVisible ? "Remove from shop" : "Add to shop"}" style="font-size:11px;padding:3px 8px;min-width:0;">${book.shopVisible ? "🛒 In Shop" : "➕ Add Shop"}</button>
-            <button class="btn primary action-btn inv-action-btn sold" data-action="sold"    data-id="${book.id}">Sold</button>
-            <button class="btn ghost action-btn inv-action-btn reserve${holds.length ? " is-reserved" : ""}" data-action="layaway" data-id="${book.id}"${availableForLayaway <= 0 ? " disabled title=\"Every copy of this book is already on layaway — cancel a hold above to free one up\"" : ""}>${availableForLayaway > 0 ? "🗓️ Layaway" : "Fully Reserved"}</button>
-            <button class="btn ghost action-btn inv-action-btn delete" data-action="delete"  data-id="${book.id}">Delete</button>
+            <button class="btn action-btn inv-action-btn" data-action="edit-book-description" data-id="${book.id}" title="${book.description ? "Edit the description buyers see" : "Add a description — condition, edition, notes, etc."}">${book.description ? "📝 Desc ✓" : "📝 Desc"}</button>
+            <button class="btn action-btn inv-action-btn${book.shopVisible ? " active" : ""}" data-action="toggle-shop" data-id="${book.id}" title="${book.shopVisible ? "Remove from shop" : "Add to shop"}">${book.shopVisible ? "🛒 In Shop" : "➕ Shop"}</button>
+            <button class="btn action-btn inv-action-btn sold" data-action="sold"    data-id="${book.id}">Sold</button>
+            <button class="btn action-btn inv-action-btn reserve${holds.length ? " is-reserved" : ""}" data-action="layaway" data-id="${book.id}"${availableForLayaway <= 0 ? " disabled title=\"Every copy of this book is already on layaway — cancel a hold above to free one up\"" : ""}>${availableForLayaway > 0 ? "🗓️ Layaway" : "Fully Reserved"}</button>
+            <button class="btn action-btn inv-action-btn delete" data-action="delete"  data-id="${book.id}">Delete</button>
           </div>
         </td>
       </tr>`;
@@ -2875,7 +2871,7 @@ const initReceiptHistory = () => {
             <button class="rc-btn" data-action="review-receipt" data-id="${r.id}">📝 Review</button>
             <button class="rc-btn view" data-action="view-receipt" data-id="${r.id}">View</button>
             <button class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}">Edit</button>
-            <button class="rc-btn del" data-action="delete-receipt" data-id="${r.id}">Del</button>
+            <button class="rc-btn del" data-action="delete-receipt" data-id="${r.id}">Delete</button>
           </div>
         </td>
       </tr>`;

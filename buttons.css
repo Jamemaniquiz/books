@@ -1,0 +1,27 @@
+/* BookNest — one consistent look for every Actions button (inventory, receipts, orders…) */
+body .action-btn, body .rc-btn, body .inv-action-btn {
+  display: inline-flex !important; align-items: center; justify-content: center; gap: 4px;
+  box-sizing: border-box; width: 100%; min-width: 0 !important; height: 34px; padding: 0 0.6rem !important;
+  background: #fff !important; color: #0f4f4a !important;
+  border: 1.5px solid #cfe3e0 !important; border-radius: 10px !important; box-shadow: none !important;
+  font-family: inherit; font-size: 0.78rem !important; font-weight: 700 !important; line-height: 1 !important;
+  white-space: nowrap; cursor: pointer; transition: background .15s, border-color .15s, transform .15s, box-shadow .15s;
+}
+body .action-btn:hover:not(:disabled), body .rc-btn:hover:not(:disabled), body .inv-action-btn:hover:not(:disabled) {
+  background: #ecf8f6 !important; border-color: #0f766e !important; transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12) !important;
+}
+body .action-btn:disabled, body .rc-btn:disabled, body .inv-action-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+/* Delete keeps the same look; it only turns red when you hover it (safety cue) */
+body .inv-action-btn.delete:hover:not(:disabled), body .rc-btn.del:hover:not(:disabled),
+body .action-btn[data-action^="delete"]:hover:not(:disabled) {
+  background: #fef2f2 !important; border-color: #ef4444 !important; color: #b91c1c !important;
+}
+/* Same neat grid of equal-size buttons everywhere */
+body .action-group, body .rh-actions-grid {
+  display: grid !important; grid-template-columns: repeat(3, minmax(76px, 1fr)); gap: 6px; align-items: stretch; margin: 0;
+}
+body .rh-actions-grid .rc-btn { grid-column: auto !important; }
+.inventory-table .action-group { min-width: 250px; }
+.inventory-table td:last-child .tag, .inventory-table td:last-child .reserved-badge { margin-bottom: 6px; display: inline-block; }
+@media (max-width: 700px) { body .action-group, body .rh-actions-grid { grid-template-columns: repeat(2, minmax(84px, 1fr)); } }
