@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="performance.js" defer></script>
 <title>Rules & Layaway — BookNest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -109,8 +108,6 @@
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   @media (max-width:700px){ .grid2{ grid-template-columns:1fr; } .content{ padding:28px 20px 48px 20px; } .hero{ padding:40px 22px 34px 22px; } }
 </style>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 </head>
 <body>
 <div class="app">
@@ -120,11 +117,9 @@
       <div class="brand-mark">BookNest</div>
       <div class="brand-sub">PRE-LOVED BOOKS</div>
     </div>
-    <a class="nav-item" href="shop.html">🏠 Shop</a>
-    <a class="nav-item" href="shop.html">🛒 Cart</a>
-    <a class="nav-item" href="shop.html">💳 Payment info</a>
-    <a class="nav-item" href="shop.html">📦 My Orders</a>
-    <a class="nav-item" href="shop.html">⚙️ Settings</a>
+    <a class="nav-item" href="shop.html">Shop</a>
+    <a class="nav-item" href="shop.html">Cart</a>
+    <a class="nav-item" href="shop.html">Payment info</a>
     <a class="nav-item active" href="rules.html">📋 Rules &amp; Layaway</a>
     <div class="spine-footer">© <span id="year"></span> BookNest</div>
   </div>
@@ -244,6 +239,5 @@
   </div>
 </div>
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="mobile-enhancements.js"></script>
 </body>
 </html>

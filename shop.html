@@ -167,21 +167,28 @@
   /* GRID */
   .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(215px, 1fr));
-    gap:20px;
+    grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+    gap:28px 24px;
   }
   .card{
     background:var(--paper-light);
     border:1px solid var(--line);
-    border-radius:3px;
+    border-radius:4px;
     position:relative;
     overflow:hidden;
     display:flex;
     flex-direction:column;
+    box-shadow:0 1px 2px rgba(38,33,26,0.04);
+    transition:transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  }
+  .card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 14px 28px rgba(38,33,26,0.16);
+    border-color:var(--brass);
   }
   .shelf-tab{
     position:absolute;
-    top:10px; left:0;
+    top:12px; left:0;
     background:var(--spine);
     color:var(--white);
     font-size:10.5px;
@@ -191,18 +198,24 @@
     z-index:2;
   }
   .cover{
-    height:190px;
+    aspect-ratio:3/4;
     background:linear-gradient(160deg, var(--spine-light), var(--spine-dark));
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:16px;
+    padding:0;
     position:relative;
+    overflow:hidden;
   }
-  .cover img{ width:100%; height:100%; object-fit:cover; }
+  .cover img{
+    width:100%; height:100%; object-fit:cover;
+    transition:transform 0.25s ease;
+  }
+  .card:hover .cover img{ transform:scale(1.04); }
   .cover-fallback{
     text-align:center;
     color:rgba(255,255,255,0.92);
+  padding:20px;
   }
   .cover-fallback .t{ font-family:'Fraunces',serif; font-weight:600; font-size:16px; line-height:1.25; }
   .cover-fallback .a{ font-size:10.5px; margin-top:8px; color:rgba(255,255,255,0.6); letter-spacing:0.03em; text-transform:uppercase; }
@@ -566,6 +579,38 @@
   const uid = (p) => p + Math.random().toString(36).slice(2,9);
   const peso = (n) => 'PHP ' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
 
+  // ---------- layaway ----------
+  // Only orders of PHP 1,000 and up may be paid on layaway. Buyers choose a
+  // duration; the fee for that duration is added on top of the books' price.
+  const LAYAWAY_MIN = 1000;
+  const LAYAWAY_PLANS = [
+    { months:1, fee:100 },
+    { months:2, fee:200 },
+    { months:3, fee:300 }
+  ];
+
+  // Splits (subtotal + fee) into `months` payments: the first is due today,
+  // each following one is due on the 15th of the next calendar month. The
+  // amount is split evenly, with any rounding remainder folded into the
+  // last payment so the total always adds up exactly.
+  function buildLayawaySchedule(subtotal, months){
+    const plan = LAYAWAY_PLANS.find(p=>p.months===months) || LAYAWAY_PLANS[0];
+    const total = subtotal + plan.fee;
+    const base = Math.floor(total / months);
+    const today = new Date();
+    const payments = [];
+    for(let i=0;i<months;i++){
+      const amount = (i===months-1) ? (total - base*(months-1)) : base;
+      const due = i===0 ? new Date(today) : new Date(today.getFullYear(), today.getMonth()+i, 15);
+      payments.push({
+        amount,
+        dueDate: due.toISOString(),
+        label: i===0 ? 'Due now' : ('Due '+due.toLocaleDateString('en-PH',{month:'short', day:'numeric', year:'numeric'}))
+      });
+    }
+    return { months, fee:plan.fee, subtotal, total, payments };
+  }
+
   // ---------- state ----------
   let state = {
     view: 'shop',
@@ -574,6 +619,8 @@
     cart:{}, // id -> qty  (in-memory only, resets on reload)
     search:'',
     checkoutOpen:false,
+    checkoutMode:'full',   // 'full' = pay in full, 'layaway' = installment plan
+    layawayMonths:1,       // duration the buyer has picked in the cart, 1-3
     lastOrder:null,
     trackId:'',
     trackedOrder:undefined, // undefined = not searched yet, null = not found
@@ -646,6 +693,7 @@
   function placeOrder(buyer){
     const items = cartItems();
     if(items.length===0) return;
+    const plan = buyer.layawayPlan || null;
     const order = {
       id:'ORD-'+Date.now().toString(36).toUpperCase(),
       buyerName:buyer.name,
@@ -653,7 +701,9 @@
       address:buyer.address,
       paymentMode:buyer.paymentMode,
       items:items.map(i=>({id:i.id, title:i.title, price:i.price, qty:i.qty})),
-      total:cartTotal(),
+      total: plan ? plan.total : cartTotal(),
+      amountDueNow: plan ? plan.payments[0].amount : cartTotal(),
+      layawayPlan: plan,
       status:'Pending',
       createdAt:new Date().toISOString(),
       proofOfPayment: buyer.proofOfPayment || null
@@ -690,6 +740,8 @@
         stockAfter: null
       })),
       total: order.total,
+      amountDueNow: order.amountDueNow,
+      layawayPlan: order.layawayPlan,
       shipped: false,
       paid: false,
       refunded: false,
@@ -916,21 +968,98 @@
     ]);
     panel.appendChild(bar);
     panel.appendChild(el('div',{style:'margin-top:16px; text-align:right;'},[
-      el('button',{class:'btn btn-primary', onclick:()=>setState({checkoutOpen:true})},['Proceed to checkout →'])
+      el('button',{class:'btn btn-primary', onclick:()=>setState({checkoutOpen:true, checkoutMode:'full'})},['Proceed to checkout →'])
     ]));
     wrap.appendChild(panel);
+    wrap.appendChild(layawayPanel());
     return wrap;
+  }
+
+  // Shown under the cart. Below PHP 1,000 it just tells the buyer how much
+  // more they need to add. At PHP 1,000+ it lets them pick a duration and
+  // shows exactly what they'd pay now and on each remaining due date.
+  function layawayPanel(){
+    const subtotal = cartTotal();
+    const panel = el('div',{class:'panel', style:'margin-top:20px;'});
+    panel.appendChild(el('div',{class:'title', style:'font-size:17px; margin-bottom:4px;'},['📅 Pay by layaway']));
+
+    if(subtotal < LAYAWAY_MIN){
+      panel.appendChild(el('p',{class:'meta'},[
+        'Layaway is available on orders of '+peso(LAYAWAY_MIN)+' and up. Add '+peso(LAYAWAY_MIN-subtotal)+' more to your cart to unlock it.'
+      ]));
+      return panel;
+    }
+
+    panel.appendChild(el('p',{class:'meta'},['Split your total into monthly payments. A layaway fee is added and is non-refundable once your first payment is in.']));
+
+    const picker = el('div',{style:'display:flex; gap:8px; margin:14px 0; flex-wrap:wrap;'});
+    LAYAWAY_PLANS.forEach(p=>{
+      const active = state.layawayMonths===p.months;
+      picker.appendChild(el('button',{
+        class:'btn btn-sm '+(active?'btn-primary':'btn-outline'),
+        onclick:()=>setState({layawayMonths:p.months})
+      },[p.months+' month'+(p.months>1?'s':'')+' (+'+peso(p.fee)+')']));
+    });
+    panel.appendChild(picker);
+
+    const sched = buildLayawaySchedule(subtotal, state.layawayMonths);
+    const table = el('table',{class:'admin-table'});
+    const thead = el('thead',{},[el('tr',{},[el('th',{},['Payment']),el('th',{},['When']),el('th',{},['Amount'])])]);
+    table.appendChild(thead);
+    const tbody = el('tbody');
+    sched.payments.forEach((p,i)=>{
+      tbody.appendChild(el('tr',{},[
+        el('td',{},[i===0?'Down payment':('Payment '+(i+1))]),
+        el('td',{},[p.label]),
+        el('td',{style:'font-weight:600;'},[peso(p.amount)])
+      ]));
+    });
+    table.appendChild(tbody);
+    panel.appendChild(table);
+
+    panel.appendChild(el('div',{class:'cart-total-bar'},[
+      el('div',{class:'meta'},['Books '+peso(sched.subtotal)+' + layaway fee '+peso(sched.fee)]),
+      el('div',{class:'sum'},['Total: '+peso(sched.total)])
+    ]));
+
+    panel.appendChild(el('div',{style:'margin-top:14px; text-align:right;'},[
+      el('button',{class:'btn btn-outline', onclick:()=>setState({checkoutOpen:true, checkoutMode:'layaway'})},
+        ['Reserve via layaway — pay '+peso(sched.payments[0].amount)+' now →'])
+    ]));
+
+    return panel;
   }
 
   function checkoutModal(){
     if(!state.checkoutOpen) return null;
+    const isLayaway = state.checkoutMode==='layaway';
+    const subtotal = cartTotal();
+    const plan = isLayaway ? buildLayawaySchedule(subtotal, state.layawayMonths) : null;
+    const dueNow = isLayaway ? plan.payments[0].amount : subtotal;
+
     const backdrop = el('div',{class:'modal-backdrop', onclick:(e)=>{ if(e.target===backdrop) setState({checkoutOpen:false}); }});
     const modal = el('div',{class:'modal'});
     modal.appendChild(el('button',{class:'modal-close', onclick:()=>setState({checkoutOpen:false})},['×']));
-    modal.appendChild(el('h2',{},['Checkout']));
-    modal.appendChild(el('p',{class:'meta', style:'margin-top:-8px; margin-bottom:16px;'},['Total due: '+peso(cartTotal())]));
+    modal.appendChild(el('h2',{},[isLayaway?'Checkout — Layaway':'Checkout']));
 
-    let selectedMode = 'GCash';
+    if(isLayaway){
+      modal.appendChild(el('p',{class:'meta', style:'margin-top:-8px;'},[
+        plan.months+'-month layaway · order total '+peso(plan.total)+' (books '+peso(plan.subtotal)+' + fee '+peso(plan.fee)+')'
+      ]));
+      const schedBox = el('div',{style:'background:var(--paper); border:1px solid var(--line); border-radius:4px; padding:10px 12px; margin-bottom:16px;'});
+      plan.payments.forEach((p,i)=>{
+        schedBox.appendChild(el('div',{class:'meta', style:'display:flex; justify-content:space-between; padding:3px 0;'+(i===0?'font-weight:700;color:var(--ink);':'')},[
+          el('span',{},[i===0?'Down payment (today)':('Payment '+(i+1)+' — '+p.label)]),
+          el('span',{},[peso(p.amount)])
+        ]));
+      });
+      modal.appendChild(schedBox);
+      modal.appendChild(el('p',{class:'meta', style:'margin-bottom:16px;'},[
+        'You\'re paying '+peso(dueNow)+' now to reserve these books. The layaway fee is non-refundable, and missed payments follow the layaway rules — see Rules & Layaway.'
+      ]));
+    } else {
+      modal.appendChild(el('p',{class:'meta', style:'margin-top:-8px; margin-bottom:16px;'},['Total due: '+peso(dueNow)]));
+    }
 
     const form = el('div');
     const nameField = el('div',{class:'field'},[ el('label',{},['Full name']), el('input',{type:'text', id:'ck-name', placeholder:'Juan Dela Cruz'}) ]);
@@ -939,7 +1068,7 @@
     form.appendChild(contactField);
 
     form.appendChild(el('div',{class:'field', style:'margin-top:16px; border-top:1px solid var(--line); padding-top:12px;'},[
-      el('label',{style:'font-weight:700; display:block; margin-bottom:8px;'},['📸 Proof of Payment (REQUIRED)'])
+      el('label',{style:'font-weight:700; display:block; margin-bottom:8px;'},['📸 Proof of Payment — '+peso(dueNow)+' (REQUIRED)'])
     ]));
     
     const proofContainer = el('div',{style:'position:relative; margin-bottom:12px;'});
@@ -973,13 +1102,14 @@
     
     form.appendChild(el('div',{style:'background:var(--primary-soft); padding:12px; border-radius:8px; text-align:center; font-weight:600;'},['💳 GCash Payment Only']));
 
-    const submitBtn = el('button',{class:'btn btn-primary', style:'width:100%; justify-content:center; margin-top:16px; padding:12px;'},['Place Order & Send Proof']);
+    const submitBtn = el('button',{class:'btn btn-primary', style:'width:100%; justify-content:center; margin-top:16px; padding:12px;'},
+      [isLayaway ? ('Reserve & Send Proof of '+peso(dueNow)) : 'Place Order & Send Proof']);
     submitBtn.addEventListener('click', ()=>{
       const name = document.getElementById('ck-name').value.trim();
       const contact = document.getElementById('ck-contact').value.trim();
       if(!name||!contact){ showToast('Please fill in all fields'); return; }
       if(!proofImageData) { showToast('Please upload proof of payment (screenshot of GCash transfer)'); return; }
-      placeOrder({name, contact, address:'', paymentMode:'GCash', proofOfPayment:proofImageData});
+      placeOrder({name, contact, address:'', paymentMode: isLayaway?'Layaway (GCash)':'GCash', proofOfPayment:proofImageData, layawayPlan: isLayaway?plan:null});
     });
     form.appendChild(submitBtn);
     form.appendChild(el('p',{class:'meta', style:'margin-top:10px; text-align:center; font-size:11px;'},['Your order will be confirmed after payment is verified.']));
@@ -995,10 +1125,25 @@
     const panel = el('div',{class:'panel confirm-box'});
     panel.appendChild(el('div',{class:'meta'},['ORDER PLACED']));
     panel.appendChild(el('div',{class:'big'},[o?o.id:'']));
-    panel.appendChild(el('p',{},['Thanks, '+(o?o.buyerName:'')+'! Please send '+peso(o?o.total:0)+' via '+(o?o.paymentMode:'')+' and keep your reference number.']));
-    
+    panel.appendChild(el('p',{},['Thanks, '+(o?o.buyerName:'')+'! Please send '+peso(o?o.amountDueNow!=null?o.amountDueNow:o.total:0)+' via GCash and keep your reference number.']));
+
+    if(o && o.layawayPlan){
+      const schedBox = el('div',{class:'panel', style:'margin:16px 0; text-align:left; background:var(--paper);'});
+      schedBox.appendChild(el('div',{class:'title', style:'font-size:14.5px; margin-bottom:8px;'},['Your '+o.layawayPlan.months+'-month layaway schedule']));
+      o.layawayPlan.payments.forEach((p,i)=>{
+        schedBox.appendChild(el('div',{class:'meta', style:'display:flex; justify-content:space-between; padding:3px 0;'+(i===0?'font-weight:700;color:var(--ink);':'')},[
+          el('span',{},[i===0?'Down payment (paid today)':('Payment '+(i+1)+' — '+p.label)]),
+          el('span',{},[peso(p.amount)])
+        ]));
+      });
+      schedBox.appendChild(el('p',{class:'meta', style:'margin-top:8px; font-size:11.5px;'},[
+        'Miss a due date and you have 1 week of grace before the layaway is cancelled and payments already made are forfeited. See Rules & Layaway for the full policy.'
+      ]));
+      panel.appendChild(schedBox);
+    }
+
     // Show payment details based on method
-    if(o && o.paymentMode === 'GCash') {
+    if(o && (o.paymentMode === 'GCash' || o.paymentMode === 'Layaway (GCash)')) {
       const payment = getSellerPayment();
       if(payment.gcashQR) {
         const qrSection = el('div', {style:'margin:20px 0; text-align:center;'});
@@ -1074,6 +1219,7 @@
     spine.appendChild(navItem('shop','Shop'));
     spine.appendChild(navItem('cart','Cart', cartCount()||null));
     spine.appendChild(navItem('payment','Payment info'));
+    spine.appendChild(el('a',{class:'nav-item', href:'rules.html'},['📋 Rules & Layaway']));
 
     spine.appendChild(el('div',{class:'spine-footer'},['© '+new Date().getFullYear()+' BookNest']));
     app.appendChild(spine);

@@ -723,21 +723,7 @@
         right: 0;
         background: var(--card-solid, #fff);
         box-shadow: -2px 0 6px rgba(15,23,42,0.06);
-        z-index: 10;
-        isolation: isolate;
-        pointer-events: auto;
-      }
-
-      .receipt-history-table td.rh-actions-cell .rh-actions-grid,
-      .receipt-history-table td.rh-actions-cell button.rc-btn {
-        position: relative;
-        z-index: 11;
-        pointer-events: auto !important;
-        cursor: pointer;
-      }
-      .receipt-history-table td.rh-actions-cell button.rc-btn::before,
-      .receipt-history-table td.rh-actions-cell button.rc-btn::after {
-        pointer-events: none;
+        z-index: 1;
       }
 
       .receipt-history-table thead th:last-child {
@@ -840,7 +826,7 @@
       }
     </style>
 
-    <script src="app.js?v=receipt-actions-fix-20261001"></script>
+    <script src="app.js"></script>
 
   </body>
 </html>

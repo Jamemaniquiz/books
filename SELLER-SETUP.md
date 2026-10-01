@@ -1,20 +1,36 @@
-# BookNest — seller access
+# BookNest — one-time Firebase setup
 
-The whole seller/admin side (Home, Inventory & Sales, Receipts, Shop
-Orders, Buyers) is behind **one passcode**, handled by `admin-gate.js`.
+Do these once, in the Firebase console, after you've pasted your config
+into `firebase-config.js`.
 
-## Changing the passcode
+## 1. Paste the security rules
+Firestore console → **Rules** tab → replace everything with the contents
+of `firestore.rules` (in this folder) → **Publish**.
+Without this step, Firestore will block every read/write (Production
+mode denies everything by default).
 
-1. Open `admin.html` (or any seller page) in your browser.
-2. Unlock it with the current passcode (default: `booknest2026`, unless
-   you've already changed it).
-3. Click the **🔑 Change Password** tab on the same lock screen.
+## 2. Create your seller account
+1. Firestore console → **Authentication** → **Users** tab → **Add user**.
+2. Enter the email and password *you* (the seller) will log in with.
+3. Copy the **User UID** it shows you after creating it.
+4. Go to **Firestore Database** → **Start collection** → collection ID
+   `sellers` → document ID = paste that UID → add any field, e.g.
+   `role: "seller"` → **Save**.
 
-That's it — no Firebase, no separate accounts. The same passcode
-unlocks every seller page, including the Buyers tracking page.
+This is what makes that one login count as a *seller* login instead of
+a buyer — the app checks for a matching document in `sellers/{uid}`.
 
-## Buyer accounts
+## 3. Set the Buyers page's second password
+Firestore console → **Firestore Database** → **Start collection** →
+collection ID `settings` → document ID `buyersLock` → add a field
+named `password` (type: string) with whatever second password you want
+→ **Save**.
 
-Buyers sign up/log in themselves with just a name + password, over on
-`buyer-login.html`. That runs on Supabase and needs a small one-time
-SQL setup — see `BUYER_ACCOUNTS_SETUP.md`.
+## 4. You're set
+- Seller login: `seller-login.html`
+- Buyer sign-up/login: `buyer-login.html`
+- Buyers admin page (double-locked): `buyers.html`
+
+If you ever want to change the Buyers page password, just edit that
+same `settings/buyersLock` → `password` field in Firestore — no code
+changes needed.

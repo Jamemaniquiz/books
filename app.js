@@ -2868,28 +2868,21 @@ const initReceiptHistory = () => {
         </td>
         <td class="rh-actions-cell">
           <div class="rh-actions-grid">
-            <button type="button" class="rc-btn ${shipped ? "shipped" : isPiling ? "piling" : "ship-now"}" data-action="toggle-shipped" data-id="${r.id}"${isPiling ? ` disabled title="Items are in Piling mode — change the shipping carrier before marking as shipped"` : ""}>${shipBtnLabel}</button>
-            <button type="button" class="rc-btn ${paid ? "shipped" : "ship-now"}" data-action="toggle-paid" data-id="${r.id}">${paidBtnLabel}</button>
-            <button type="button" class="rc-btn ${refunded ? "refunded" : "refund-now"}" data-action="toggle-refunded" data-id="${r.id}" title="${refunded ? "Undo refund" : "Refund this order — removes its amount from Total Revenue"}">${refundBtnLabel}</button>
-            <button type="button" class="rc-btn waybill" data-action="waybill-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)" title="Attach the waybill photo and download a thank-you card to send the buyer">${r.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill"}</button>
-            <button type="button" class="rc-btn" data-action="review-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">📝 Review</button>
-            <button type="button" class="rc-btn view" data-action="view-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">View</button>
-            <button type="button" class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">Edit</button>
-            <button type="button" class="rc-btn del" data-action="delete-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">Del</button>
+            <button class="rc-btn ${shipped ? "shipped" : isPiling ? "piling" : "ship-now"}" data-action="toggle-shipped" data-id="${r.id}"${isPiling ? ` disabled title="Items are in Piling mode — change the shipping carrier before marking as shipped"` : ""}>${shipBtnLabel}</button>
+            <button class="rc-btn ${paid ? "shipped" : "ship-now"}" data-action="toggle-paid" data-id="${r.id}">${paidBtnLabel}</button>
+            <button class="rc-btn ${refunded ? "refunded" : "refund-now"}" data-action="toggle-refunded" data-id="${r.id}" title="${refunded ? "Undo refund" : "Refund this order — removes its amount from Total Revenue"}">${refundBtnLabel}</button>
+            <button class="rc-btn waybill" data-action="waybill-receipt" data-id="${r.id}" title="Attach the waybill photo and download a thank-you card to send the buyer">${r.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill"}</button>
+            <button class="rc-btn" data-action="review-receipt" data-id="${r.id}">📝 Review</button>
+            <button class="rc-btn view" data-action="view-receipt" data-id="${r.id}">View</button>
+            <button class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}">Edit</button>
+            <button class="rc-btn del" data-action="delete-receipt" data-id="${r.id}">Del</button>
           </div>
         </td>
       </tr>`;
     }).join("");
-
-    // Receipt buttons use an inline target handler below. This intentionally
-    // avoids depending on bubbling through the table/sticky cells.
   };
 
-  // Expose the receipt action handler for the button-level onclick above.
-  // This is deliberately direct: even if another element stops event bubbling,
-  // the button itself still invokes the action.
-  window.BookNestReceiptAction = handleReceiptAction;
-
+  render();
   searchInput?.addEventListener("input", render);
   document.getElementById("receiptShipStatus")?.addEventListener("change", render);
   document.getElementById("receiptPayStatus")?.addEventListener("change", render);
@@ -2908,11 +2901,11 @@ const initReceiptHistory = () => {
     saveReceipts(receipts);
   });
 
-  async function handleReceiptAction(e) {
-    const btn = e.currentTarget || e.target.closest("button[data-action]");
-    if (!btn || !btn.matches("button[data-action]")) return;
+  wrap.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    const btn    = e.target.closest("[data-action]");
+    if (!btn) return;
     const action = btn.dataset.action;
     const id     = btn.dataset.id;
     if (!id) return;
@@ -3005,9 +2998,7 @@ const initReceiptHistory = () => {
       saveReceipts(getReceipts().filter(r => r.id !== id));
       render();
     }
-  };
-
-  render();
+  });
 
   const modal = document.getElementById("viewReceiptModal");
   if (!modal) return;
@@ -3113,7 +3104,9 @@ const renderShipmentControls = (receipt) => {
       const updated = setReceiptFlags(receipt.id, { shipped: !shipped });
       if (!updated) return;
       renderShipmentControls(updated);
-      openViewModal(updated);
+      // The receipt dialog is already open. Do not call showModal() again.
+      // Prompt for the waybill only after a receipt is newly marked shipped.
+      if (!shipped) openWaybillModal(updated);
     };
   }
 
@@ -3141,8 +3134,8 @@ const renderShipmentControls = (receipt) => {
         }
       }
       const fresh = getReceipts().find(r => r.id === receipt.id) || updated;
+      // The receipt dialog is already open, so refresh only its controls.
       renderShipmentControls(fresh);
-      openViewModal(fresh);
     };
   }
 
