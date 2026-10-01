@@ -1,17 +1,7 @@
-# BookNest — Vercel setup (no Firebase)
+# BookNest — seller password (no Firebase, no Vercel functions)
 
-## 1. Seller password
-Vercel → your project → **Settings → Environment Variables** → add:
-- `SELLER_PASSWORD` = your password (if you skip this, it is `booknest2026`)
-- `BUYERS_PASSWORD` = optional second password for the Buyers page (defaults to the seller password)
-
-## 2. Database (needed for buyer accounts)
-Vercel → **Storage → Create → Upstash Redis** (free) → **Connect to project**.
-Vercel adds the keys by itself.
-
-## 3. Redeploy
-Deployments → ⋯ → **Redeploy** (env vars only apply to new deployments).
-
-Seller login: `seller-login.html` (password only).
-Buyers sign up themselves at `buyer-login.html`. If a buyer forgets their
-password, open `buyers.html` and press **Reset password** to get a temporary one.
+- Seller login: open `seller-login.html` and type the password. Default: `booknest2026`.
+- Change it: log in → `admin.html` → **Seller Password** card → Change Password.
+- The password is saved in the browser you change it in (each phone/computer has its own).
+- Forgot it? Open the site in that browser, press F12 → Console, run
+  `localStorage.removeItem('bn_admin_password_hash')` and reload — it goes back to `booknest2026`.

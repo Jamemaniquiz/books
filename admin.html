@@ -109,6 +109,32 @@
         <button class="btn primary" id="saveGcashBtn">💾 Save GCash Details</button>
       </section>
 
+      <section class="panel" id="passwordPanel">
+        <div class="panel-header">
+          <h2>🔑 Seller Password</h2>
+          <button class="btn ghost" id="logoutBtn">Log out</button>
+        </div>
+        <p class="muted" style="margin-bottom:1rem">Change the password used to log in as seller. It is saved in this browser.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <div style="flex:1;min-width:200px"><label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">Current password</label><input type="password" id="pwCurrent" autocomplete="current-password" /></div>
+          <div style="flex:1;min-width:200px"><label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">New password (6+ characters)</label><input type="password" id="pwNew" autocomplete="new-password" /></div>
+          <div style="flex:1;min-width:200px"><label style="display:block;font-weight:600;font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem">Confirm new password</label><input type="password" id="pwConfirm" autocomplete="new-password" /></div>
+        </div>
+        <button class="btn primary" id="changePwBtn">Change Password</button>
+        <p id="pwMsg" style="margin-top:0.75rem;font-weight:600;display:none"></p>
+      </section>
+      <script>
+        document.getElementById('changePwBtn').addEventListener('click', function(){
+          var msg = document.getElementById('pwMsg');
+          var r = window.BN_Security.changePassword(document.getElementById('pwCurrent').value, document.getElementById('pwNew').value, document.getElementById('pwConfirm').value);
+          var ok = r === 'Password changed';
+          msg.textContent = ok ? '✅ Password changed. Use the new one next time you log in.' : '⚠️ ' + r;
+          msg.style.color = ok ? '#2f6b3a' : '#a8402a'; msg.style.display = 'block';
+          if(ok){ ['pwCurrent','pwNew','pwConfirm'].forEach(function(id){ document.getElementById(id).value = ''; }); }
+        });
+        document.getElementById('logoutBtn').addEventListener('click', function(){ window.BN_Security.logout(); });
+      </script>
+
       <section class="panel">
         <div class="panel-header">
           <h2>Recent Activity</h2>
