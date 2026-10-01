@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-<script src="performance.js" defer></script>
     <title>BookNest</title>
     <style>
       :root{
@@ -49,8 +48,7 @@
       }
       .choices{
         display:grid;
-        grid-template-columns:minmax(0,420px);
-        justify-content:center;
+        grid-template-columns:1fr 1fr;
         gap:20px;
       }
       @media (max-width:520px){
@@ -93,26 +91,27 @@
         color:rgba(255,255,255,0.5);
       }
     </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="supabase-data.js"></script><script src="site-status.js"></script>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-</head>
+  </head>
   <body>
     <div class="landing">
       <div class="brand-mark">BookNest</div>
       <div class="brand-sub">Pre-loved Books</div>
 
       <div class="choices">
-        <a class="choice-card buyer" href="buyer-login.html#login">
+        <a class="choice-card buyer" href="shop.html">
           <div class="choice-icon">🛒</div>
           <div class="choice-title">I'm a Buyer</div>
           <div class="choice-desc">Browse books, add to cart, and check out — no account needed.</div>
+        </a>
+        <a class="choice-card admin" href="admin.html">
+          <div class="choice-icon">🔒</div>
+          <div class="choice-title">I'm the Admin</div>
+          <div class="choice-desc">Manage inventory, sales, and orders. Passcode required.</div>
         </a>
       </div>
 
       <div class="footer-note">© <span id="year"></span> BookNest</div>
     </div>
     <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-  <script src="mobile-enhancements.js"></script>
-</body>
+  </body>
 </html>

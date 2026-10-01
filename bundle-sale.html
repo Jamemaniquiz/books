@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="performance.js" defer></script>
     <title>BookNest — Bundle Order</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
@@ -19,17 +18,17 @@
            "this is a receipt", so the page still feels distinct without
            inventing a second brand. */
         :root {
-            --ink: #26211a;
+            --ink: #17302c;
             --paper: #fffefc;
             --paper-warm: #f6f1e4;
-            --line: rgba(38, 33, 26, 0.14);
+            --line: rgba(23, 48, 44, 0.14);
             --muted: #5c6d68;
-            --teal: #35493c;
-            --teal-deep: #263329;
-            --teal-soft: rgba(53, 73, 60, 0.08);
-            --gold: #9c7a34;
-            --brick: #a8402a;
-            --brick-soft: rgba(168, 64, 42, 0.09);
+            --teal: #0f766e;
+            --teal-deep: #0b3f3b;
+            --teal-soft: rgba(15, 118, 110, 0.08);
+            --gold: #a9782f;
+            --brick: #a8433a;
+            --brick-soft: rgba(168, 67, 58, 0.09);
         }
 
         body { padding-bottom: 3rem; }
@@ -286,7 +285,7 @@
 
         .bn-table input.book-total {
             background: var(--teal-soft);
-            border-color: rgba(53, 73, 60, 0.25);
+            border-color: rgba(15, 118, 110, 0.25);
             color: var(--teal-deep);
             font-weight: 700;
         }
@@ -385,7 +384,7 @@
             gap: 6px;
             background: var(--teal-soft);
             color: var(--teal-deep);
-            border: 1px solid rgba(53, 73, 60, 0.25);
+            border: 1px solid rgba(15, 118, 110, 0.25);
             padding: 4px 12px;
             border-radius: 999px;
             font-size: 12.5px;
@@ -553,13 +552,11 @@
         .action-modal .btn.modal-primary { background: var(--teal); color: #fff; border-color: transparent; }
         .action-modal .btn.modal-ghost { background: transparent; color: var(--muted); }
     </style>
-<script src="seller-nav.js"></script><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 </head>
 <body>
     <header class="site-header">
       <div class="logo">
-        <img class="logo-image" src="logo.png" alt="BookNest logo" />
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
         <span>BookNest</span>
       </div>
       <nav class="nav">
@@ -590,7 +587,7 @@
             <div class="bn-header">
                 <div class="bn-header-left">
                     <div class="bn-logo-circle">
-                        <img class="bn-logo-img" src="logo.png" alt="BookNest logo" />
+                        <img class="bn-logo-img" src="Assets/Booknest.png" alt="BookNest logo" />
                     </div>
                     <div>
                         <h1 class="bn-title serif">BookNest</h1>
@@ -715,9 +712,6 @@
 
     <footer class="site-footer">BookNest © 2026</footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="supabase-data.js"></script>
     <script src="app.js"></script>
     <script>
         function setSelectValueSafe(select, value) {
@@ -733,7 +727,7 @@
         }
 
         const BOOK_TYPES = ["Paperback","Hardbound","MMPB","Sprayed","Leatherbound","Slipcase","Special Edition","Box Set","Signed","Other"];
-        const BOOK_CONDITIONS = ["Brand New","Pre Loved","Damaged","Remaindered"];
+        const BOOK_CONDITIONS = ["New","Pre Loved","Remaindered"];
 
         function setCurrentDate() {
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -1230,6 +1224,5 @@
 
         document.addEventListener('DOMContentLoaded', initNewSale);
     </script>
-<script src="mobile-enhancements.js"></script>
 </body>
 </html>

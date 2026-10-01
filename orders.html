@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-<script src="performance.js" defer></script>
     <title>Shop Orders - BookNest</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
@@ -16,20 +15,16 @@
       .status-Paid{ background:#D8E6D9; color:#2E5A34; }
       .status-Shipped{ background:#D6E1EC; color:#2A4A6B; }
       .status-Cancelled{ background:#E9D6D6; color:#8A2E2E; }
-      .status-Archived{ background:#e8e5df; color:#5f5b54; }
       .order-body{ padding:14px 18px; font-size:13.5px; }
       .order-body .line{ display:flex; justify-content:space-between; padding:3px 0; color:#666; }
       .order-buyer{ margin-bottom:8px; }
       .order-actions{ padding:12px 18px; border-top:1px solid var(--line, #e2ddd0); display:flex; gap:8px; flex-wrap:wrap; }
-      .delete-order{background:#fff0ef!important;color:#a32b22!important;border-color:#e1aaa5!important}.proof-view{margin-top:12px;padding:12px;border:1px solid var(--line,#e2ddd0);border-radius:10px;background:#fafafa}.proof-thumb{width:120px;height:150px;object-fit:cover;border-radius:8px;border:1px solid #ddd;cursor:zoom-in;display:block}.proof-empty{font-size:12px;color:#777}.proof-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}.proof-modal.open{display:flex}.proof-modal img{max-width:95vw;max-height:90vh;object-fit:contain;background:#fff;border-radius:10px}.proof-close{position:absolute;top:14px;right:18px;border:0;background:#fff;border-radius:999px;width:42px;height:42px;font-size:24px;cursor:pointer}
     </style>
-  <script src="seller-nav.js"></script><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-</head>
+  </head>
   <body>
     <header class="site-header">
       <div class="logo">
-        <img class="logo-image" src="logo.png" alt="BookNest logo" />
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
         <span>BookNest</span>
       </div>
       <nav class="nav">
@@ -45,9 +40,7 @@
       <section class="panel">
         <div class="panel-header">
           <h2>Shop Orders</h2>
-          <button id="refreshOrdersBtn" class="btn ghost" type="button">↻ Refresh orders</button>
         </div>
-        <div id="ordersSyncStatus" class="muted" style="font-size:12px;margin:-4px 0 12px;">Checking cloud orders…</div>
         <p class="muted" style="margin-bottom:1rem">
           Orders placed by buyers through <strong>shop.html</strong>. Mark them Paid once you've confirmed payment,
           then Shipped once they're on the way. Buyers can look up their own order status with their Order ID on the
@@ -58,11 +51,7 @@
     </main>
 
     <footer class="site-footer">BookNest © 2026</footer>
-    <div id="proofModal" class="proof-modal" aria-hidden="true"><button id="proofClose" class="proof-close" type="button">×</button><img id="proofModalImg" alt="GCash payment proof"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="supabase-data.js"></script>
     <script>
       const ORDERS_KEY   = '.shop_orders';
       const BOOKS_KEY    = '.books';
@@ -78,9 +67,6 @@
       function writeLocal(key, value){
         try{
           localStorage.setItem(key, JSON.stringify(value));
-          if(window.BookNestCloud?.enabled){
-            window.BookNestCloud.save(key, value).catch(err => console.error('[BookNest] Cloud save failed for', key, err));
-          }
           return true;
         }catch(e){
           alert('Could not save — your browser storage may be full.');
@@ -121,17 +107,6 @@
         writeLocal(RECEIPTS_KEY, receipts);
       }
 
-      function archiveOrder(id){
-        const orders = getOrders();
-        const order = orders.find(o => o.id === id);
-        if(!order) return;
-        if(!confirm('Archive order '+id+'? If it is still active, its stock will be returned to Inventory.')) return;
-        if(order.status !== 'Cancelled' && !order.archived) adjustStockForOrder(order, +1);
-        const updated = orders.map(o => o.id===id ? {...o, archived:true, archivedAt:new Date().toISOString()} : o);
-        saveOrders(updated);
-        render();
-      }
-
       function setOrderStatus(id, status){
         const orders = getOrders();
         const order = orders.find(o => o.id === id);
@@ -144,7 +119,7 @@
         if(willCancel && !wasCancelled) adjustStockForOrder(order, +1);       // give stock back
         else if(!willCancel && wasCancelled) adjustStockForOrder(order, -1);  // take it again
 
-        const updated = orders.map(o => o.id===id ? {...o, status, ...(willCancel ? {archived:true, archivedAt:new Date().toISOString()} : {})} : o);
+        const updated = orders.map(o => o.id===id ? {...o, status} : o);
         if(saveOrders(updated)){
           syncReceiptWithStatus(id, status);
           render();
@@ -154,51 +129,38 @@
       function render(){
         const orders = getOrders();
         const list = document.getElementById('ordersList');
-        const activeOrders = orders.filter(o => !o.archived && o.status !== 'Cancelled');
-        const archivedOrders = orders.filter(o => o.archived || o.status === 'Cancelled');
-
-        function renderOrder(o){
+        if(orders.length===0){
+          list.innerHTML = '<p class="muted" style="padding:20px 0;text-align:center;">No orders yet — they\'ll show up here as soon as a buyer checks out on the shop.</p>';
+          return;
+        }
+        list.innerHTML = orders.map(o => {
           const itemLines = (o.items||[]).map(i =>
             `<div class="line"><span>${escapeHtml(i.title)} × ${i.qty}</span><span>${peso(i.price*i.qty)}</span></div>`
           ).join('');
           const statuses = ['Pending','Paid','Shipped','Cancelled'].filter(s => s !== o.status);
           const actionBtns = statuses.map(s =>
-            `<button class="btn ghost" data-action="set-status" data-id="${escapeHtml(o.id)}" data-status="${s}">Mark ${s}</button>`
+            `<button class="btn ghost" data-action="set-status" data-id="${o.id}" data-status="${s}">Mark ${s}</button>`
           ).join('');
           return `
             <div class="order-card">
               <div class="order-head">
                 <div>
-                  <div class="order-id">${escapeHtml(o.id)}</div>
+                  <div class="order-id">${o.id}</div>
                   <div class="muted" style="font-size:12px;">${new Date(o.createdAt).toLocaleString()}</div>
                 </div>
-                <span class="status-pill status-${escapeHtml(o.status)}">${escapeHtml(o.status)}</span>
+                <span class="status-pill status-${o.status}">${o.status}</span>
               </div>
               <div class="order-body">
                 <div class="order-buyer"><strong>${escapeHtml(o.buyerName)}</strong> · ${escapeHtml(o.contact)}</div>
-                <div class="muted" style="margin-bottom:4px;">${escapeHtml(o.address)}</div>
-                ${o.buyerFacebook?`<div class="muted" style="margin-bottom:8px;">Facebook: ${escapeHtml(o.buyerFacebook)}</div>`:''}
+                <div class="muted" style="margin-bottom:8px;">${escapeHtml(o.address)}</div>
                 ${itemLines}
                 <div class="line" style="font-weight:700;color:#222;border-top:1px solid var(--line, #e2ddd0);margin-top:6px;padding-top:8px;">
                   <span>Total via ${escapeHtml(o.paymentMode)}</span><span>${peso(o.total)}</span>
                 </div>
-                <div class="line"><span>Courier</span><span>${escapeHtml(o.courier||'J&T')}</span></div>
-                <div class="proof-view">${o.proofOfPayment ? `<div style="font-weight:800;margin-bottom:8px;">📸 GCash payment proof — uploaded</div><img class="proof-thumb" data-proof="${escapeHtml(o.id)}" src="${o.proofOfPayment}" alt="GCash payment proof" loading="lazy"><div class="muted" style="font-size:11px;margin-top:6px;">Tap the image to view it larger.</div>` : '<div class="proof-empty">No payment proof uploaded.</div>'}</div>
               </div>
-              <div class="order-actions">${actionBtns}<button class="btn ghost delete-order" data-action="archive-order" data-id="${escapeHtml(o.id)}">🗄 Archive Order</button></div>
+              <div class="order-actions">${actionBtns}</div>
             </div>`;
-        }
-
-        if(!orders.length){
-          list.innerHTML = '<p class="muted" style="padding:20px 0;text-align:center;">No orders yet — they\'ll show up here as soon as a buyer checks out on the shop.</p>';
-          return;
-        }
-        const activeHtml = activeOrders.map(renderOrder).join('');
-        const archivedHtml = archivedOrders.length
-          ? `<details style="margin-top:18px;"><summary style="cursor:pointer;font-weight:800;padding:10px 0;">🗄 Archived Orders (${archivedOrders.length})</summary><div style="margin-top:10px;">${archivedOrders.map(renderOrder).join('')}</div></details>`
-          : '';
-        list.innerHTML = activeHtml || '<p class="muted" style="padding:20px 0;text-align:center;">No active orders.</p>';
-        list.insertAdjacentHTML('beforeend', archivedHtml);
+        }).join('');
       }
 
       function escapeHtml(s){
@@ -206,50 +168,12 @@
       }
 
       document.getElementById('ordersList').addEventListener('click', (e) => {
-        const archiveBtn = e.target.closest('[data-action="archive-order"]');
-        if(archiveBtn){ archiveOrder(archiveBtn.dataset.id); return; }
         const btn = e.target.closest('[data-action="set-status"]');
         if(!btn) return;
         setOrderStatus(btn.dataset.id, btn.dataset.status);
       });
 
-      const proofModal=document.getElementById('proofModal'), proofModalImg=document.getElementById('proofModalImg');
-      document.getElementById('ordersList').addEventListener('click',e=>{const img=e.target.closest('[data-proof]');if(!img)return;proofModalImg.src=img.src;proofModal.classList.add('open');proofModal.setAttribute('aria-hidden','false');});
-      document.getElementById('proofClose').onclick=()=>{proofModal.classList.remove('open');proofModal.setAttribute('aria-hidden','true');proofModalImg.src='';};
-      proofModal.addEventListener('click',e=>{if(e.target===proofModal)document.getElementById('proofClose').click()});
-      async function refreshOrdersFromCloud(){
-        const status=document.getElementById('ordersSyncStatus');
-        const btn=document.getElementById('refreshOrdersBtn');
-        if(btn){btn.disabled=true;btn.textContent='Refreshing…';}
-        if(status) status.textContent='Checking cloud orders…';
-        try{
-          if(window.BookNestCloud?.refresh){
-            const ok=await window.BookNestCloud.refresh(['.shop_orders','.books']);
-            if(status) status.textContent=ok ? '✓ Orders synced from Supabase' : '⚠ Could not sync cloud orders. Showing the last saved data.';
-          } else if(status){
-            status.textContent='Cloud sync is unavailable. Showing saved orders.';
-          }
-          render();
-        }catch(err){
-          console.error('[BookNest] order refresh failed',err);
-          if(status) status.textContent='⚠ Could not sync cloud orders. Showing the last saved data.';
-          render();
-        }finally{
-          if(btn){btn.disabled=false;btn.textContent='↻ Refresh orders';}
-        }
-      }
-      document.getElementById('refreshOrdersBtn')?.addEventListener('click',refreshOrdersFromCloud);
-      // Fallback polling keeps Seller > Shop Orders current even when Supabase realtime is unavailable.
-      setInterval(()=>{ if(document.visibilityState==='visible') refreshOrdersFromCloud(); },15000);
-      window.addEventListener('booknest-cloud-ready', (e) => {
-        if(!e.detail?.ok) return;
-        const active=document.activeElement;
-        const editing=active && active.matches('input,textarea,select,[contenteditable="true"]');
-        if(!editing){ render(); const status=document.getElementById('ordersSyncStatus'); if(status) status.textContent='✓ Orders synced from Supabase'; }
-      });
       render();
-      refreshOrdersFromCloud();
     </script>
-  <script src="mobile-enhancements.js"></script>
-</body>
+  </body>
 </html>

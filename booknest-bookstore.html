@@ -40,7 +40,7 @@
   }
   /* SPINE NAV */
   .spine{
-    width:180px;
+    width:220px;
     flex-shrink:0;
     background:var(--spine);
     color:var(--white);
@@ -112,7 +112,7 @@
   }
 
   /* MAIN */
-  .main{ flex:1; padding:36px 44px; }
+  .main{ flex:1; padding:36px 44px; max-width:1200px; }
   .page-head{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; gap:16px; flex-wrap:wrap;}
   .page-head h1{ font-size:30px; margin:0; }
   .page-head p{ margin:4px 0 0 0; color:var(--ink-soft); font-size:14.5px; }
@@ -283,53 +283,6 @@
   .modal h2{ margin-top:0; font-size:22px; }
   .modal-close{ float:right; cursor:pointer; font-size:20px; color:var(--ink-soft); line-height:1; background:none;border:none; }
 
-  .photo-count-badge{
-    position:absolute; bottom:8px; left:8px;
-    background:rgba(38,33,26,0.7); color:var(--white);
-    font-size:10px; font-weight:700; padding:3px 7px; border-radius:2px;
-  }
-
-  /* Book detail modal */
-  .book-detail-main-img{
-    width:100%; max-height:320px; object-fit:cover; border-radius:4px;
-    cursor:zoom-in; display:block;
-  }
-  .book-detail-noimg{
-    height:160px; border-radius:4px; background:linear-gradient(160deg, var(--spine-light), var(--spine-dark));
-    color:rgba(255,255,255,0.85); display:flex; align-items:center; justify-content:center; font-size:14px;
-  }
-  .book-detail-thumbs{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-  .book-detail-thumb{
-    width:52px; height:68px; object-fit:cover; border-radius:2px; cursor:pointer;
-    border:2px solid transparent; opacity:0.7;
-  }
-  .book-detail-thumb:hover{ opacity:1; }
-  .book-detail-thumb.active{ border-color:var(--brick); opacity:1; }
-  .book-detail-tags{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
-  .book-detail-tags .tag{
-    background:rgba(53,73,60,0.08); color:var(--spine-dark);
-    font-size:11.5px; font-weight:600; padding:4px 9px; border-radius:10px;
-  }
-  .book-detail-desc{
-    margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
-    font-size:13.5px; line-height:1.65; color:var(--ink); white-space:pre-wrap;
-  }
-
-  /* Lightbox (click any photo to enlarge) */
-  .lightbox-backdrop{
-    position:fixed; inset:0; background:rgba(15,13,10,0.85);
-    display:flex; align-items:center; justify-content:center; z-index:80; padding:24px;
-    cursor:zoom-out;
-  }
-  .lightbox-box{ max-width:min(680px, 92vw); max-height:90vh; text-align:center; cursor:default; position:relative; }
-  .lightbox-img{ max-width:100%; max-height:80vh; border-radius:4px; display:block; margin:0 auto; }
-  .lightbox-caption{ color:var(--white); font-size:13px; margin-top:10px; }
-  .lightbox-close{
-    position:absolute; top:-14px; right:-14px; width:32px; height:32px; border-radius:50%;
-    background:var(--white); color:var(--ink); border:none; font-size:18px; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-  }
-
   .lock-screen{ max-width:340px; margin:60px auto; text-align:center; }
   .lock-screen .field{ margin:16px 0; text-align:left; }
 
@@ -355,233 +308,62 @@
     .cart-row{ grid-template-columns:48px 1fr; grid-template-areas:"cover title" "cover meta" "cover controls"; row-gap:4px; }
     .form-grid{ grid-template-columns:1fr; }
   }
-
-  @media (max-width: 600px) {
-    .modal {
-      max-width: 100vw;
-      width: 100%;
-      max-height: 90vh;
-      padding: 20px;
-      border-radius: 12px 12px 0 0;
-      margin: 0 auto auto auto;
-    }
-
-    .modal-backdrop {
-      padding: 0;
-      align-items: flex-end;
-      background: rgba(38, 33, 26, 0.6);
-    }
-
-    .modal h2 {
-      font-size: 18px;
-      margin-bottom: 16px;
-    }
-
-    .modal-close {
-      float: right;
-      font-size: 24px;
-    }
-
-    .field {
-      margin-bottom: 12px;
-    }
-
-    .field label {
-      font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      display: block;
-    }
-
-    .field input[type="text"],
-    .field input[type="tel"],
-    .field textarea {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 16px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      font-family: inherit;
-    }
-
-    #ck-proof-preview {
-      height: 100px;
-      border-radius: 6px;
-      padding: 10px;
-    }
-
-    #ck-proof-preview img {
-      border-radius: 6px;
-    }
-
-    .btn {
-      padding: 12px 16px;
-      font-size: 15px;
-      width: 100%;
-    }
-
-    .btn.btn-primary {
-      margin-top: 12px;
-    }
-
-    .meta {
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .cart-row {
-      grid-template-columns: 40px 1fr 40px;
-      gap: 10px;
-      padding: 12px 0;
-    }
-
-    .cart-row .mini-cover {
-      width: 40px;
-      height: 54px;
-    }
-
-    .qty-input {
-      width: 45px;
-      padding: 6px 4px;
-      font-size: 13px;
-    }
-
-    .cart-total-bar {
-      font-size: 14px;
-      padding: 12px 0 0 0;
-    }
-
-    .cart-total-bar .sum {
-      font-size: 18px;
-    }
-
-    .panel {
-      padding: 16px;
-      border-radius: 8px;
-    }
-
-    .confirm-box {
-      padding: 16px 0;
-    }
-
-    .confirm-box .big {
-      font-size: 18px;
-    }
-  }
-
-  @media (max-width: 380px) {
-    .modal {
-      padding: 16px;
-    }
-
-    .modal h2 {
-      font-size: 16px;
-    }
-
-    .field input[type="text"],
-    .field input[type="tel"],
-    .field textarea {
-      padding: 8px 10px;
-      font-size: 14px;
-    }
-
-    #ck-proof-preview {
-      height: 80px;
-      font-size: 11px;
-    }
-
-    .btn {
-      padding: 10px 12px;
-      font-size: 13px;
-    }
-
-    .meta {
-      font-size: 11px;
-    }
-
-    .cart-row {
-      grid-template-columns: 35px 1fr 35px;
-      gap: 8px;
-      padding: 10px 0;
-    }
-
-    .cart-row .mini-cover {
-      width: 35px;
-      height: 47px;
-    }
-
-    .panel {
-      padding: 12px;
-    }
-  }
-
 </style>
 </head>
 <body>
 
 <div id="root"></div>
 
-<script src="app.js"></script>
 <script>
 (function(){
 
-  // ---------- storage: shared with the seller admin app ----------
-  // This page reads the SAME book records the seller manages in
-  // inventory.html (same localStorage key, same browser/device). No
-  // separate catalog, no login for buyers — orders are written to their
-  // own key so the seller can review them from the password-protected
-  // Admin > Orders page.
-  const BOOKS_KEY  = '.books';
-  const ORDERS_KEY = '.shop_orders';
-
-  function readLocal(key, fallback){
+  // ---------- storage helpers ----------
+  async function loadCatalog(){
     try{
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    }catch(e){ return fallback; }
+      const r = await window.storage.get('catalog', true);
+      return r ? JSON.parse(r.value) : seedCatalog();
+    }catch(e){ return seedCatalog(); }
   }
-  function writeLocal(key, value){
+  async function saveCatalog(books){
+    await window.storage.set('catalog', JSON.stringify(books), true);
+  }
+  async function loadOrders(){
     try{
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    }catch(e){
-      console.error('[BookNest shop] save failed for', key, e);
-      showToast('Could not save — your browser storage may be full.');
-      return false;
-    }
+      const r = await window.storage.get('orders', true);
+      return r ? JSON.parse(r.value) : [];
+    }catch(e){ return []; }
+  }
+  async function saveOrders(orders){
+    await window.storage.set('orders', JSON.stringify(orders), true);
   }
 
-  function loadCatalog(){ return readLocal(BOOKS_KEY, []); }
-  function saveCatalog(books){ return writeLocal(BOOKS_KEY, books); }
-  function loadOrders(){ return readLocal(ORDERS_KEY, []); }
-  function saveOrders(orders){ return writeLocal(ORDERS_KEY, orders); }
-
-  // A book is available to buy if it has stock left beyond anything the
-  // seller has already put on layaway (mirrors the admin app's own rule).
-  function availableStock(book){
-    const holds = Array.isArray(book.layawayHolds) ? book.layawayHolds : [];
-    return Math.max(0, (Number(book.stock)||0) - holds.length);
+  function seedCatalog(){
+    return [
+      {id:'bk1', title:'The Core', author:'Peter V. Brett', price:150, format:'Hardcover', edition:'UK', condition:'Pre-loved — tanned, light foxing', shelf:'2113', stock:1, image:''},
+      {id:'bk2', title:'Sons of Darkness', author:'Gourav Mohanty', price:180, format:'Hardcover', edition:'US, Remaindered', condition:'Minimal foxing', shelf:'2234', stock:1, image:''},
+      {id:'bk3', title:'Heart Bones', author:'Colleen Hoover', price:180, format:'Hardcover', edition:'UK', condition:'Pre-loved — good shape', shelf:'5222', stock:2, image:''},
+      {id:'bk4', title:'Defy the Night', author:'Brigid Kemmerer', price:240, format:'Hardcover', edition:'US, Remaindered', condition:'Light foxing', shelf:'5242', stock:1, image:''}
+    ];
   }
-
   const uid = (p) => p + Math.random().toString(36).slice(2,9);
   const peso = (n) => 'PHP ' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
 
+  const ADMIN_CODE = 'foxed2026'; // simple client-side gate — not real security
+  const ADMIN_PARAM = new URLSearchParams(window.location.search).has('admin'); // visit the page with ?admin at the end of the URL to reveal the Admin tab
+
   // ---------- state ----------
   let state = {
-    view: 'shop',
-    books: loadCatalog(),
-    orders: loadOrders(),
+    view: ADMIN_PARAM ? 'admin' : 'shop',
+    books:[],
+    orders:[],
     cart:{}, // id -> qty  (in-memory only, resets on reload)
+    loading:true,
     search:'',
+    adminUnlocked:false,
+    editingBook:null,   // book object being edited, or 'new'
     checkoutOpen:false,
     lastOrder:null,
-    trackId:'',
-    trackedOrder:undefined, // undefined = not searched yet, null = not found
-    toast:null,
-    viewingBookId:null,   // book detail modal (multiple photos + full details)
-    viewingImageIndex:0,  // which photo is showing large inside that modal
-    lightbox:null         // {src, title} — fullscreen photo viewer, used by both
-                           // the book detail modal and the Payment info QR code
+    toast:null
   };
 
   function setState(patch){ state = {...state, ...patch}; render(); }
@@ -591,11 +373,11 @@
     setTimeout(()=>{ if(state.toast===msg) setState({toast:null}); }, 2600);
   }
 
-  // Refresh the catalog from storage each time we come back to the shop
-  // view, so stock the seller just changed in Inventory shows up here too.
-  function refreshCatalog(){
-    setState({books: loadCatalog()});
-  }
+  // ---------- init ----------
+  (async function init(){
+    const [books, orders] = await Promise.all([loadCatalog(), loadOrders()]);
+    setState({books, orders, loading:false});
+  })();
 
   // ---------- cart logic ----------
   function cartCount(){ return Object.values(state.cart).reduce((a,b)=>a+b,0); }
@@ -611,13 +393,13 @@
     const book = state.books.find(b=>b.id===id);
     if(!book) return;
     const current = state.cart[id]||0;
-    if(current >= availableStock(book)){ showToast('No more stock available'); return; }
+    if(current >= book.stock){ showToast('No more stock available'); return; }
     setState({cart:{...state.cart, [id]:current+1}});
     showToast('Added to cart');
   }
   function setCartQty(id, qty){
     const book = state.books.find(b=>b.id===id);
-    qty = Math.max(0, Math.min(qty, book?availableStock(book):qty));
+    qty = Math.max(0, Math.min(qty, book?book.stock:qty));
     const next = {...state.cart};
     if(qty<=0){ delete next[id]; } else { next[id]=qty; }
     setState({cart:next});
@@ -626,24 +408,27 @@
     const next = {...state.cart}; delete next[id]; setState({cart:next});
   }
 
-  // A book can have several photos (book.images, an array) — older records
-  // may only have the single legacy book.image field, so fall back to that.
-  function bookImages(book){
-    if(Array.isArray(book.images) && book.images.filter(Boolean).length) return book.images.filter(Boolean);
-    return book.image ? [book.image] : [];
+  // ---------- admin: book CRUD ----------
+  async function saveBook(book){
+    let books;
+    if(book.id){
+      books = state.books.map(b=>b.id===book.id?book:b);
+    }else{
+      books = [...state.books, {...book, id:uid('bk')}];
+    }
+    await saveCatalog(books);
+    setState({books, editingBook:null});
+    showToast('Book saved');
+  }
+  async function deleteBook(id){
+    const books = state.books.filter(b=>b.id!==id);
+    await saveCatalog(books);
+    setState({books});
+    showToast('Book removed');
   }
 
-  // ---------- book detail + photo lightbox ----------
-  function openBookDetail(id){ setState({viewingBookId:id, viewingImageIndex:0}); }
-  function closeBookDetail(){ setState({viewingBookId:null}); }
-  function openLightbox(src, title){ if(src) setState({lightbox:{src, title}}); }
-  function closeLightbox(){ setState({lightbox:null}); }
-
   // ---------- checkout ----------
-  function loadReceipts(){ return readLocal('.receipts', []); }
-  function saveReceiptsLocal(receipts){ return writeLocal('.receipts', receipts); }
-
-  function placeOrder(buyer){
+  async function placeOrder(buyer){
     const items = cartItems();
     if(items.length===0) return;
     const order = {
@@ -655,54 +440,22 @@
       items:items.map(i=>({id:i.id, title:i.title, price:i.price, qty:i.qty})),
       total:cartTotal(),
       status:'Pending',
-      createdAt:new Date().toISOString(),
-      proofOfPayment: buyer.proofOfPayment || null
+      createdAt:new Date().toISOString()
     };
-    // decrement stock on the SHARED book records (same ones inventory.html reads)
+    // decrement stock
     const books = state.books.map(b=>{
       const item = items.find(i=>i.id===b.id);
-      return item ? {...b, stock:Math.max(0,(Number(b.stock)||0)-item.qty)} : b;
+      return item ? {...b, stock:Math.max(0,b.stock-item.qty)} : b;
     });
     const orders = [order, ...state.orders];
-
-    // Also record this as a Receipt — same shape/key Admin > Receipts uses
-    // for manually-recorded sales — so every shop checkout shows up there
-    // too, with the same invoice-style view/print/download buyers and the
-    // seller both see. It's linked to the order by sharing the same id.
-    const receipt = {
-      id: order.id,
-      date: order.createdAt,
-      customer: order.buyerName,
-      address: order.address || '',
-      phone: order.contact,
-      paymentMethod: order.paymentMode,
-      saleIds: [],
-      items: items.map(i => ({
-        title: i.title,
-        author: i.author || '',
-        genre: i.genre || 'General',
-        type: i.type || 'Paperback',
-        condition: i.condition || 'Pre Loved',
-        box: i.box || '',
-        qty: i.qty,
-        unitPrice: i.price,
-        discount: 0,
-        stockAfter: null
-      })),
-      total: order.total,
-      shipped: false,
-      paid: false,
-      refunded: false,
-      shopOrder: true,
-      proofOfPayment: order.proofOfPayment || null
-    };
-    const receipts = [receipt, ...loadReceipts()];
-
-    const catalogOk  = saveCatalog(books);
-    const ordersOk   = saveOrders(orders);
-    const receiptsOk = saveReceiptsLocal(receipts);
-    if(!catalogOk || !ordersOk || !receiptsOk) return;
+    await Promise.all([saveCatalog(books), saveOrders(orders)]);
     setState({books, orders, cart:{}, checkoutOpen:false, lastOrder:order, view:'confirm'});
+  }
+
+  async function setOrderStatus(orderId, status){
+    const orders = state.orders.map(o=>o.id===orderId?{...o,status}:o);
+    await saveOrders(orders);
+    setState({orders});
   }
 
   // ---------- render helpers ----------
@@ -721,22 +474,15 @@
 
   function navItem(key, label, badge){
     const active = state.view===key || (state.view==='confirm' && key==='shop');
-    const item = el('div',{class:'nav-item'+(active?' active':''), onclick:()=>{
-      if(key==='shop') refreshCatalog();
-      setState({view:key});
-    }},[label]);
+    const item = el('div',{class:'nav-item'+(active?' active':''), onclick:()=>setState({view:key})},[label]);
     if(badge) item.appendChild(el('span',{class:'nav-badge'},[String(badge)]));
     return item;
   }
 
-  function coverEl(book, sizeClass, onClick){
-    const images = bookImages(book);
-    const attrs = {class:sizeClass||'cover'};
-    if(onClick){ attrs.onclick = onClick; attrs.style = 'cursor:zoom-in;'; attrs.title = 'Tap to see more photos & details'; }
-    const c = el('div',attrs);
-    if(images.length){
-      c.appendChild(el('img',{src:images[0], alt:book.title}));
-      if(images.length>1) c.appendChild(el('div',{class:'photo-count-badge'},['📷 '+images.length]));
+  function coverEl(book, sizeClass){
+    const c = el('div',{class:sizeClass||'cover'});
+    if(book.image){
+      c.appendChild(el('img',{src:book.image, alt:book.title}));
     }else{
       c.appendChild(el('div',{class:'cover-fallback'},[
         el('div',{class:'t'},[book.title]),
@@ -747,100 +493,24 @@
   }
 
   function bookCard(book){
-    const avail = availableStock(book);
-    const out = avail<=0;
+    const out = book.stock<=0;
     const card = el('div',{class:'card'});
-    if(book.box) card.appendChild(el('div',{class:'shelf-tab'},['📦 '+book.box]));
-    const cov = coverEl(book,'cover', ()=>openBookDetail(book.id));
-    cov.appendChild(el('div',{class:'stock-flag'+(out?' out':'')},[out?'OUT':avail+' LEFT']));
+    card.appendChild(el('div',{class:'shelf-tab'},['Shelf #'+book.shelf]));
+    const cov = coverEl(book,'cover');
+    cov.appendChild(el('div',{class:'stock-flag'+(out?' out':'')},[out?'OUT':book.stock+' LEFT']));
     card.appendChild(cov);
     const body = el('div',{class:'card-body'});
     body.appendChild(el('div',{class:'price'},[peso(book.price)]));
-    body.appendChild(el('div',{class:'title', style:'cursor:pointer;', onclick:()=>openBookDetail(book.id)},[book.title]));
-    body.appendChild(el('div',{class:'meta'},[[book.genre,book.type].filter(Boolean).join(' · ')]));
+    body.appendChild(el('div',{class:'title'},[book.title]));
+    body.appendChild(el('div',{class:'meta'},[[book.format,book.edition].filter(Boolean).join(' · ')]));
     body.appendChild(el('div',{class:'meta'},[book.condition||'']));
     const actions = el('div',{class:'card-actions'});
-    const detailsBtn = el('button',{class:'btn btn-outline', onclick:()=>openBookDetail(book.id)},['Details']);
     const addBtn = el('button',{class:'btn btn-primary', onclick:()=>addToCart(book.id)},['Add to cart']);
     if(out) addBtn.disabled = true;
-    actions.appendChild(detailsBtn);
     actions.appendChild(addBtn);
     body.appendChild(actions);
     card.appendChild(body);
     return card;
-  }
-
-  // Full book detail — every photo (click one to see it fullscreen) plus
-  // every detail the seller has entered, including their description.
-  function bookDetailModal(){
-    if(!state.viewingBookId) return null;
-    const book = state.books.find(b=>b.id===state.viewingBookId);
-    if(!book) return null;
-    const images = bookImages(book);
-    const idx = images.length ? Math.min(state.viewingImageIndex||0, images.length-1) : 0;
-    const avail = availableStock(book);
-    const out = avail<=0;
-
-    const backdrop = el('div',{class:'modal-backdrop', onclick:(e)=>{ if(e.target===backdrop) closeBookDetail(); }});
-    const modal = el('div',{class:'modal', style:'max-width:520px;'});
-    modal.appendChild(el('button',{class:'modal-close', onclick:closeBookDetail},['×']));
-
-    if(images.length){
-      modal.appendChild(el('img',{
-        src:images[idx], alt:book.title, class:'book-detail-main-img', title:'Tap to enlarge',
-        onclick:()=>openLightbox(images[idx], book.title)
-      }));
-      if(images.length>1){
-        const thumbs = el('div',{class:'book-detail-thumbs'});
-        images.forEach((src,i)=>{
-          thumbs.appendChild(el('img',{
-            src, class:'book-detail-thumb'+(i===idx?' active':''),
-            onclick:()=>setState({viewingImageIndex:i})
-          }));
-        });
-        modal.appendChild(thumbs);
-      }
-    }else{
-      modal.appendChild(el('div',{class:'book-detail-noimg'},['📕 No photo uploaded yet']));
-    }
-
-    modal.appendChild(el('h2',{},[book.title]));
-    modal.appendChild(el('p',{class:'meta'},[book.author ? 'by '+book.author : 'Author unknown']));
-
-    const tags = el('div',{class:'book-detail-tags'});
-    [book.genre||'General', book.type||'Paperback', book.condition||'Pre Loved'].forEach(t=>{
-      tags.appendChild(el('span',{class:'tag'},[t]));
-    });
-    modal.appendChild(tags);
-
-    modal.appendChild(el('div',{class:'price', style:'font-size:20px;margin-top:10px;'},[peso(book.price)]));
-    modal.appendChild(el('p',{class:'meta'},[out ? 'Out of stock' : avail+' left in stock']));
-
-    modal.appendChild(el('div',{class:'book-detail-desc'},[
-      book.description && book.description.trim() ? book.description.trim() : 'No description from the seller yet.'
-    ]));
-
-    const addBtn = el('button',{
-      class:'btn btn-primary', style:'width:100%;justify-content:center;margin-top:16px;padding:12px;',
-      onclick:()=>addToCart(book.id)
-    },[out?'Out of stock':'Add to cart']);
-    if(out) addBtn.disabled = true;
-    modal.appendChild(addBtn);
-
-    backdrop.appendChild(modal);
-    return backdrop;
-  }
-
-  // Fullscreen photo viewer — reused for book photos and the GCash QR code.
-  function lightboxOverlay(){
-    if(!state.lightbox) return null;
-    const backdrop = el('div',{class:'lightbox-backdrop', onclick:closeLightbox});
-    const box = el('div',{class:'lightbox-box', onclick:(e)=>e.stopPropagation()});
-    box.appendChild(el('button',{class:'lightbox-close', onclick:closeLightbox},['×']));
-    box.appendChild(el('img',{src:state.lightbox.src, alt:state.lightbox.title||'', class:'lightbox-img'}));
-    if(state.lightbox.title) box.appendChild(el('div',{class:'lightbox-caption'},[state.lightbox.title]));
-    backdrop.appendChild(box);
-    return backdrop;
   }
 
   function shopView(){
@@ -848,7 +518,7 @@
     wrap.appendChild(el('div',{class:'page-head'},[
       el('div',{},[
         el('h1',{},['All books']),
-        el('p',{},['Browse what\'s currently on the shelf. Stock updates as the seller adds or sells books.'])
+        el('p',{},['Browse what\'s currently on the shelf. Stock updates live as orders come in.'])
       ]),
       (function(){
         const tb = el('div',{class:'toolbar'});
@@ -863,14 +533,11 @@
       'Estimated ship-out is 2 weeks from date of payment confirmation. Pricing errors will be corrected before an order is confirmed — we\'ll always check with you first.'
     ]));
     const q = state.search.trim().toLowerCase();
-    const books = state.books.filter(b => b.shopVisible && (!q || (b.title||'').toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q)));
-    if(state.books.length===0){
-      wrap.appendChild(el('div',{class:'empty'},[
-        el('h3',{},['The shelf is empty right now']),
-        el('p',{},['The seller hasn\'t added any books to the shop yet — check back soon.'])
-      ]));
+    const books = state.books.filter(b => !q || b.title.toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q));
+    if(state.loading){
+      wrap.appendChild(el('div',{class:'empty'},[el('p',{},['Loading catalog...'])]));
     }else if(books.length===0){
-      wrap.appendChild(el('div',{class:'empty'},[el('h3',{},['No books found']), el('p',{},['Try a different search term, or check back when more books are added to the shop.'])]));
+      wrap.appendChild(el('div',{class:'empty'},[el('h3',{},['No books found']), el('p',{},['Try a different search term.'])]));
     }else{
       const grid = el('div',{class:'grid'});
       books.forEach(b=>grid.appendChild(bookCard(b)));
@@ -888,22 +555,21 @@
     if(items.length===0){
       wrap.appendChild(el('div',{class:'panel'},[
         el('div',{class:'empty'},[ el('h3',{},['Cart is empty']), el('p',{},['Head back to the shop to add some books.']),
-          el('button',{class:'btn btn-primary', onclick:()=>{ refreshCatalog(); setState({view:'shop'}); }, style:'margin-top:10px;'},['Browse books']) ])
+          el('button',{class:'btn btn-primary', onclick:()=>setState({view:'shop'}), style:'margin-top:10px;'},['Browse books']) ])
       ]));
       return wrap;
     }
     const panel = el('div',{class:'panel'});
     items.forEach(item=>{
-      const avail = availableStock(item) + item.qty; // qty already reserved in cart counts toward what THIS buyer can hold
       const row = el('div',{class:'cart-row'});
       row.appendChild(coverEl(item,'mini-cover'));
       const info = el('div',{},[
         el('div',{class:'title', style:'font-size:15px;'},[item.title]),
-        el('div',{class:'meta'},[[item.genre,item.type].filter(Boolean).join(' · ')])
+        el('div',{class:'meta'},[[item.format,item.edition].filter(Boolean).join(' · ')])
       ]);
       row.appendChild(info);
-      row.appendChild(el('div',{class:'meta'},[item.box?('📦 '+item.box):'']));
-      const qtyInput = el('input',{class:'qty-input', type:'number', min:'1', max:String(avail), value:String(item.qty)});
+      row.appendChild(el('div',{class:'meta'},['Shelf #'+item.shelf]));
+      const qtyInput = el('input',{class:'qty-input', type:'number', min:'1', max:String(item.stock+item.qty), value:String(item.qty)});
       qtyInput.addEventListener('change', e=>setCartQty(item.id, parseInt(e.target.value||'1',10)));
       row.appendChild(qtyInput);
       row.appendChild(el('div',{style:'font-weight:600;'},[peso(item.price*item.qty)]));
@@ -934,55 +600,39 @@
 
     const form = el('div');
     const nameField = el('div',{class:'field'},[ el('label',{},['Full name']), el('input',{type:'text', id:'ck-name', placeholder:'Juan Dela Cruz'}) ]);
-    const contactField = el('div',{class:'field'},[ el('label',{},['Phone number']), el('input',{type:'tel', id:'ck-contact', placeholder:'09XX XXX XXXX'}) ]);
+    const contactField = el('div',{class:'field'},[ el('label',{},['Phone / FB name']), el('input',{type:'text', id:'ck-contact', placeholder:'09XX XXX XXXX or FB name'}) ]);
+    const addressField = el('div',{class:'field'},[ el('label',{},['Delivery address']), el('textarea',{id:'ck-address', placeholder:'Complete address for shipping'}) ]);
     form.appendChild(nameField);
     form.appendChild(contactField);
+    form.appendChild(addressField);
 
-    form.appendChild(el('div',{class:'field', style:'margin-top:16px; border-top:1px solid var(--line); padding-top:12px;'},[
-      el('label',{style:'font-weight:700; display:block; margin-bottom:8px;'},['📸 Proof of Payment (REQUIRED)'])
-    ]));
-    
-    const proofContainer = el('div',{style:'position:relative; margin-bottom:12px;'});
-    const proofInput = el('input',{type:'file', id:'ck-payment-proof', accept:'image/*', style:'display:none;'});
-    const proofPreview = el('div',{id:'ck-proof-preview', style:'width:100%; height:120px; border:2px dashed var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; background:var(--paper); cursor:pointer;'});
-    proofPreview.appendChild(el('span',{class:'meta'},['Tap to upload proof of GCash payment']));
-    proofContainer.appendChild(proofPreview);
-    proofContainer.appendChild(proofInput);
-    
-    let proofImageData = null;
-    proofPreview.addEventListener('click', ()=>proofInput.click());
-    proofInput.addEventListener('change', async (e)=>{
-      const file = e.target.files?.[0];
-      if(!file) return;
-      try {
-        proofImageData = await compressImageFile(file);
-        const img = el('img',{src:proofImageData, style:'width:100%; height:100%; object-fit:cover; border-radius:6px;'});
-        proofPreview.innerHTML = '';
-        proofPreview.appendChild(img);
-      } catch(err) {
-        showToast('Could not process image. Try a smaller file.');
-      }
+    form.appendChild(el('div',{class:'field', style:'margin-top:4px;'},[el('label',{},['Payment method'])]));
+    const methods = ['GCash','Bank Transfer'];
+    const methodWrap = el('div');
+    methods.forEach(m=>{
+      const opt = el('div',{class:'pay-method'+(m===selectedMode?' selected':'')},[
+        el('input',{type:'radio', name:'paymode', checked:m===selectedMode?'checked':null, onchange:()=>{ selectedMode=m; render_methods(); }}),
+        el('span',{},[m])
+      ]);
+      methodWrap.appendChild(opt);
     });
-    
-    form.appendChild(proofContainer);
-    form.appendChild(el('p',{class:'meta', style:'font-size:11px; margin-top:8px; color:var(--muted);'},['Take a screenshot or photo of your GCash transfer confirmation']));
+    function render_methods(){
+      Array.from(methodWrap.children).forEach((child,i)=>{
+        child.className = 'pay-method'+(methods[i]===selectedMode?' selected':'');
+      });
+    }
+    form.appendChild(methodWrap);
 
-    form.appendChild(el('div',{class:'field', style:'margin-top:16px; border-top:1px solid var(--line); padding-top:12px;'},[
-      el('div',{class:'meta'},['Payment Method'])
-    ]));
-    
-    form.appendChild(el('div',{style:'background:var(--primary-soft); padding:12px; border-radius:8px; text-align:center; font-weight:600;'},['💳 GCash Payment Only']));
-
-    const submitBtn = el('button',{class:'btn btn-primary', style:'width:100%; justify-content:center; margin-top:16px; padding:12px;'},['Place Order & Send Proof']);
+    const submitBtn = el('button',{class:'btn btn-primary', style:'width:100%; justify-content:center; margin-top:8px;'},['Place order']);
     submitBtn.addEventListener('click', ()=>{
       const name = document.getElementById('ck-name').value.trim();
       const contact = document.getElementById('ck-contact').value.trim();
-      if(!name||!contact){ showToast('Please fill in all fields'); return; }
-      if(!proofImageData) { showToast('Please upload proof of payment (screenshot of GCash transfer)'); return; }
-      placeOrder({name, contact, address:'', paymentMode:'GCash', proofOfPayment:proofImageData});
+      const address = document.getElementById('ck-address').value.trim();
+      if(!name||!contact||!address){ showToast('Please fill in all fields'); return; }
+      placeOrder({name, contact, address, paymentMode:selectedMode});
     });
     form.appendChild(submitBtn);
-    form.appendChild(el('p',{class:'meta', style:'margin-top:10px; text-align:center; font-size:11px;'},['Your order will be confirmed after payment is verified.']));
+    form.appendChild(el('p',{class:'meta', style:'margin-top:10px; text-align:center;'},['This creates your order. Payment instructions and confirmation come next — no card details needed here.']));
 
     modal.appendChild(form);
     backdrop.appendChild(modal);
@@ -996,27 +646,8 @@
     panel.appendChild(el('div',{class:'meta'},['ORDER PLACED']));
     panel.appendChild(el('div',{class:'big'},[o?o.id:'']));
     panel.appendChild(el('p',{},['Thanks, '+(o?o.buyerName:'')+'! Please send '+peso(o?o.total:0)+' via '+(o?o.paymentMode:'')+' and keep your reference number.']));
-    
-    // Show payment details based on method
-    if(o && o.paymentMode === 'GCash') {
-      const payment = getSellerPayment();
-      if(payment.gcashQR) {
-        const qrSection = el('div', {style:'margin:20px 0; text-align:center;'});
-        qrSection.appendChild(el('p',{class:'meta'},['Scan or save this QR code to pay via GCash:']));
-        const img = el('img', {src:payment.gcashQR, style:'max-width:200px; border:1px solid var(--line); border-radius:6px; padding:8px; background:white; margin:12px 0; cursor:zoom-in;', title:'Tap to enlarge', onclick:()=>openLightbox(payment.gcashQR, 'GCash QR Code')});
-        qrSection.appendChild(img);
-        if(payment.gcashNumber) {
-          qrSection.appendChild(el('p',{class:'meta'},['Or send to: <strong>'+payment.gcashNumber+'</strong>']));
-        }
-        qrSection.appendChild(el('p',{class:'meta', style:'font-size:12px; color:var(--ink-soft);'},['Reference: '+o.id]));
-        panel.appendChild(qrSection);
-      } else if(payment.gcashNumber) {
-        panel.appendChild(el('p',{class:'meta', style:'margin-top:12px;'},['Send to GCash: <strong>'+payment.gcashNumber+'</strong><br>Reference: '+o.id]));
-      }
-    }
-    
-    panel.appendChild(el('p',{class:'meta'},['Save your Order ID for your records.']));
-    panel.appendChild(el('button',{class:'btn btn-primary', style:'margin-top:14px;', onclick:()=>{ refreshCatalog(); setState({view:'shop'}); }},['Back to shop']));
+    panel.appendChild(el('p',{class:'meta'},['Once we confirm your payment, your order status will change to "Paid" and we\'ll ship within 2 weeks. Check the Orders page any time using your order ID.']));
+    panel.appendChild(el('button',{class:'btn btn-primary', style:'margin-top:14px;', onclick:()=>setState({view:'shop'})},['Back to shop']));
     wrap.appendChild(panel);
     return wrap;
   }
@@ -1025,26 +656,11 @@
     const wrap = el('div');
     wrap.appendChild(el('div',{class:'page-head'},[ el('div',{},[ el('h1',{},['Modes of payment']) ]) ]));
     const panel = el('div',{class:'panel'});
-    
-    const payment = getSellerPayment();
-    let gcashContent = '<div class="meta">Send to the GCash number provided after checkout. Use your Order ID as the reference note.</div>';
-    
-    if(payment.gcashQR || payment.gcashNumber) {
-      gcashContent = '<div style="text-align:center;padding:12px 0;">';
-      if(payment.gcashQR) {
-        gcashContent += '<img src="'+payment.gcashQR+'" id="bn-gcash-qr-img" title="Tap to enlarge" style="max-width:150px;border:1px solid var(--line);border-radius:6px;padding:6px;background:white;margin-bottom:8px;cursor:zoom-in;" /><br>';
-      }
-      if(payment.gcashNumber) {
-        gcashContent += '<strong style="font-size:16px;">'+payment.gcashNumber+'</strong><br>';
-      }
-      gcashContent += '<div class="meta" style="margin-top:8px;">Use your Order ID as reference</div></div>';
-    }
-    
     panel.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:18px;">
         <div>
           <div class="title" style="font-size:16px;">GCash</div>
-          ${gcashContent}
+          <div class="meta">Send to the GCash number provided after checkout. Use your Order ID as the reference note.</div>
         </div>
         <div>
           <div class="title" style="font-size:16px;">Bank Transfer</div>
@@ -1055,8 +671,181 @@
         </div>
       </div>`;
     wrap.appendChild(panel);
-    const qrImg = panel.querySelector('#bn-gcash-qr-img');
-    if(qrImg) qrImg.addEventListener('click', ()=>openLightbox(payment.gcashQR, 'GCash QR Code'));
+    return wrap;
+  }
+
+  // ---------- Admin ----------
+  function bookForm(existing){
+    const isNew = !existing || existing==='new';
+    const b = isNew ? {title:'',author:'',price:'',format:'Hardcover',edition:'',condition:'',shelf:'',stock:1,image:''} : {...existing};
+    const wrap = el('div',{class:'panel'});
+    wrap.appendChild(el('h3',{style:'margin-top:0;'},[isNew?'Add a book':'Edit book']));
+    const grid = el('div',{class:'form-grid'});
+
+    function field(label, key, type, span){
+      const f = el('div',{class:'field'+(span?' field-span2':'')});
+      f.appendChild(el('label',{},[label]));
+      const input = el(type==='textarea'?'textarea':'input', type==='textarea'?{id:'f-'+key}:{id:'f-'+key, type:type});
+      input.value = b[key]!==undefined ? b[key] : '';
+      f.appendChild(input);
+      return f;
+    }
+    grid.appendChild(field('Title','title','text'));
+    grid.appendChild(field('Author','author','text'));
+    grid.appendChild(field('Price (PHP)','price','number'));
+    grid.appendChild(field('Stock','stock','number'));
+    grid.appendChild(field('Format (e.g. Hardcover)','format','text'));
+    grid.appendChild(field('Edition (e.g. UK, Remaindered)','edition','text'));
+    grid.appendChild(field('Shelf number','shelf','text'));
+    grid.appendChild(field('Condition notes','condition','textarea',true));
+    wrap.appendChild(grid);
+
+    // ---- photo: upload a file OR paste a URL, with live preview ----
+    let pendingImage = b.image || '';
+    const photoField = el('div',{class:'field', style:'margin-top:14px;'});
+    photoField.appendChild(el('label',{},['Cover photo']));
+    const photoRow = el('div',{style:'display:flex; gap:14px; align-items:flex-start;'});
+    const preview = el('img',{style:'width:72px; height:98px; object-fit:cover; border-radius:2px; border:1px solid var(--line); background:var(--paper); display:'+(pendingImage?'block':'none')+';', src:pendingImage||''});
+    const previewEmpty = el('div',{style:'width:72px; height:98px; border:1px dashed var(--line); border-radius:2px; display:'+(pendingImage?'none':'flex')+'; align-items:center; justify-content:center; font-size:10px; color:var(--ink-soft); text-align:center; padding:4px;'},['No photo yet']);
+    photoRow.appendChild(preview);
+    photoRow.appendChild(previewEmpty);
+    const photoControls = el('div',{style:'flex:1; display:flex; flex-direction:column; gap:8px;'});
+    const fileInput = el('input',{type:'file', accept:'image/*', id:'f-image-file'});
+    const urlInput = el('input',{type:'text', id:'f-image', placeholder:'...or paste an image URL', value:pendingImage});
+    photoControls.appendChild(fileInput);
+    photoControls.appendChild(urlInput);
+    photoControls.appendChild(el('div',{class:'meta'},['Upload a photo of the actual book, or paste a link. Keep uploaded photos reasonably small.']));
+    photoRow.appendChild(photoControls);
+    photoField.appendChild(photoRow);
+    wrap.appendChild(photoField);
+
+    function updatePreview(src){
+      pendingImage = src||'';
+      preview.src = pendingImage;
+      preview.style.display = pendingImage ? 'block' : 'none';
+      previewEmpty.style.display = pendingImage ? 'none' : 'flex';
+    }
+    fileInput.addEventListener('change', ()=>{
+      const file = fileInput.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = e => { urlInput.value=''; updatePreview(e.target.result); };
+      reader.readAsDataURL(file);
+    });
+    urlInput.addEventListener('input', ()=>{ fileInput.value=''; updatePreview(urlInput.value.trim()); });
+
+    const actions = el('div',{style:'margin-top:16px; display:flex; gap:8px;'});
+    const saveBtn = el('button',{class:'btn btn-primary'},[isNew?'Add book':'Save changes']);
+    saveBtn.addEventListener('click', ()=>{
+      const get = k => document.getElementById('f-'+k).value;
+      const price = parseFloat(get('price')); const stock = parseInt(get('stock')||'0',10);
+      const title = get('title').trim();
+      if(!title || isNaN(price)){ showToast('Title and price are required'); return; }
+      const book = {
+        id: isNew ? null : existing.id,
+        title, author:get('author').trim(), price, stock:isNaN(stock)?0:stock,
+        format:get('format').trim(), edition:get('edition').trim(),
+        shelf:get('shelf').trim(), image:pendingImage.trim(), condition:get('condition').trim()
+      };
+      saveBook(book);
+    });
+    actions.appendChild(saveBtn);
+    actions.appendChild(el('button',{class:'btn btn-ghost', onclick:()=>setState({editingBook:null})},['Cancel']));
+    wrap.appendChild(actions);
+    return wrap;
+  }
+
+  function adminView(){
+    const wrap = el('div');
+    if(!state.adminUnlocked){
+      const lock = el('div',{class:'lock-screen'});
+      lock.appendChild(el('h2',{},['Admin access']));
+      lock.appendChild(el('p',{class:'meta'},['Enter the store passcode to manage the catalog.']));
+      const f = el('div',{class:'field'});
+      const input = el('input',{type:'password', id:'admin-pass', placeholder:'Passcode'});
+      f.appendChild(input);
+      lock.appendChild(f);
+      const btn = el('button',{class:'btn btn-primary', style:'width:100%; justify-content:center;'},['Unlock']);
+      btn.addEventListener('click', ()=>{
+        if(input.value===ADMIN_CODE){ setState({adminUnlocked:true}); }
+        else showToast('Incorrect passcode');
+      });
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter') btn.click(); });
+      lock.appendChild(btn);
+      lock.appendChild(el('p',{class:'meta', style:'margin-top:14px;'},['This is a light client-side gate for one shop-owner use — not secure enough for sensitive data.']));
+      wrap.appendChild(lock);
+      return wrap;
+    }
+
+    wrap.appendChild(el('div',{class:'page-head'},[
+      el('div',{},[ el('h1',{},['Manage catalog']), el('p',{},['Add, edit, or remove books from the shop.']) ]),
+      el('button',{class:'btn btn-primary', onclick:()=>setState({editingBook:'new'})},['+ Add book'])
+    ]));
+
+    if(state.editingBook){
+      wrap.appendChild(bookForm(state.editingBook==='new'?null:state.editingBook));
+      return wrap;
+    }
+
+    const panel = el('div',{class:'panel'});
+    const table = el('table',{class:'admin-table'});
+    const thead = el('tr',{},[ el('th',{},['Title']), el('th',{},['Price']), el('th',{},['Stock']), el('th',{},['Shelf']), el('th',{},['']) ]);
+    table.appendChild(thead);
+    if(state.books.length===0){
+      panel.appendChild(el('div',{class:'empty'},[el('p',{},['No books yet — add your first one.'])]));
+    }else{
+      state.books.forEach(b=>{
+        const tr = el('tr',{},[
+          el('td',{},[b.title]),
+          el('td',{},[peso(b.price)]),
+          el('td',{},[String(b.stock)]),
+          el('td',{},[b.shelf||'—'])
+        ]);
+        const actionsTd = el('td',{style:'text-align:right;'});
+        const editBtn = el('button',{class:'btn btn-ghost btn-sm', onclick:()=>setState({editingBook:b})},['Edit']);
+        const delBtn = el('button',{class:'btn btn-danger btn-sm', style:'margin-left:6px;', onclick:()=>{ if(confirm('Remove "'+b.title+'"?')) deleteBook(b.id); }},['Delete']);
+        actionsTd.appendChild(editBtn); actionsTd.appendChild(delBtn);
+        tr.appendChild(actionsTd);
+        table.appendChild(tr);
+      });
+      panel.appendChild(table);
+    }
+    wrap.appendChild(panel);
+    return wrap;
+  }
+
+  function ordersView(){
+    const wrap = el('div');
+    wrap.appendChild(el('div',{class:'page-head'},[ el('div',{},[ el('h1',{},['Orders']), el('p',{},['All orders placed through the shop.']) ]) ]));
+    if(state.orders.length===0){
+      wrap.appendChild(el('div',{class:'panel'},[ el('div',{class:'empty'},[ el('h3',{},['No orders yet']) ]) ]));
+      return wrap;
+    }
+    state.orders.forEach(o=>{
+      const card = el('div',{class:'order-card'});
+      const head = el('div',{class:'order-head'},[
+        el('div',{},[ el('div',{class:'order-id'},[o.id]), el('div',{class:'meta'},[new Date(o.createdAt).toLocaleString()]) ]),
+        el('span',{class:'status-pill status-'+o.status},[o.status])
+      ]);
+      card.appendChild(head);
+      const body = el('div',{class:'order-body'});
+      body.appendChild(el('div',{style:'margin-bottom:8px;'},[el('b',{},[o.buyerName]), ' · ', o.contact]));
+      body.appendChild(el('div',{class:'meta', style:'margin-bottom:8px;'},[o.address]));
+      o.items.forEach(i=>{
+        body.appendChild(el('div',{class:'line'},[ i.title+' × '+i.qty, peso(i.price*i.qty) ]));
+      });
+      body.appendChild(el('div',{class:'line', style:'font-weight:700; color:var(--ink); border-top:1px solid var(--line); margin-top:6px; padding-top:8px;'},[ 'Total via '+o.paymentMode, peso(o.total) ]));
+      card.appendChild(body);
+      if(state.adminUnlocked){
+        const actions = el('div',{class:'order-actions'});
+        ['Pending','Paid','Shipped','Cancelled'].forEach(s=>{
+          if(s===o.status) return;
+          actions.appendChild(el('button',{class:'btn btn-ghost btn-sm', onclick:()=>setOrderStatus(o.id,s)},['Mark '+s]));
+        });
+        card.appendChild(actions);
+      }
+      wrap.appendChild(card);
+    });
     return wrap;
   }
 
@@ -1073,8 +862,9 @@
     ]));
     spine.appendChild(navItem('shop','Shop'));
     spine.appendChild(navItem('cart','Cart', cartCount()||null));
+    spine.appendChild(navItem('orders','Orders'));
     spine.appendChild(navItem('payment','Payment info'));
-
+    if(ADMIN_PARAM || state.adminUnlocked){ spine.appendChild(navItem('admin','Admin')); }
     spine.appendChild(el('div',{class:'spine-footer'},['© '+new Date().getFullYear()+' BookNest']));
     app.appendChild(spine);
 
@@ -1083,18 +873,14 @@
     else if(state.view==='cart') main.appendChild(cartView());
     else if(state.view==='confirm') main.appendChild(confirmView());
     else if(state.view==='payment') main.appendChild(paymentInfoView());
+    else if(state.view==='admin') main.appendChild(adminView());
+    else if(state.view==='orders') main.appendChild(ordersView());
     app.appendChild(main);
 
     root.appendChild(app);
 
     const modal = checkoutModal();
     if(modal) root.appendChild(modal);
-
-    const bookModal = bookDetailModal();
-    if(bookModal) root.appendChild(bookModal);
-
-    const lb = lightboxOverlay();
-    if(lb) root.appendChild(lb);
 
     if(state.toast){
       const t = el('div',{style:'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--white); padding:10px 18px; border-radius:4px; font-size:13.5px; z-index:100;'},[state.toast]);

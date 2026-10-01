@@ -69,31 +69,25 @@ const sampleSales = [
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
 const getData    = (key, fallback) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  const cached = window.__BookNestCloudCache?.[key];
-  return cached != null ? cached : fallback;
+  const raw = localStorage.getItem(key);
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); } catch { return fallback; }
 };
-const setData = (key, value) => {
-  // Always keep the synchronous in-memory copy. This prevents photo-heavy
-  // mobile sessions from breaking when localStorage reaches its quota.
-  window.__BookNestCloudCache = window.__BookNestCloudCache || {};
-  window.__BookNestCloudCache[key] = value;
+const setData    = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.warn("[BookNest] localStorage full; using cloud/in-memory cache for", key, e);
-    try { localStorage.removeItem(key); } catch {}
+    return true;
+  } catch (err) {
+    console.error("[BookNest] setData failed for", key, err);
+    if (typeof showNotice === "function") {
+      showNotice(
+        "Could not save — your browser's storage is full (this often happens after adding several photos). " +
+        "Try removing a photo, deleting old receipts, or downloading a backup and clearing some data.",
+        "Save Failed"
+      );
+    }
+    return false;
   }
-  // Supabase is the persistent/shared source when available.
-  if (window.BookNestCloud?.enabled) {
-    window.BookNestCloud.save(key, value).catch(err =>
-      console.error('[BookNest] Cloud save failed for', key, err)
-    );
-  }
-  return true;
 };
 
 const getBooks    = ()         => getData(STORAGE_KEYS.books,    []).map(b => ({
@@ -102,7 +96,6 @@ const getBooks    = ()         => getData(STORAGE_KEYS.books,    []).map(b => ({
   author: (b.author === undefined || b.author === null) ? "" : String(b.author),
   genre:  (b.genre  === undefined || b.genre  === null) ? "General" : String(b.genre),
   box:    (b.box    === undefined || b.box    === null) ? "" : String(b.box),
-  variant:(b.variant === undefined || b.variant === null) ? "" : String(b.variant),
   price:  Number(b.price) || 0,
   stock:  Number.isFinite(Number(b.stock)) ? Number(b.stock) : 0,
   shopVisible: b.shopVisible === true, // Only show in shop if explicitly set to true
@@ -151,46 +144,6 @@ const createReceiptId = () => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const rand    = crypto.getRandomValues(new Uint32Array(1))[0].toString(16).slice(0, 4).toUpperCase();
   return `BN-${dateStr}-${rand}`;
-};
-
-// Human-friendly receipt numbers are sequential (1, 2, 3...). The random
-// internal id is kept for data integrity and existing links/references.
-const ensureReceiptNumbers = () => {
-  const receipts = getReceipts();
-  if (!Array.isArray(receipts) || !receipts.length) return receipts || [];
-
-  let changed = false;
-  const used = new Set(receipts.map(r => Number(r?.receiptNumber)).filter(n => Number.isInteger(n) && n > 0));
-  let next = used.size ? Math.max(...used) + 1 : 1;
-
-  const missing = receipts
-    .filter(r => !(Number.isInteger(Number(r?.receiptNumber)) && Number(r.receiptNumber) > 0))
-    .sort((a, b) => {
-      const ta = Number.isFinite(Date.parse(a?.date)) ? Date.parse(a.date) : 0;
-      const tb = Number.isFinite(Date.parse(b?.date)) ? Date.parse(b.date) : 0;
-      return ta - tb || String(a?.id || "").localeCompare(String(b?.id || ""));
-    });
-
-  missing.forEach(r => {
-    r.receiptNumber = next++;
-    changed = true;
-  });
-  if (changed) saveReceipts(receipts);
-  return receipts;
-};
-
-const getNextReceiptNumber = () => {
-  const receipts = ensureReceiptNumbers();
-  const max = receipts.reduce((m, r) => {
-    const n = Number(r?.receiptNumber);
-    return Number.isInteger(n) && n > m ? n : m;
-  }, 0);
-  return max + 1;
-};
-
-const receiptNumberLabel = (receipt) => {
-  const n = Number(receipt?.receiptNumber);
-  return Number.isInteger(n) && n > 0 ? String(n) : String(receipt?.id || "—");
 };
 
 const currency  = (value) =>
@@ -655,7 +608,7 @@ const openReceiptModal = (saleRows, customerInfo = null) => {
   const now       = new Date().toISOString();
 
   // Fill header
-  document.getElementById("bn-receipt-id").textContent   = getNextReceiptNumber();
+  document.getElementById("bn-receipt-id").textContent   = receiptId;
   document.getElementById("bn-receipt-date").textContent = formatDateLong(now);
 
   // Fill or clear customer fields
@@ -759,7 +712,6 @@ const saveReceiptFromModal = () => {
 
   const receiptPayload = {
     id:            pendingSale.receiptId,
-    receiptNumber: getNextReceiptNumber(),
     date:          pendingSale.date,
     customer,
     address,
@@ -1330,32 +1282,11 @@ const ensurePhotoLightbox = () => {
       <img class="photo-lightbox__img" style="width:100%;border-radius:12px;display:block;" />
     </div>
     <div class="action-modal__actions">
-      <button class="btn modal-ghost" data-action="download" type="button">⬇ Download photo</button>
       <button class="btn modal-primary" data-action="close" type="button">Close</button>
     </div>
   `;
   document.body.appendChild(dialog);
   dialog.querySelector("[data-action='close']").addEventListener("click", () => dialog.close());
-  dialog.querySelector("[data-action='download']").addEventListener("click", async () => {
-    const img = dialog.querySelector(".photo-lightbox__img");
-    const src = img?.src || "";
-    if (!src) return;
-    try {
-      const response = await fetch(src);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `BookNest_photo_${new Date().toISOString().slice(0,10)}.jpg`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-    } catch (e) {
-      // data: URLs can be downloaded directly when fetch is unavailable.
-      const a = document.createElement("a");
-      a.href = src; a.download = `BookNest_photo_${Date.now()}.jpg`;
-      document.body.appendChild(a); a.click(); a.remove();
-    }
-  });
   photoLightbox = dialog;
   return dialog;
 };
@@ -1701,7 +1632,9 @@ const initInventory = () => {
 
   const searchInput     = document.getElementById("searchInput");
   const genreFilter     = document.getElementById("genreFilter");
+  const boxFilter       = document.getElementById("boxFilter");
   const stockFilter     = document.getElementById("stockFilter");
+  const conditionFilter = document.getElementById("conditionFilter");
   const addTitle        = document.getElementById("addTitle");
   const addAuthor       = document.getElementById("addAuthor");
   const addGenre        = document.getElementById("addGenre");
@@ -1709,6 +1642,8 @@ const initInventory = () => {
   const addPrice        = document.getElementById("addPrice");
   const addStock        = document.getElementById("addStock");
   const addType         = document.getElementById("addType");
+  const addCondition    = document.getElementById("addCondition");
+  const addBox          = document.getElementById("addBox");
   const addBookBtn      = document.getElementById("addBookBtn");
   const priceCalcBtn    = document.getElementById("priceCalcBtn");
   const bulkInput       = document.getElementById("bulkInput");
@@ -1759,27 +1694,29 @@ const initInventory = () => {
     console.log("[BookNest] Inventory refresh — books in storage:", books.length);
     const search    = searchInput?.value?.toLowerCase() ?? "";
     const genre     = genreFilter?.value ?? "";
-    const box       = "";
+    const box       = boxFilter?.value ?? "";
     const stock     = stockFilter?.value ?? "";
+    const condition = conditionFilter?.value ?? "";
 
     const filtered = books.filter(book => {
       const matchesSearch    = book.title.toLowerCase().includes(search) || book.author.toLowerCase().includes(search);
       const matchesGenre     = !genre || book.genre === genre;
-      const matchesBox       = true; // Box assignment is retained for receipts but is hidden from Inventory.
+      const matchesBox       = !box || (book.box || "") === box;
       const matchesStock     =
         !stock ||
         (stock === "low"      && book.stock > 0 && book.stock < 5) ||
         (stock === "out"      && book.stock === 0) ||
         (stock === "reserved" && Array.isArray(book.layawayHolds) && book.layawayHolds.length > 0);
-      return matchesSearch && matchesGenre && matchesStock;
+      const matchesCondition = !condition || book.condition === condition;
+      return matchesSearch && matchesGenre && matchesBox && matchesStock && matchesCondition;
     });
 
     if (books.length > 0 && filtered.length === 0) {
-      rows.innerHTML = `<tr><td colspan="8" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="9" class="muted">No books match your current search/filters. You have ${books.length} book(s) in storage — try clearing the search box and filters above.</td></tr>`;
       return;
     }
     if (books.length === 0) {
-      rows.innerHTML = `<tr><td colspan="8" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="9" class="muted">No books in inventory yet. Add one above, or use Bulk Paste.</td></tr>`;
       return;
     }
 
@@ -1799,11 +1736,11 @@ const initInventory = () => {
         : book.stock;
       const genreOpts     = ["Fiction","Non-Fiction","Fantasy","Mystery","Romance","Thriller","Horror","Self-Help","Biography","History","Science","Technology","Poetry","Drama","Adventure","Dystopian","Science Fiction","Children's","Young Adult","Other"];
       const typeOpts      = ["Paperback","Hardbound","MMPB","Sprayed","Leatherbound","Slipcase","Special Edition","Box Set","Signed","Other"];
+      const conditionOpts = ["New","Pre Loved","Remaindered"];
       const currentType   = book.type || "Paperback";
       const genreClass    = `genre-${(book.genre || "other").toLowerCase().replace(/\s+/g, "").replace(/['-]/g, "")}`;
       return `<tr class="${genreClass}">
         <td contenteditable="true" data-field="title"  data-id="${book.id}">${book.title}</td>
-        <td contenteditable="true" data-field="variant" data-id="${book.id}" title="Use this to distinguish copies of the same title">${book.variant || ""}</td>
         <td contenteditable="true" data-field="author" data-id="${book.id}">${book.author}</td>
         <td>
           <select class="inv-select" data-field="genre" data-id="${book.id}">
@@ -1812,9 +1749,15 @@ const initInventory = () => {
         </td>
         <td contenteditable="true" data-field="price"  data-id="${book.id}">${book.price}</td>
         <td contenteditable="true" data-field="stock"  data-id="${book.id}">${book.stock}</td>
+        <td contenteditable="true" data-field="box" data-id="${book.id}" title="Which box/batch this book came from">${book.box || ""}</td>
         <td>
           <select class="inv-select" data-field="type" data-id="${book.id}">
             ${typeOpts.map(t => `<option value="${t}"${currentType === t ? " selected" : ""}>${t}</option>`).join("")}
+          </select>
+        </td>
+        <td>
+          <select class="inv-select" data-field="condition" data-id="${book.id}">
+            ${conditionOpts.map(c => `<option value="${c}"${(book.condition || "New") === c ? " selected" : ""}>${c}</option>`).join("")}
           </select>
         </td>
         <td>
@@ -1825,6 +1768,7 @@ const initInventory = () => {
               : ""}
             <button class="btn ghost action-btn inv-action-btn" data-action="manage-book-photos" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="Add, remove, or reorder this book's photos">🖼 Photos${book.images && book.images.length ? ` (${book.images.length})` : ""}</button>
             <button class="btn ghost action-btn inv-action-btn" data-action="edit-book-description" data-id="${book.id}" style="font-size:11px;padding:3px 8px;min-width:0;" title="${book.description ? "Edit the description buyers see" : "Add a description — condition, edition, notes, etc."}">${book.description ? "📝 Desc ✓" : "📝 Add Desc"}</button>
+            <button class="btn primary action-btn inv-action-btn${book.shopVisible ? " active" : ""}" data-action="toggle-shop" data-id="${book.id}" title="${book.shopVisible ? "Remove from shop" : "Add to shop"}" style="font-size:11px;padding:3px 8px;min-width:0;">${book.shopVisible ? "🛒 In Shop" : "➕ Add Shop"}</button>
             <button class="btn primary action-btn inv-action-btn sold" data-action="sold"    data-id="${book.id}">Sold</button>
             <button class="btn ghost action-btn inv-action-btn reserve${holds.length ? " is-reserved" : ""}" data-action="layaway" data-id="${book.id}"${availableForLayaway <= 0 ? " disabled title=\"Every copy of this book is already on layaway — cancel a hold above to free one up\"" : ""}>${availableForLayaway > 0 ? "🗓️ Layaway" : "Fully Reserved"}</button>
             <button class="btn ghost action-btn inv-action-btn delete" data-action="delete"  data-id="${book.id}">Delete</button>
@@ -1842,19 +1786,21 @@ const initInventory = () => {
     if (boxSuggestions) {
       boxSuggestions.innerHTML = uniqueBoxes.map(b => `<option value="${b}"></option>`).join("");
     }
+    if (boxFilter) {
+      boxFilter.innerHTML = `<option value="">All boxes</option>${uniqueBoxes.map(b => `<option value="${b}"${b === box ? " selected" : ""}>${b}</option>`).join("")}`;
+    }
    } catch (err) {
     console.error("[BookNest] Inventory refresh failed:", err);
-    rows.innerHTML = `<tr><td colspan="8" style="color:#b91c1c">⚠ Error loading inventory: ${String(err.message || err)}. Press F12 to open the console for details, or share a screenshot of the console with support.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="9" style="color:#b91c1c">⚠ Error loading inventory: ${String(err.message || err)}. Press F12 to open the console for details, or share a screenshot of the console with support.</td></tr>`;
    }
   };
 
   const normalizeCondition = (c) => {
     if (!c) return "Pre Loved";
     const s = String(c).toLowerCase().replace(/[-_\s]+/g,"");
-    if (s === "new" || s === "brandnew") return "Brand New";
+    if (s === "new") return "New";
     if (s === "preloved" || s === "used" || s === "good") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
-    if (s === "damaged" || s === "damage") return "Damaged";
     return "Pre Loved";
   };
 
@@ -1994,7 +1940,7 @@ const initInventory = () => {
         price:     addPrice?.value || 0,
         stock:     addStock?.value || 1,
         type:      addType?.value || "Paperback",
-        condition: "Pre Loved",
+        condition: addCondition?.value || "Pre Loved",
         box:       addBox?.value.trim() || "",
       };
       console.log("Adding book:", bookData);
@@ -2010,6 +1956,7 @@ const initInventory = () => {
       genreManuallyEdited = false;
       updateGenreSuggestion();
       if (addType) addType.value = "Paperback";
+      if (addCondition) addCondition.value = "Pre Loved";
       alert("✓ Book added successfully!");
     } catch(error) {
       console.error("Error in addBookBtn click:", error);
@@ -2029,10 +1976,9 @@ const initInventory = () => {
   const matchCondition = (raw) => {
     const s = String(raw || "").toLowerCase().replace(/[-_\s]+/g, "");
     if (!s) return null;
-    if (s === "new" || s === "brandnew") return "Brand New";
+    if (s === "new") return "New";
     if (s === "preloved" || s === "used" || s === "good" || s === "secondhand") return "Pre Loved";
     if (s === "remaindered" || s === "remainder") return "Remaindered";
-    if (s === "damaged" || s === "damage") return "Damaged";
     return null;
   };
 
@@ -2173,7 +2119,7 @@ const initInventory = () => {
             price:     document.getElementById("addPrice")?.value || 0,
             stock:     document.getElementById("addStock")?.value || 1,
             type:      document.getElementById("addType")?.value || "Paperback",
-            condition: "Pre Loved",
+            condition: document.getElementById("addCondition")?.value || "Pre Loved",
             box:       document.getElementById("addBox")?.value.trim() || "",
           }]);
           const btn = retryAddBtn;
@@ -2189,6 +2135,7 @@ const initInventory = () => {
           document.getElementById("addPrice").value = "";
           document.getElementById("addStock").value = "";
           document.getElementById("addType").value = "Paperback";
+          document.getElementById("addCondition").value = "Pre Loved";
           if (document.getElementById("addBox")) document.getElementById("addBox").value = "";
         });
         retryAddBtn._inventoryInitialized = true;
@@ -2285,14 +2232,7 @@ const initInventory = () => {
   // first is used as the cover shown in the shop). Built the same way as
   // the box-photo lightbox — a single reusable <dialog>, filled in fresh
   // each time it's opened.
-  // Raised from the old cap of 6 — each photo is compressed before storage,
-  // but everything still lives in the browser's localStorage (shared with
-  // every other book, sale, and receipt), which most browsers cap around
-  // 5–10MB total. 20 photos/book is "practically unlimited" for a resale
-  // shop while leaving headroom for the rest of the data. If storage ever
-  // fills up, setData() below already warns the seller instead of failing
-  // silently.
-  const MAX_BOOK_PHOTOS = 20;
+  const MAX_BOOK_PHOTOS = 6;
   let bookPhotosDialog = null;
   const ensureBookPhotosDialog = () => {
     if (bookPhotosDialog) return bookPhotosDialog;
@@ -2333,20 +2273,20 @@ const initInventory = () => {
     const grid   = dialog.querySelector(".bn-book-photos-grid");
     header.textContent = `${photos.length}/${MAX_BOOK_PHOTOS} photos — the first one is the cover shown in the shop`;
 
-    // Render exactly the filled photos, plus one "Add" tile if there's room —
-    // no blank filler cells. This lets MAX_BOOK_PHOTOS be a high number
-    // (many books' worth of photos) without drawing dozens of empty boxes.
-    const cells = photos.map((src, i) => `
+    const cells = [];
+    for (let i = 0; i < MAX_BOOK_PHOTOS; i++) {
+      if (i < photos.length) {
+        cells.push(`
           <div style="position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:1.5px solid #d9cdb2;background:#efe7d8;">
-            <img src="${src}" alt="Book photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" data-lightbox-idx="${i}" />
+            <img src="${photos[i]}" alt="Book photo ${i + 1}" style="width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;" data-lightbox-idx="${i}" />
             ${i === 0 ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(38,33,26,0.7);color:#fff;font-size:10px;text-align:center;padding:2px 0;">Cover</div>` : ""}
             <button type="button" class="bn-book-photo-remove" data-idx="${i}"
               style="position:absolute;top:4px;right:4px;width:22px;height:22px;border:none;border-radius:50%;
               background:rgba(179,38,30,0.92);color:#fff;font-weight:700;font-size:12px;line-height:1;
               cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>`);
-    if (photos.length < MAX_BOOK_PHOTOS) {
-      cells.push(`
+      } else if (i === photos.length) {
+        cells.push(`
           <label class="bn-book-photo-add" style="aspect-ratio:3/4;border-radius:8px;
             border:2px dashed #9C7A34;background:#F8F3E7;display:flex;flex-direction:column;
             align-items:center;justify-content:center;cursor:pointer;color:#8A5A1F;font-size:12px;
@@ -2355,6 +2295,9 @@ const initInventory = () => {
             <span>Add</span>
             <input type="file" accept="image/*" class="bn-book-photo-input" style="display:none;" />
           </label>`);
+      } else {
+        cells.push(`<div></div>`);
+      }
     }
     grid.innerHTML = cells.join("");
 
@@ -2444,28 +2387,6 @@ const initInventory = () => {
       if (target) {
         target.description = field.value.trim();
         saveBooks(books);
-        // A book that's already published to the Shop has its own frozen
-        // copy of the description in .shop_listings (buildShopBooks in
-        // shop.html always prefers that copy over this Inventory record).
-        // Without this, editing the description here silently does nothing
-        // for a book that's already live in the Shop — push the new text
-        // into any matching listing(s) too so buyers actually see it.
-        let listings = [];
-        try { listings = JSON.parse(localStorage.getItem('.shop_listings') || '[]'); } catch (e) { listings = []; }
-        let changed = false;
-        listings.forEach(l => {
-          if (String(l.sourceBookId) === String(bookId)) {
-            l.description = target.description;
-            l.updatedAt = new Date().toISOString();
-            changed = true;
-          }
-        });
-        if (changed) {
-          try {
-            localStorage.setItem('.shop_listings', JSON.stringify(listings));
-            if (window.BookNestCloud?.enabled) window.BookNestCloud.save('.shop_listings', listings).catch(console.error);
-          } catch (e) { console.error(e); }
-        }
         refresh();
       }
       dialog.close();
@@ -2503,46 +2424,26 @@ const initInventory = () => {
       const bookToDelete = books.find(b => b.id === id);
       if (!bookToDelete) return;
       const remaining = books.filter(b => b.id !== id);
-      // Deleting an Inventory record must also delete its storefront listing.
-      // Otherwise the buyer shop can display a ghost/orphan listing.
-      let listings=[];
-      try{ listings=JSON.parse(localStorage.getItem('.shop_listings')||'[]'); }catch{ listings=[]; }
-      const removedListings=listings.filter(x=>String(x.sourceBookId)===String(id));
-      const remainingListings=listings.filter(x=>String(x.sourceBookId)!==String(id));
       saveBooks(remaining);
-      try{
-        localStorage.setItem('.shop_listings',JSON.stringify(remainingListings));
-        if(window.BookNestCloud?.enabled) window.BookNestCloud.save('.shop_listings',remainingListings).catch(console.error);
-      }catch(e){console.error(e)}
       refresh();
-      showUndoToast(`Deleted "${bookToDelete.title || "book"}"${removedListings.length?' and removed its Shop listing':''}.`, () => {
+      showUndoToast(`Deleted "${bookToDelete.title || "book"}".`, () => {
         saveBooks([...getBooks(), bookToDelete]);
-        if(removedListings.length){
-          const restored=[...getData('.shop_listings',[]),...removedListings];
-          try{localStorage.setItem('.shop_listings',JSON.stringify(restored));if(window.BookNestCloud?.enabled)window.BookNestCloud.save('.shop_listings',restored).catch(console.error)}catch(e){console.error(e)}
-        }
         refresh();
       });
-      return;
     }
 
     if (action === "toggle-shop") {
       const book = books.find(b => b.id === id);
       if (!book) return;
-      const rawListings = localStorage.getItem('.shop_listings');
-      let listings=[]; try{listings=rawListings?JSON.parse(rawListings):[]}catch{listings=[]}
-      const existingIndex=listings.findIndex(x=>String(x.sourceBookId)===String(book.id));
-      if(existingIndex>=0){
-        listings.splice(existingIndex,1);
-        book.shopVisible=false;
-      }else{
-        listings.push({id:`LIST-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`,sourceBookId:book.id,title:book.title,author:book.author||'',genre:book.genre||'General',price:Number(book.price)||0,type:book.type||'Paperback',condition:book.condition||'Pre Loved',variant:book.variant||'',shopStock:Math.max(1,Number(book.stock)||0),images:Array.isArray(book.images)&&book.images.length?book.images.slice(0,8):(book.image?[book.image]:[]),description:book.description||'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
-        book.shopVisible=true;
-      }
+      book.shopVisible = book.shopVisible !== true; // Toggle: if undefined or false, set to true; if true, set to false
       saveBooks(books);
-      try{localStorage.setItem('.shop_listings',JSON.stringify(listings));if(window.BookNestCloud?.enabled)window.BookNestCloud.save('.shop_listings',listings).catch(console.error)}catch(e){console.error(e)}
       refresh();
-      showNotice(existingIndex>=0?`"${book.title}" was removed from the Shop.`:`"${book.title}" was added to the Shop.`, existingIndex>=0?"Removed from Shop":"Added to Shop");
+      showNotice(
+        book.shopVisible
+          ? `"${book.title}" is now visible in the shop.`
+          : `"${book.title}" has been removed from the shop.`,
+        book.shopVisible ? "Added to Shop" : "Removed from Shop"
+      );
     }
 
     if (action === "sold") {
@@ -2621,7 +2522,6 @@ const initInventory = () => {
 
       const receiptPayload = {
         id: receiptId,
-        receiptNumber: getNextReceiptNumber(),
         date: new Date().toISOString(),
         customer: (name || "").toUpperCase(),
         address: "",
@@ -2725,7 +2625,7 @@ const initInventory = () => {
     if (event.key === "Enter") { event.preventDefault(); target.blur(); }
   });
 
-  [searchInput, genreFilter, stockFilter].forEach(el => {
+  [searchInput, genreFilter, boxFilter, stockFilter, conditionFilter].forEach(el => {
     if (el) el.addEventListener("input", refresh);
   });
 
@@ -2816,7 +2716,7 @@ const initReceiptHistory = () => {
       ...getReceipts().flatMap(rr => (rr.items || []).map(i => (i.box || "").trim())),
     ].filter(Boolean))].sort();
 
-    const receipts = ensureReceiptNumbers()
+    const receipts = getReceipts()
       .slice()
       .sort((a, b) => {
         const timeA = Number.isFinite(Date.parse(a?.date)) ? Date.parse(a.date) : 0;
@@ -2855,7 +2755,6 @@ const initReceiptHistory = () => {
       if (!query) return matchesShip && matchesPay && matchesBox;
       const haystack = [
         r.id,
-        receiptNumberLabel(r),
         r.customer,
         r.phone,
         r.address,
@@ -2954,7 +2853,7 @@ const initReceiptHistory = () => {
       return `
       <tr${refunded ? ` style="text-decoration:line-through;"` : ""}>
         <td class="rh-date">${receiptDate}</td>
-        <td class="rh-receipt"><span class="rh-receipt-number">#${receiptNumberLabel(r)}</span><small>${r.id}</small></td>
+        <td class="rh-receipt">${r.id}</td>
         <td class="rh-customer">${r.customer || "—"}${r.isBundle ? `<div style="margin-top:3px;"><span class="rh-status pending" style="background:rgba(15,118,110,0.12);color:var(--primary-dark,#0f766e);">🎁 Bundle</span></div>` : ""}</td>
         <td class="rh-items"><strong>${totalQty} item(s)</strong>${itemLines}</td>
         <td class="rh-box-col">${boxLines}</td>
@@ -2969,20 +2868,28 @@ const initReceiptHistory = () => {
         </td>
         <td class="rh-actions-cell">
           <div class="rh-actions-grid">
-            <button class="rc-btn ${shipped ? "shipped" : isPiling ? "piling" : "ship-now"}" data-action="toggle-shipped" data-id="${r.id}"${isPiling ? ` disabled title="Items are in Piling mode — change the shipping carrier before marking as shipped"` : ""}>${shipBtnLabel}</button>
-            <button class="rc-btn ${paid ? "shipped" : "ship-now"}" data-action="toggle-paid" data-id="${r.id}">${paidBtnLabel}</button>
-            <button class="rc-btn ${refunded ? "refunded" : "refund-now"}" data-action="toggle-refunded" data-id="${r.id}" title="${refunded ? "Undo refund" : "Refund this order — removes its amount from Total Revenue"}">${refundBtnLabel}</button>
-            <button class="rc-btn" data-action="review-receipt" data-id="${r.id}">📝 Review</button>
-            <button class="rc-btn view" data-action="view-receipt" data-id="${r.id}">View</button>
-            <button class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}">Edit</button>
-            <button class="rc-btn del" data-action="delete-receipt" data-id="${r.id}">Del</button>
+            <button type="button" class="rc-btn ${shipped ? "shipped" : isPiling ? "piling" : "ship-now"}" data-action="toggle-shipped" data-id="${r.id}"${isPiling ? ` disabled title="Items are in Piling mode — change the shipping carrier before marking as shipped"` : ""}>${shipBtnLabel}</button>
+            <button type="button" class="rc-btn ${paid ? "shipped" : "ship-now"}" data-action="toggle-paid" data-id="${r.id}">${paidBtnLabel}</button>
+            <button type="button" class="rc-btn ${refunded ? "refunded" : "refund-now"}" data-action="toggle-refunded" data-id="${r.id}" title="${refunded ? "Undo refund" : "Refund this order — removes its amount from Total Revenue"}">${refundBtnLabel}</button>
+            <button type="button" class="rc-btn waybill" data-action="waybill-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)" title="Attach the waybill photo and download a thank-you card to send the buyer">${r.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill"}</button>
+            <button type="button" class="rc-btn" data-action="review-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">📝 Review</button>
+            <button type="button" class="rc-btn view" data-action="view-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">View</button>
+            <button type="button" class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">Edit</button>
+            <button type="button" class="rc-btn del" data-action="delete-receipt" data-id="${r.id}" onclick="window.BookNestReceiptAction(event)">Del</button>
           </div>
         </td>
       </tr>`;
     }).join("");
+
+    // Receipt buttons use an inline target handler below. This intentionally
+    // avoids depending on bubbling through the table/sticky cells.
   };
 
-  render();
+  // Expose the receipt action handler for the button-level onclick above.
+  // This is deliberately direct: even if another element stops event bubbling,
+  // the button itself still invokes the action.
+  window.BookNestReceiptAction = handleReceiptAction;
+
   searchInput?.addEventListener("input", render);
   document.getElementById("receiptShipStatus")?.addEventListener("change", render);
   document.getElementById("receiptPayStatus")?.addEventListener("change", render);
@@ -3001,11 +2908,11 @@ const initReceiptHistory = () => {
     saveReceipts(receipts);
   });
 
-  wrap.addEventListener("click", async (e) => {
+  async function handleReceiptAction(e) {
+    const btn = e.currentTarget || e.target.closest("button[data-action]");
+    if (!btn || !btn.matches("button[data-action]")) return;
     e.preventDefault();
     e.stopPropagation();
-    const btn    = e.target.closest("[data-action]");
-    if (!btn) return;
     const action = btn.dataset.action;
     const id     = btn.dataset.id;
     if (!id) return;
@@ -3025,9 +2932,12 @@ const initReceiptHistory = () => {
       const updated = setReceiptFlags(id, { shipped: !shipped });
       if (updated) {
         render();
-
+        // Just marked as shipped — prompt right away to attach the waybill
+        // photo so a thank-you card can be sent to the buyer.
+        if (wasNotShipped) openWaybillModal(updated);
       }
     }
+    if (action === "waybill-receipt") { openWaybillModal(receipt); }
     if (action === "toggle-paid") {
       const { paid } = getReceiptFlags(receipt);
       const updated = setReceiptFlags(id, { paid: !paid });
@@ -3095,7 +3005,9 @@ const initReceiptHistory = () => {
       saveReceipts(getReceipts().filter(r => r.id !== id));
       render();
     }
-  });
+  };
+
+  render();
 
   const modal = document.getElementById("viewReceiptModal");
   if (!modal) return;
@@ -3143,32 +3055,6 @@ const getReceiptFlags = (receipt) => {
   return { shipped: false, paid: false, refunded: !!receipt.refunded };
 };
 
-// Shop checkouts (from shop.html) are written into BOTH ".receipts" (so they
-// show in Admin > Receipts) AND ".shop_orders" (so they show in Admin > Shop
-// Orders) as two separate copies of the same sale, linked by a shared id.
-// Marking an order Paid/Shipped from the Receipts screen only ever touched
-// the ".receipts" copy, so the Shop Orders screen kept showing "Pending"
-// forever even after payment was confirmed. Push the same flags into the
-// ".shop_orders" copy any time they change here so both screens agree.
-const SHOP_ORDERS_KEY = ".shop_orders";
-const getShopOrders = () => getData(SHOP_ORDERS_KEY, []);
-const saveShopOrders = (orders) => setData(SHOP_ORDERS_KEY, orders);
-
-const syncShopOrderStatus = (orderId, { shipped, paid }) => {
-  const orders = getShopOrders();
-  const idx = orders.findIndex(o => o.id === orderId);
-  if (idx < 0) return;
-  orders[idx].paid    = paid;
-  orders[idx].shipped = shipped;
-  // Keep the legacy single "status" field (what the Shop Orders screen
-  // most likely renders) in sync too, covering every combination.
-  orders[idx].status = paid && shipped ? "Completed"
-                      : paid            ? "Paid"
-                      : shipped         ? "Shipped"
-                      : "Pending";
-  saveShopOrders(orders);
-};
-
 const setReceiptFlags = (receiptId, patch) => {
   const receipts = getReceipts();
   const idx = receipts.findIndex(r => r.id === receiptId);
@@ -3182,11 +3068,6 @@ const setReceiptFlags = (receiptId, patch) => {
   receipts[idx].shipmentStatus = next.shipped ? "shipped" : "pending";
   receipts[idx].status = next.shipped ? "shipped" : "pending";
   saveReceipts(receipts);
-  // If this receipt came from a shop.html checkout, mirror the new
-  // paid/shipped flags onto its matching ".shop_orders" record too.
-  if (receipts[idx].shopOrder) {
-    syncShopOrderStatus(receiptId, { shipped: next.shipped, paid: next.paid });
-  }
   return receipts[idx];
 };
 
@@ -3265,6 +3146,115 @@ const renderShipmentControls = (receipt) => {
     };
   }
 
+  const waybillBtn = document.getElementById("openWaybillBtn");
+  if (waybillBtn) {
+    waybillBtn.textContent = receipt.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill";
+    waybillBtn.onclick = () => openWaybillModal(receipt);
+  }
+};
+
+// ── Waybill thank-you card (sent to buyer after shipping) ──────────────
+const renderWaybillPreview = (photoSrc) => {
+  const wrap = document.getElementById("waybillPhotoWrap");
+  if (!wrap) return;
+  if (isValidPhotoSrc(photoSrc)) {
+    wrap.classList.add("has-photo");
+    wrap.innerHTML = `<img src="${photoSrc}" alt="Waybill photo" />`;
+  } else {
+    wrap.classList.remove("has-photo");
+    wrap.innerHTML = `
+      <div class="bn-waybill-photo-empty">
+        <div class="bn-waybill-photo-icon">📮</div>
+        <div>No waybill photo attached yet</div>
+      </div>`;
+  }
+};
+
+const openWaybillModal = (receiptOrId) => {
+  const modal = document.getElementById("waybillModal");
+  if (!modal) return;
+  const receipt = typeof receiptOrId === "string"
+    ? getReceipts().find(r => r.id === receiptOrId)
+    : (getReceipts().find(r => r.id === receiptOrId.id) || receiptOrId);
+  if (!receipt) return;
+
+  const idLabel = document.getElementById("waybill-bn-id");
+  if (idLabel) idLabel.textContent = receipt.id;
+
+  const photoInput = document.getElementById("waybillPhotoInput");
+  if (photoInput) photoInput.value = "";
+
+  renderWaybillPreview(receipt.waybillPhoto);
+
+  if (photoInput) {
+    photoInput.onchange = async () => {
+      const file = photoInput.files?.[0];
+      if (!file) return;
+      try {
+        const dataUrl = await compressImageFile(file);
+        renderWaybillPreview(dataUrl);
+      } catch {
+        showNotice("Couldn't read that image. Please try a different photo.", "Error");
+      }
+    };
+  }
+
+  const saveBtn = document.getElementById("saveWaybillBtn");
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      const file = photoInput?.files?.[0];
+      if (!file) {
+        showNotice("Choose a waybill photo first, then save.", "Nothing to save");
+        return;
+      }
+      let dataUrl;
+      try {
+        dataUrl = await compressImageFile(file);
+      } catch {
+        showNotice("Couldn't read that image. Please try a different photo.", "Error");
+        return;
+      }
+      const receipts = getReceipts();
+      const idx = receipts.findIndex(r => r.id === receipt.id);
+      if (idx < 0) return;
+      receipts[idx].waybillPhoto = dataUrl;
+      saveReceipts(receipts);
+      renderWaybillPreview(dataUrl);
+      showNotice("Waybill photo saved. You can now download the card to send to the buyer.", "Saved");
+      render();
+    };
+  }
+
+  const removeBtn = document.getElementById("removeWaybillBtn");
+  if (removeBtn) {
+    removeBtn.onclick = () => {
+      const receipts = getReceipts();
+      const idx = receipts.findIndex(r => r.id === receipt.id);
+      if (idx < 0) return;
+      delete receipts[idx].waybillPhoto;
+      saveReceipts(receipts);
+      if (photoInput) photoInput.value = "";
+      renderWaybillPreview(null);
+      render();
+    };
+  }
+
+  const downloadBtn = document.getElementById("downloadWaybillBtn");
+  if (downloadBtn) {
+    downloadBtn.onclick = async () => {
+      const wrapHasPhoto = document.getElementById("waybillPhotoWrap")?.classList.contains("has-photo");
+      if (!wrapHasPhoto) {
+        showNotice("Attach and save a waybill photo before downloading the card.", "Nothing to download");
+        return;
+      }
+      await downloadReceipt("waybillPrintArea", `Waybill_${receipt.id}`);
+    };
+  }
+
+  modal.showModal();
+
+  const closeBtn = document.getElementById("closeWaybillModal");
+  if (closeBtn) closeBtn.onclick = () => modal.close();
 };
 
 const openShipmentReviewModal = (receiptOrId) => {
@@ -3276,7 +3266,7 @@ const openShipmentReviewModal = (receiptOrId) => {
   if (!receipt) return;
 
   const idLabel = document.getElementById("review-bn-id");
-  if (idLabel) idLabel.textContent = receiptNumberLabel(receipt);
+  if (idLabel) idLabel.textContent = receipt.id;
 
   const reviewText = document.getElementById("shipmentReviewText");
   const photoInput = document.getElementById("shipmentReviewPhotos");
@@ -3376,38 +3366,30 @@ const renderReceiptPhotosReadOnly = (receipt) => {
 
 const MAX_RECEIPT_PHOTOS = 4;
 
-const compressImageFile = (file, maxDim = 900, quality = 0.72) =>
+const compressImageFile = (file, maxDim = 900, quality = 0.75) =>
   new Promise((resolve, reject) => {
-    if (!file || !String(file.type || '').startsWith('image/')) { reject(new Error('Please choose an image file.')); return; }
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read the selected image.'));
+    reader.onerror = reject;
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error('Could not decode the selected image.'));
+      img.onerror = reject;
       img.onload = () => {
-        try {
-          let { width, height } = img;
-          const ratio = Math.min(1, maxDim / Math.max(width, height));
-          width = Math.max(1, Math.round(width * ratio));
-          height = Math.max(1, Math.round(height * ratio));
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d", { alpha: false });
-          if (!ctx) throw new Error('Canvas unavailable');
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", quality));
-        } catch (err) { reject(err); }
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
       };
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
-window.BookNestCompressImage = window.BookNestCompressImage || compressImageFile;
 
 // ── Receipt photos (editable, max 4) ────────────────────────────────────
 const renderReceiptPhotosEditable = (currentPhotos, onChange) => {
@@ -3598,7 +3580,7 @@ const openViewModal = (receiptOrId, autoDownload = false) => {
   `;
 
   // Fill header
-  document.getElementById("view-bn-id").textContent      = receiptNumberLabel(receipt);
+  document.getElementById("view-bn-id").textContent      = receipt.id;
   document.getElementById("view-bn-date").textContent    = formatDateLong(receipt.date);
   document.getElementById("view-bn-payment").textContent = receipt.paymentMethod || "GCash";
 
@@ -3830,7 +3812,7 @@ const openEditModal = (receipt) => {
   editingReceiptBundlePrice = Number(receipt.bundlePrice) || 0;
 
   // Fill header
-  document.getElementById("view-bn-id").textContent      = receiptNumberLabel(receipt);
+  document.getElementById("view-bn-id").textContent      = receipt.id;
   document.getElementById("view-bn-date").textContent    = formatDateLong(receipt.date);
   document.getElementById("view-bn-payment").textContent = receipt.paymentMethod || "GCash";
   
@@ -4198,7 +4180,7 @@ const safeRun = (fn, name) => {
   try { fn(); } catch (err) { console.error(`[BookNest] ${name} failed:`, err); }
 };
 
-const renderSellerWorkspace = () => {
+const init = () => {
   migrateStorage();
   ensureSeedData();
   safeRun(initDashboard,     "initDashboard");
@@ -4207,21 +4189,6 @@ const renderSellerWorkspace = () => {
   safeRun(initReceiptModal,  "initReceiptModal");
   safeRun(initReports,       "initReports");
   safeRun(initReceiptHistory,"initReceiptHistory");
-};
-
-// Render from the local cache immediately. Supabase refreshes in the background
-// and the same workspace is refreshed when the cloud snapshot arrives. This
-// removes the old 5–10 second blank/loading wait on seller pages.
-const init = () => {
-  // Render once on page load. Supabase Realtime will notify this page when
-  // shared data actually changes; we intentionally do NOT poll every few
-  // seconds because polling makes the UI feel like it is constantly
-  // refreshing and can interrupt typing/selection.
-  renderSellerWorkspace();
-  window.addEventListener("booknest-cloud-ready", (event) => {
-    if (!event.detail?.ok) return;
-    requestAnimationFrame(() => renderSellerWorkspace());
-  });
 };
 
 document.addEventListener("DOMContentLoaded", init);

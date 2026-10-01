@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="performance.js" defer></script>
     <title>BookNest — New Sale</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="admin-gate.js"></script>
@@ -19,17 +18,17 @@
            "this is a receipt", so the page still feels distinct without
            inventing a second brand. */
         :root {
-            --ink: #26211a;
+            --ink: #17302c;
             --paper: #fffefc;
             --paper-warm: #f6f1e4;
-            --line: rgba(38, 33, 26, 0.14);
+            --line: rgba(23, 48, 44, 0.14);
             --muted: #5c6d68;
-            --teal: #35493c;
-            --teal-deep: #263329;
-            --teal-soft: rgba(53, 73, 60, 0.08);
-            --gold: #9c7a34;
-            --brick: #a8402a;
-            --brick-soft: rgba(168, 64, 42, 0.09);
+            --teal: #0f766e;
+            --teal-deep: #0b3f3b;
+            --teal-soft: rgba(15, 118, 110, 0.08);
+            --gold: #a9782f;
+            --brick: #a8433a;
+            --brick-soft: rgba(168, 67, 58, 0.09);
         }
 
         body { padding-bottom: 3rem; }
@@ -286,7 +285,7 @@
 
         .bn-table input.book-total {
             background: var(--teal-soft);
-            border-color: rgba(53, 73, 60, 0.25);
+            border-color: rgba(15, 118, 110, 0.25);
             color: var(--teal-deep);
             font-weight: 700;
         }
@@ -504,13 +503,11 @@
         .action-modal .btn.modal-primary { background: var(--teal); color: #fff; border-color: transparent; }
         .action-modal .btn.modal-ghost { background: transparent; color: var(--muted); }
     </style>
-<script src="seller-nav.js"></script><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 </head>
 <body>
     <header class="site-header">
       <div class="logo">
-        <img class="logo-image" src="logo.png" alt="BookNest logo" />
+        <img class="logo-image" src="Assets/Booknest.png" alt="BookNest logo" />
         <span>BookNest</span>
       </div>
       <nav class="nav">
@@ -540,7 +537,7 @@
             <div class="bn-header">
                 <div class="bn-header-left">
                     <div class="bn-logo-circle">
-                        <img class="bn-logo-img" src="logo.png" alt="BookNest logo" />
+                        <img class="bn-logo-img" src="Assets/Booknest.png" alt="BookNest logo" />
                     </div>
                     <div>
                         <h1 class="bn-title serif">BookNest</h1>
@@ -574,7 +571,7 @@
                 <table class="bn-table">
                     <colgroup>
                         <col class="col-title"><col class="col-author"><col class="col-genre">
-                        <col class="col-type"><col class="col-qty">
+                        <col class="col-type"><col class="col-condition"><col class="col-qty">
                         <col class="col-price"><col class="col-total"><col class="col-action">
                     </colgroup>
                     <thead>
@@ -583,7 +580,8 @@
                             <th>Author</th>
                             <th>Genre</th>
                             <th>Type</th>
-                                                        <th>Qty</th>
+                            <th>Condition</th>
+                            <th>Qty</th>
                             <th>Price</th>
                             <th>Total</th>
                             <th></th>
@@ -661,9 +659,6 @@
 
     <footer class="site-footer">BookNest © 2026</footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="supabase-data.js"></script>
     <script src="app.js"></script>
     <script>
         function setSelectValueSafe(select, value) {
@@ -679,7 +674,7 @@
         }
 
         const BOOK_TYPES = ["Paperback","Hardbound","MMPB","Sprayed","Leatherbound","Slipcase","Special Edition","Box Set","Signed","Other"];
-        const BOOK_CONDITIONS = ["Brand New","Pre Loved","Damaged","Remaindered"];
+        const BOOK_CONDITIONS = ["New","Pre Loved","Remaindered"];
 
         function setCurrentDate() {
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -856,6 +851,9 @@
                     </select>
                 </td>
                 <td>
+                    <select class="book-condition" title="Editable — fix if this sale differs from the inventory record">
+                        ${BOOK_CONDITIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
                 </td>
                 <td><input type="number" class="book-qty" value="1" min="1" max="1" oninput="calculateTotal()" onchange="calculateTotal()"></td>
                 <td><input type="number" class="book-price" value="0" min="0" step="0.01" oninput="calculateTotal()" onchange="calculateTotal()" title="Editable — fix the price here if there's a mistake"></td>
@@ -890,7 +888,8 @@
                 row.querySelector('.book-author').value = '';
                 row.querySelector('.book-genre').value = '';
                 setSelectValueSafe(row.querySelector('.book-type'), '');
-                        row.querySelector('.book-price').value = '0.00';
+                setSelectValueSafe(row.querySelector('.book-condition'), '');
+                row.querySelector('.book-price').value = '0.00';
                 row.querySelector('.book-total').value = '0.00';
                 calculateTotal();
                 return;
@@ -906,6 +905,7 @@
             row.querySelector('.book-author').value = author;
             row.querySelector('.book-genre').value = genre;
             setSelectValueSafe(row.querySelector('.book-type'), type);
+            setSelectValueSafe(row.querySelector('.book-condition'), condition);
             row.querySelector('.book-price').value = price.toFixed(2);
 
             const qtyInput = row.querySelector('.book-qty');
@@ -1026,7 +1026,7 @@
                     const rowAuthor    = row.querySelector('.book-author')?.value.trim()    || book.author;
                     const rowGenre     = row.querySelector('.book-genre')?.value.trim()     || book.genre;
                     const rowType      = row.querySelector('.book-type')?.value             || book.type || "Paperback";
-                    const rowCondition = book.condition || "Pre Loved";
+                    const rowCondition = row.querySelector('.book-condition')?.value        || book.condition;
                     const rowPrice     = Math.max(0, parseFloat(row.querySelector('.book-price')?.value) || 0);
 
                     const sale = {
@@ -1123,6 +1123,5 @@
 
         document.addEventListener('DOMContentLoaded', initNewSale);
     </script>
-<script src="mobile-enhancements.js"></script>
 </body>
 </html>
