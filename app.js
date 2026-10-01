@@ -3104,9 +3104,7 @@ const renderShipmentControls = (receipt) => {
       const updated = setReceiptFlags(receipt.id, { shipped: !shipped });
       if (!updated) return;
       renderShipmentControls(updated);
-      // The receipt dialog is already open. Do not call showModal() again.
-      // Prompt for the waybill only after a receipt is newly marked shipped.
-      if (!shipped) openWaybillModal(updated);
+      openViewModal(updated);
     };
   }
 
@@ -3134,8 +3132,8 @@ const renderShipmentControls = (receipt) => {
         }
       }
       const fresh = getReceipts().find(r => r.id === receipt.id) || updated;
-      // The receipt dialog is already open, so refresh only its controls.
       renderShipmentControls(fresh);
+      openViewModal(fresh);
     };
   }
 
