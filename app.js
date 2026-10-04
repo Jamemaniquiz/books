@@ -761,7 +761,8 @@ const downloadReceipt = async (printAreaId, filenamePrefix = "Receipt") => {
   if (!printArea) return;
 
   if (typeof html2canvas === "undefined") {
-    showNotice("html2canvas library not loaded. Please refresh the page.", "Error");
+    showNotice("Image save is unavailable, so the receipt print/save window will open instead.", "Receipt Ready");
+    printReceiptArea(printAreaId);
     return;
   }
 
@@ -841,7 +842,9 @@ const downloadReceipt = async (printAreaId, filenamePrefix = "Receipt") => {
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       }, "image/png");
     } catch(e2) {
-      showNotice("Download failed. Please use the Print button instead.", "Error");
+      console.error("Receipt image retry failed:", e2);
+      showNotice("Image save failed, so the receipt print/save window will open instead.", "Receipt Ready");
+      setTimeout(() => printReceiptArea(printAreaId), 150);
     } finally {
       imgs.forEach(img => img.style.display = "");
     }
@@ -2869,7 +2872,7 @@ const initReceiptHistory = () => {
             <button class="rc-btn ${refunded ? "refunded" : "refund-now"}" data-action="toggle-refunded" data-id="${r.id}" title="${refunded ? "Undo refund" : "Refund this order — removes its amount from Total Revenue"}">${refundBtnLabel}</button>
             <button class="rc-btn waybill" data-action="waybill-receipt" data-id="${r.id}" title="Attach the waybill photo and download a thank-you card to send the buyer">${r.waybillPhoto ? "📮 Waybill ✓" : "📮 Waybill"}</button>
             <button class="rc-btn" data-action="review-receipt" data-id="${r.id}">📝 Review</button>
-            <button class="rc-btn view" data-action="view-receipt" data-id="${r.id}">View</button>
+            <button class="rc-btn view" data-action="view-receipt" data-id="${r.id}">👁 View Receipt</button>
             <button class="rc-btn edit" data-action="edit-receipt" data-id="${r.id}">Edit</button>
             <button class="rc-btn del" data-action="delete-receipt" data-id="${r.id}">Delete</button>
           </div>
@@ -3560,8 +3563,8 @@ const openViewModal = (receiptOrId, autoDownload = false) => {
   modalBar.innerHTML = `
     <span style="font-weight:700;font-size:1rem;">📄 Receipt</span>
     <div style="display:flex;gap:0.6rem;flex-wrap:wrap">
-      <button id="downloadReceiptBtn"    class="bn-btn-blue  modal-no-print" type="button">📸 Download Image</button>
-      <button id="printViewReceiptBtn"   class="bn-btn-slate modal-no-print" type="button">🖨 Print</button>
+      <button id="downloadReceiptBtn"    class="bn-btn-blue  modal-no-print" type="button">📸 Save Receipt</button>
+      <button id="printViewReceiptBtn"   class="bn-btn-slate modal-no-print" type="button">🖨 Print / Save PDF</button>
       <button id="closeViewModal"        class="bn-btn-slate modal-no-print" type="button">✕ Close</button>
     </div>
   `;
